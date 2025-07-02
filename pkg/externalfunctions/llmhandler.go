@@ -1032,6 +1032,7 @@ const (
 // Returns:
 //   - updatedHistory: the updated conversation history
 func AppendMessageHistory(newMessage string, role AppendMessageHistoryRole, history []sharedtypes.HistoricMessage) (updatedHistory []sharedtypes.HistoricMessage) {
+	logging.Log.Debugf(&logging.ContextMap{}, "Appending new message to history: %s", newMessage)
 	switch role {
 	case user:
 	case assistant:
@@ -1055,6 +1056,8 @@ func AppendMessageHistory(newMessage string, role AppendMessageHistoryRole, hist
 
 	// Append the new message to the history
 	history = append(history, newMessageHistory)
+
+	logging.Log.Infof(&logging.ContextMap{}, "Appended new message to history: %s", history)
 
 	return history
 }

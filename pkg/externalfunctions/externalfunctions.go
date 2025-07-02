@@ -166,4 +166,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 
 	// rhsc
 	"SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,
+
+	// ace
+	"ConvertJsonToCustomize": ConvertJsonToCustomize,
 }

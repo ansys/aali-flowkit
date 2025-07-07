@@ -257,10 +257,10 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 	return
 }
 
-// FindRelevantPathDescriptionByPrompt finds the relevant description by prompting
+// FindRelevantPathDescription finds the relevant description by prompting
 //
 // Tags:
-//   - @displayName: FindRelevantPathDescriptionByPrompt
+//   - @displayName: FindRelevantPathDescription
 //
 // Parameters:
 //   - descriptions: the list of descriptions
@@ -268,7 +268,7 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 //
 // Returns:
 //   - relevantDescription: the relevant desctiption
-func FindRelevantPathDescriptionByPrompt(descriptions []string, message string) (relevantDescription string) {
+func FindRelevantPathDescription(descriptions []string, message string) (relevantDescription string) {
 
 	relevantDescription = ""
 	ctx := &logging.ContextMap{}
@@ -1669,7 +1669,29 @@ func GenerateUserPrompt(userInstruction string, userPromptTemplate string) (user
 	return
 }
 
-// GenerateUserPrompt generates user instruction prompt based on the provided template, instruction, list.
+// GenerateUserPromptWithContext generates user instruction prompt based on the provided template with instruction and context.
+//
+// Tags:
+//   - @displayName: GenerateUserPromptWithContext
+//
+// Parameters:
+//   - userInstruction: user instruction
+//   - context: user context
+//   - userPromptTemplate: user prompt template
+//
+// Returns:
+//   - userPrompt: the user prompt
+func GenerateUserPromptWithContext(userInstruction string, context string, userPromptTemplate string) (userPrompt string) {
+	ctx := &logging.ContextMap{}
+
+	userPrompt = fmt.Sprintf(userPromptTemplate, userInstruction, context)
+
+	logging.Log.Debugf(ctx, "Generated User Prompt With Context: %s", userPrompt)
+
+	return
+}
+
+// GenerateUserPromptWithList generates user instruction prompt based on the provided template, instruction, list.
 //
 // Tags:
 //   - @displayName: GenerateUserPromptWithList
@@ -1786,4 +1808,22 @@ func FinalizeMessage(message string) (result string) {
 	logging.Log.Info(ctx, "successfully converted actions to json")
 
 	return result
+}
+
+// SelectedSolution this function parse the selected solution
+//
+// Tags:
+//   - @displayName: SelectedSolution
+//
+// Parameters:
+//   - selectedSolution: selected solution found by the LLM
+//
+// Returns:
+//   - solution: parsed solution
+func SelectedSolution(selectedSolution string) (solution string) {
+	logging.Log.Info(&logging.ContextMap{}, "Parsing Selected solution...")
+	// Use blackfriday to convert markdown to HTML
+	logging.Log.Debugf(&logging.ContextMap{}, "Selected Solution: %s", selectedSolution)
+	solution = selectedSolution
+	return solution
 }

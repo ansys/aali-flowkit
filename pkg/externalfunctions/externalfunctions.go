@@ -116,7 +116,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 
 	// ansys mesh pilot
 	"SimilartitySearchOnPathDescriptions":       SimilartitySearchOnPathDescriptions,
-	"FindRelevantPathDescriptionByPrompt":       FindRelevantPathDescriptionByPrompt,
+	"FindRelevantPathDescription":               FindRelevantPathDescription,
 	"FetchPropertiesFromPathDescription":        FetchPropertiesFromPathDescription,
 	"FetchNodeDescriptionsFromPathDescription":  FetchNodeDescriptionsFromPathDescription,
 	"FetchActionsPathFromPathDescription":       FetchActionsPathFromPathDescription,
@@ -139,6 +139,8 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"FinalizeMessage":                           FinalizeMessage,
 	"GenerateUserPrompt":                        GenerateUserPrompt,
 	"GenerateUserPromptWithList":                GenerateUserPromptWithList,
+	"GenerateUserPromptWithContext":             GenerateUserPromptWithContext,
+	"SelectedSolution":                          SelectedSolution,
 
 	// qdrant
 	"QdrantCreateCollection": QdrantCreateCollection,

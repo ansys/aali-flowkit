@@ -26,9 +26,34 @@ dist
 # Extra
 .venv
 doc/_build
+doc/venv
+doc/.venv
+doc/styles
 /config.yaml
 error.log
 logs.log
+
+# Generated documentation
+doc/source/advanced/autodoc/*.rst
+
+# Vale temporary files
+.vale/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
 
 examples/
 user_guide_structured/

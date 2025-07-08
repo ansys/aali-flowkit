@@ -20,32 +20,44 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Sphinx documentation configuration file."""
-
-from datetime import datetime
 import os
+import sys
+from datetime import datetime
 
-from ansys_sphinx_theme import ansys_logo_black, ansys_favicon, get_version_match
+sys.path.insert(0, os.path.abspath("../../"))
 
-# Project information
-project = "aali-flowkit"
-copyright = f"(c) {datetime.now().year} ANSYS, Inc. All rights reserved"
-author = "ANSYS, Inc."
+from ansys_sphinx_theme import ansys_favicon, get_version_match
 
 # Read version from VERSION file
 with open(os.path.join("..", "..", "VERSION"), "r") as f:
     version_file = f.readline().strip()
 
+# Project metadata
+project = "AALI Flowkit"
+author = "ANSYS, Inc."
+copyright = f"{datetime.now().year} ANSYS, Inc. All rights reserved"
+
 release = version = version_file
 switcher_version = get_version_match(version_file)
-cname = os.getenv("DOCUMENTATION_CNAME", "laughing-guide-5m1lvq6.pages.github.io")
-"""The canonical name of the webpage hosting the documentation."""
+cname = os.getenv("DOCUMENTATION_CNAME", "noname.com")
 
-# Select desired logo, theme, and declare the html title
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.intersphinx",
+    "sphinx_design",
+    "sphinx_external_toc",
+]
+
 html_theme = "ansys_sphinx_theme"
-html_short_title = html_title = project
-html_logo = ansys_logo_black
 html_favicon = ansys_favicon
+html_short_title = html_title = project
+html_static_path = ["_static"]
+html_css_files = ["custom.css"]
+
+external_toc_path = "_toc.yml"
+
 html_context = {
     "github_user": "ansys",
     "github_repo": "aali-flowkit",
@@ -53,39 +65,46 @@ html_context = {
     "doc_path": "doc/source",
 }
 html_theme_options = {
+    "logo": "ansys",
     "github_url": "https://github.com/ansys/aali-flowkit",
     "additional_breadcrumbs": [
-        ("Aali", "https://aali.docs.ansys.com/"),
+        ("AALI", "https://aali.docs.pyansys.com/"),
     ],
     "switcher": {
-        "json_url": f"https://{cname}/versions.json",
+        "json_url": "_static/versions.json",
         "version_match": switcher_version,
     },
-    "check_switcher": False,
-    "show_prev_next": False,
+    "navbar_end": ["navbar-icon-links", "version-switcher", "theme-switcher"],
+    "check_switcher": True,
+    "show_prev_next": True,
     "show_breadcrumbs": True,
     "use_edit_page_button": True,
+    "navigation_depth": 4,
+    "collapse_navigation": False,
 }
 
-# Sphinx extensions
-extensions = [
-    "sphinx_design",
-    "sphinx_copybutton",
-]
+html_css_files = ["https://fonts.googleapis.com/icon?family=Material+Icons"]
 
-
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
-
-# The suffix(es) of source filenames.
-source_suffix = ".rst"
-
-# The master toctree document.
-master_doc = "index"
-
-source_suffix = {
-    ".rst": "restructuredtext",
+# Autodoc settings
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',
+    'special-members': '__init__',
+    'undoc-members': True,
+    'exclude-members': '__weakref__'
 }
 
-# The master toctree document.
-master_doc = "index"
+# Napoleon settings for Google-style docstrings
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
+napoleon_include_init_with_doc = True
+napoleon_include_private_with_doc = True
+napoleon_include_special_with_doc = True
+napoleon_use_admonition_for_examples = True
+napoleon_use_admonition_for_notes = True
+napoleon_use_admonition_for_references = True
+napoleon_use_ivar = True
+napoleon_use_param = True
+napoleon_use_rtype = True
+napoleon_use_keyword = True
+napoleon_custom_sections = None

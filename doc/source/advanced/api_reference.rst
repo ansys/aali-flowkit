@@ -5,54 +5,8 @@ API reference
 
 Complete API documentation for AALI Flowkit, including all available functions and their parameters.
 
-Quick navigation
-----------------
-
-.. grid:: 1 2 2 3
-   :gutter: 2
-   :class-container: sd-mb-3
-
-   .. grid-item-card:: External Functions
-      :link: autodoc/externalfunctions
-      :link-type: doc
-      :class-card: sd-shadow-sm sd-rounded-2 sd-p-2
-
-      All functions available through gRPC interface
-
-   .. grid-item-card:: Function Definitions
-      :link: autodoc/functiondefinitions
-      :link-type: doc
-      :class-card: sd-shadow-sm sd-rounded-2 sd-p-2
-
-      Core function structures and types
-
-   .. grid-item-card:: gRPC Server
-      :link: autodoc/grpcserver
-      :link-type: doc
-      :class-card: sd-shadow-sm sd-rounded-2 sd-p-2
-
-      Server implementation details
-
-   .. grid-item-card:: Internal States
-      :link: autodoc/internalstates
-      :link-type: doc
-      :class-card: sd-shadow-sm sd-rounded-2 sd-p-2
-
-      State management functions
-
-   .. grid-item-card:: Private Functions
-      :link: autodoc/privatefunctions_generic
-      :link-type: doc
-      :class-card: sd-shadow-sm sd-rounded-2 sd-p-2
-
-      Internal helper functions
-
-   .. grid-item-card:: Testing Functions
-      :link: autodoc/functiontesting
-      :link-type: doc
-      :class-card: sd-shadow-sm sd-rounded-2 sd-p-2
-
-      Test utilities and helpers
+.. note::
+   The complete API reference documentation is auto-generated during the build process from the Go source code.
 
 Overview
 --------
@@ -83,9 +37,9 @@ Finding functions
 
 To find specific functions:
 
-1. **By Category**: Use the cards that precede to browse by function type
-2. **By Name**: Use the search feature (Ctrl+K) to find functions by name
-3. **By Feature**: Check the categorized lists in each section
+1. **By Name**: Use the search feature (Ctrl+K) to find functions by name
+2. **By Feature**: Check the categorized lists below
+3. **By Package**: Browse the auto-generated documentation sections
 
 Common function patterns
 ------------------------

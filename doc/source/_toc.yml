@@ -14,7 +14,6 @@ parts:
     chapters:
       - file: user_guide/index
         sections:
-          - file: user_guide/overview
           - file: user_guide/function_registration
           - file: user_guide/calling
           - file: user_guide/agent_integration

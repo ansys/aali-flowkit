@@ -132,7 +132,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"SynthesizeActionsTool13":                   SynthesizeActionsTool13,
 	"SynthesizeActionsTool14":                   SynthesizeActionsTool14,
 	"SimilartitySearchOnPathDescriptionsQdrant": SimilartitySearchOnPathDescriptionsQdrant,
-	"GenerateSubWorkflowPrompt":                 GenerateSubWorkflowPrompt,
+	"GenerateActionsSubWorkflowPrompt":          GenerateActionsSubWorkflowPrompt,
 	"ProcessSubworkflowIdentificationOutput":    ProcessSubworkflowIdentificationOutput,
 	"MarkdownToHTML":                            MarkdownToHTML,
 	"ParseHistoryToHistoricMessages":            ParseHistoryToHistoricMessages,
@@ -141,6 +141,8 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"GenerateUserPromptWithList":                GenerateUserPromptWithList,
 	"GenerateUserPromptWithContext":             GenerateUserPromptWithContext,
 	"SelectedSolution":                          SelectedSolution,
+	"ProcessMainAgentOutput":                    ProcessMainAgentOutput,
+	"GenerateHelperSubWorkflowPrompt":           GenerateHelperSubWorkflowPrompt,
 
 	// qdrant
 	"QdrantCreateCollection": QdrantCreateCollection,

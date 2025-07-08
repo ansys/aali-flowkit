@@ -42,8 +42,8 @@ func mustCfg(ctx *logging.ContextMap, key string) string {
 	return toolVal
 }
 
-// GetSubworkflows returns a slice of subworkflow names and descriptions.
-func GetSubworkflows() []struct {
+// GetActionsSubworkflows returns a slice of subworkflow names and descriptions.
+func GetActionsSubworkflows() []struct {
 	Name        string
 	Description string
 } {
@@ -53,7 +53,7 @@ func GetSubworkflows() []struct {
 		Description string
 	}{}
 
-	toolAmount := mustCfg(ctx, "APP_TOOL_TOTAL_AMOUNT")
+	toolAmount := mustCfg(ctx, "APP_ACTIONS_TOOL_TOTAL_AMOUNT")
 	toolAmountInt, err := strconv.Atoi(toolAmount)
 	if err != nil {
 		logging.Log.Error(ctx, fmt.Sprintf("Invalid tool amount: %s", toolAmount))
@@ -61,8 +61,48 @@ func GetSubworkflows() []struct {
 	}
 
 	for i := 1; i <= toolAmountInt; i++ {
-		nameKey := fmt.Sprintf("APP_TOOL_%d_NAME", i)
-		descKey := fmt.Sprintf("APP_TOOL_%d_DESCRIPTION", i)
+		if i == 8 { //Connect is remove from the tool list
+			continue // Skip the 8th tool as per the original logic
+		}
+
+		nameKey := fmt.Sprintf("APP_TOOL_ACTION_%d_NAME", i)
+		descKey := fmt.Sprintf("APP_TOOL_ACTION_%d_DESCRIPTION", i)
+		name, nameExists := mustCfg(ctx, nameKey), true
+		desc, descExists := mustCfg(ctx, descKey), true
+		if nameExists && descExists && name != "" && desc != "" {
+			subworkflows = append(subworkflows, struct {
+				Name        string
+				Description string
+			}{
+				Name:        name,
+				Description: desc,
+			})
+		}
+	}
+	return subworkflows
+}
+
+// GetActionsSubworkflows returns a slice of subworkflow names and descriptions.
+func GetHelperSubworkflows() []struct {
+	Name        string
+	Description string
+} {
+	ctx := &logging.ContextMap{}
+	subworkflows := []struct {
+		Name        string
+		Description string
+	}{}
+
+	toolAmount := mustCfg(ctx, "APP_HELPER_TOOL_TOTAL_AMOUNT")
+	toolAmountInt, err := strconv.Atoi(toolAmount)
+	if err != nil {
+		logging.Log.Error(ctx, fmt.Sprintf("Invalid tool amount: %s", toolAmount))
+		panic(err)
+	}
+
+	for i := 1; i <= toolAmountInt; i++ {
+		nameKey := fmt.Sprintf("APP_TOOL_HELPER_%d_NAME", i)
+		descKey := fmt.Sprintf("APP_TOOL_HELPER_%d_DESCRIPTION", i)
 		name, nameExists := mustCfg(ctx, nameKey), true
 		desc, descExists := mustCfg(ctx, descKey), true
 		if nameExists && descExists && name != "" && desc != "" {

@@ -19,7 +19,7 @@ Quick navigation
 
       All functions available through gRPC interface
 
-   .. grid-item-card:: Function Definitions  
+   .. grid-item-card:: Function Definitions
       :link: autodoc/functiondefinitions
       :link-type: doc
       :class-card: sd-shadow-sm sd-rounded-2 sd-p-2

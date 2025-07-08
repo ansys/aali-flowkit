@@ -50,16 +50,16 @@ Main Flowkit service
    service FlowkitService {
        // Execute a registered function
        rpc ExecuteFunction(ExecuteFunctionRequest) returns (ExecuteFunctionResponse);
-       
+
        // Execute function with streaming response
        rpc ExecuteFunctionStream(ExecuteFunctionRequest) returns (stream StreamResponse);
-       
+
        // List available functions
        rpc ListFunctions(ListFunctionsRequest) returns (ListFunctionsResponse);
-       
+
        // Get function details
        rpc GetFunctionInfo(GetFunctionInfoRequest) returns (GetFunctionInfoResponse);
-       
+
        // Get system information
        rpc GetSystemInfo(GetSystemInfoRequest) returns (GetSystemInfoResponse);
    }
@@ -72,13 +72,13 @@ Function registry service
    service FunctionRegistryService {
        // Register a new function
        rpc RegisterFunction(RegisterFunctionRequest) returns (RegisterFunctionResponse);
-       
+
        // Unregister a function
        rpc UnregisterFunction(UnregisterFunctionRequest) returns (UnregisterFunctionResponse);
-       
+
        // Update function metadata
        rpc UpdateFunction(UpdateFunctionRequest) returns (UpdateFunctionResponse);
-       
+
        // Search functions by criteria
        rpc SearchFunctions(SearchFunctionsRequest) returns (SearchFunctionsResponse);
    }
@@ -91,13 +91,13 @@ Memory service
    service MemoryService {
        // Store data in memory
        rpc Store(StoreRequest) returns (StoreResponse);
-       
+
        // Retrieve data from memory
        rpc Retrieve(RetrieveRequest) returns (RetrieveResponse);
-       
+
        // List memory stores
        rpc ListStores(ListStoresRequest) returns (ListStoresResponse);
-       
+
        // Clear memory store
        rpc ClearStore(ClearStoreRequest) returns (ClearStoreResponse);
    }
@@ -163,7 +163,7 @@ Flowkit supports API key authentication for gRPC calls:
        if err != nil {
            return nil, err
        }
-       
+
        return conn, nil
    }
 
@@ -190,13 +190,13 @@ For production deployments, enable TLS:
            ServerName: "flowkit.example.com",
        }
        creds := credentials.NewTLS(config)
-       
-       conn, err := grpc.Dial("flowkit.example.com:50051", 
+
+       conn, err := grpc.Dial("flowkit.example.com:50051",
            grpc.WithTransportCredentials(creds))
        if err != nil {
            return nil, err
        }
-       
+
        return conn, nil
    }
 
@@ -268,7 +268,7 @@ Python client example
        # Prepare request
        request = flowkit_pb2.ExecuteFunctionRequest()
        request.function_name = "PerformGeneralRequest"
-       
+
        # Add parameters
        input_param = any_pb2.Any()
        input_param.Pack(flowkit_pb2.StringValue(value="Hello, Flowkit!"))
@@ -306,7 +306,7 @@ JavaScript/Node.js client example
 
    function main() {
        // Create client
-       const client = new flowkit.FlowkitService('localhost:50051', 
+       const client = new flowkit.FlowkitService('localhost:50051',
            grpc.credentials.createInsecure());
 
        // Prepare request
@@ -324,7 +324,7 @@ JavaScript/Node.js client example
                console.error('Error:', error);
                return;
            }
-           
+
            console.log('Success:', response.success);
            console.log('Result:', response.result);
        });
@@ -344,7 +344,7 @@ For functions that return streaming responses:
 
    func streamingExample(client pb.FlowkitServiceClient) {
        ctx := context.Background()
-       
+
        request := &pb.ExecuteFunctionRequest{
            FunctionName: "StreamingFunction",
            Parameters: map[string]*any.Any{
@@ -365,7 +365,7 @@ For functions that return streaming responses:
            if err != nil {
                log.Fatalf("Stream error: %v", err)
            }
-           
+
            log.Printf("Streamed: %v", response.Data)
        }
    }
@@ -379,7 +379,7 @@ For functions that accept streaming input:
 
    func clientStreamingExample(client pb.FlowkitServiceClient) {
        ctx := context.Background()
-       
+
        stream, err := client.ExecuteFunctionClientStream(ctx)
        if err != nil {
            log.Fatalf("Client streaming failed: %v", err)
@@ -390,7 +390,7 @@ For functions that accept streaming input:
            request := &pb.StreamRequest{
                Data: fmt.Sprintf("Message %d", i),
            }
-           
+
            if err := stream.Send(request); err != nil {
                log.Fatalf("Send error: %v", err)
            }
@@ -400,7 +400,7 @@ For functions that accept streaming input:
        if err != nil {
            log.Fatalf("Close error: %v", err)
        }
-       
+
        log.Printf("Final result: %v", response)
    }
 
@@ -506,7 +506,7 @@ Enable compression for large payloads:
    import "google.golang.org/grpc/encoding/gzip"
 
    // Enable compression
-   conn, err := grpc.Dial("localhost:50051", 
+   conn, err := grpc.Dial("localhost:50051",
        grpc.WithInsecure(),
        grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
 
@@ -531,7 +531,7 @@ Set appropriate timeouts:
            }
            return
        }
-       
+
        // Process response
    }
 
@@ -545,4 +545,3 @@ Best practices
 5. **Use TLS in production**: Secure communication channels
 6. **Implement retries**: With exponential backoff for transient errors
 7. **Monitor performance**: Track latency and error rates
-

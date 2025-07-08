@@ -28,6 +28,6 @@ Common options
 --------------
 
 * **LOG_LEVEL**: debug, info, warning, error
-* **FLOWKIT_ADDRESS**: Server bind address (default: 0.0.0.0:50051)  
+* **FLOWKIT_ADDRESS**: Server bind address (default: 0.0.0.0:50051)
 * **FLOWKIT_API_KEY**: API key for authentication
 * **USE_SSL**: true/false for SSL encryption

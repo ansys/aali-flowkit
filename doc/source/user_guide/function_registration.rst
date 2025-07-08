@@ -64,21 +64,21 @@ Step 1: Define your function
            Method   string        `json:"method"`
            Options  map[string]interface{} `json:"options,omitempty"`
        }
-       
+
        if err := json.Unmarshal([]byte(input), &params); err != nil {
            return "", fmt.Errorf("invalid input: %v", err)
        }
-       
+
        // Process data based on method
        result := processWithMethod(params.Data, params.Method, params.Options)
-       
+
        // Return JSON result
        output, _ := json.Marshal(map[string]interface{}{
            "processed_data": result,
            "method_used": params.Method,
            "timestamp": time.Now().Unix(),
        })
-       
+
        return string(output), nil
    }
 
@@ -102,26 +102,26 @@ Step 1: Define your function
            OutputFormat string                `json:"output_format" validate:"oneof=json csv xml"`
            Filters      map[string]interface{} `json:"filters,omitempty"`
        }
-       
+
        if err := json.Unmarshal([]byte(input), &params); err != nil {
            return "", fmt.Errorf("JSON parsing error: %v", err)
        }
-       
+
        // Validate required fields
        if len(params.Dataset) == 0 {
            return "", fmt.Errorf("dataset cannot be empty")
        }
-       
+
        if params.OutputFormat == "" {
            params.OutputFormat = "json" // Default format
        }
-       
+
        // Perform analysis
        analysis := performAnalysis(params.Dataset, params.AnalysisType, params.Filters)
-       
+
        // Format output
        output := formatOutput(analysis, params.OutputFormat)
-       
+
        return output, nil
    }
 
@@ -143,7 +143,7 @@ Step 2: Register the Function
    :caption: externalfunctions.go
 
    package externalfunctions
-   
+
    // ExternalFunctionsMap contains all functions available via gRPC
    var ExternalFunctionsMap = map[string]interface{}{
        // Data Processing Functions
@@ -151,17 +151,17 @@ Step 2: Register the Function
        "AnalyzeDataset":       AnalyzeDataset,
        "TransformData":        TransformData,
        "ValidateData":         ValidateData,
-       
+
        // Utility Functions
        "GenerateReport":       GenerateReport,
        "SendNotification":     SendNotification,
        "CacheResult":          CacheResult,
-       
+
        // AI Integration Functions
        "CallLLM":              CallLLM,
        "ProcessNLP":           ProcessNLP,
        "ImageAnalysis":        ImageAnalysis,
-       
+
        // System Functions
        "ResetSession":         ResetSession,
        "GetSystemStatus":      GetSystemStatus,
@@ -178,7 +178,7 @@ Step 2: Register the Function
    var FunctionCategories = map[string][]string{
        "data-processing": {
            "ProcessData",
-           "AnalyzeDataset", 
+           "AnalyzeDataset",
            "TransformData",
            "ValidateData",
        },
@@ -209,7 +209,7 @@ Step 3: Function metadata
    :caption: metadata-example.go
 
    // ComplexAnalysis performs multi-stage data analysis with AI integration.
-   // 
+   //
    // This function takes raw data, applies preprocessing, runs AI analysis,
    // and returns comprehensive insights with confidence scores.
    //
@@ -253,16 +253,16 @@ Function signatures
 
    // Basic function (most common)
    func BasicFunction(ctx context.Context, input string) (string, error)
-   
+
    // Function with memory access
    func MemoryFunction(ctx context.Context, input string, memory *Memory) (string, error)
-   
+
    // Function with configuration
    func ConfigFunction(ctx context.Context, input string, config *Config) (string, error)
-   
+
    // Streaming function
    func StreamingFunction(ctx context.Context, input string, stream Stream) error
-   
+
    // Async function
    func AsyncFunction(ctx context.Context, input string) (*AsyncResult, error)
 
@@ -279,11 +279,11 @@ Function signatures
            Op   string `json:"operation"`
        }
        json.Unmarshal([]byte(input), &params)
-       
+
        result := performOperation(params.Text, params.Op)
        return result, nil
    }
-   
+
    // Structured data processing
    func ProcessStructuredData(ctx context.Context, input string) (string, error) {
        var params struct {
@@ -291,13 +291,13 @@ Function signatures
            Config  Config   `json:"config"`
        }
        json.Unmarshal([]byte(input), &params)
-       
+
        output := map[string]interface{}{
            "processed": processRecords(params.Records, params.Config),
            "count":     len(params.Records),
            "timestamp": time.Now(),
        }
-       
+
        result, _ := json.Marshal(output)
        return string(result), nil
    }
@@ -316,24 +316,24 @@ Error handling
        if input == "" {
            return "", fmt.Errorf("input cannot be empty")
        }
-       
+
        var params RequestParams
        if err := json.Unmarshal([]byte(input), &params); err != nil {
            return "", fmt.Errorf("invalid JSON input: %v", err)
        }
-       
+
        // 2. Parameter validation
        if err := validateParams(params); err != nil {
            return "", fmt.Errorf("parameter validation failed: %v", err)
        }
-       
+
        // 3. Context timeout handling
        select {
        case <-ctx.Done():
            return "", fmt.Errorf("operation cancelled: %v", ctx.Err())
        default:
        }
-       
+
        // 4. Business logic with error handling
        result, err := processWithRecovery(params)
        if err != nil {
@@ -341,13 +341,13 @@ Error handling
            log.Error("Function execution failed", "error", err, "params", params)
            return "", fmt.Errorf("processing failed: %v", err)
        }
-       
+
        // 5. Output formatting
        output, err := json.Marshal(result)
        if err != nil {
            return "", fmt.Errorf("output serialization failed: %v", err)
        }
-       
+
        return string(output), nil
    }
 
@@ -384,17 +384,17 @@ Testing functions
                wantErr: true,
            },
        }
-       
+
        for _, tt := range tests {
            t.Run(tt.name, func(t *testing.T) {
                ctx := context.Background()
                result, err := ProcessData(ctx, tt.input)
-               
+
                if tt.wantErr {
                    assert.Error(t, err)
                    return
                }
-               
+
                assert.NoError(t, err)
                assert.JSONEq(t, tt.expected, result)
            })
@@ -414,7 +414,7 @@ Testing functions
        "function": "ProcessData",
        "input": "{\"data\": [1,2,3,4,5], \"method\": \"average\"}"
      }'
-   
+
    # Expected response
    # {
    #   "output": "{\"result\": 3, \"method\": \"average\"}",

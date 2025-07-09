@@ -452,10 +452,10 @@ func FetchActionsPathFromPathDescription(db_name, description, nodeLabel string)
 	return
 }
 
-// SynthesizeActionsTool4 update action as per user instruction
+// SynthesizeActionsTool2 update action as per user instruction
 //
 // Tags:
-//   - @displayName: SynthesizeActionsTool4
+//   - @displayName: SynthesizeActionsTool2
 //
 // Parameters:
 //   - message: the message from the llm
@@ -463,7 +463,7 @@ func FetchActionsPathFromPathDescription(db_name, description, nodeLabel string)
 //
 // Returns:
 //   - updatedActions: the list of synthesized actions
-func SynthesizeActionsTool4(message string, actions []map[string]string) (updatedActions []map[string]string) {
+func SynthesizeActionsTool2(message string, actions []map[string]string) (updatedActions []map[string]string) {
 
 	ctx := &logging.ContextMap{}
 
@@ -491,7 +491,7 @@ func SynthesizeActionsTool4(message string, actions []map[string]string) (update
 
 	err := json.Unmarshal([]byte(cleanedContent), &output)
 	if err != nil {
-		errorMessage := fmt.Sprintf("SynthesizeActionsTool4: Failed to unmarshal response: %v", err)
+		errorMessage := fmt.Sprintf("SynthesizeActionsTool2: Failed to unmarshal response: %v", err)
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
@@ -508,7 +508,7 @@ func SynthesizeActionsTool4(message string, actions []map[string]string) (update
 		panic(errorMessage)
 	}
 
-	synthesizeActionsValue, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_TOOL4_VALUE"]
+	synthesizeActionsValue, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_TOOL2_VALUE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load synthesize actions find key from the configuration")
 		logging.Log.Error(ctx, errorMessage)
@@ -537,17 +537,17 @@ func SynthesizeActionsTool4(message string, actions []map[string]string) (update
 	return
 }
 
-// SynthesizeActionsTool13 synthesize actions based on user instruction
+// SynthesizeActionsTool11 synthesize actions based on user instruction
 //
 // Tags:
-//   - @displayName: SynthesizeActionsTool13
+//   - @displayName: SynthesizeActionsTool11
 //
 // Parameters:
 //   - content: the llm content
 //
 // Returns:
 //   - result: the synthesized string
-func SynthesizeActionsTool13(content string) (result string) {
+func SynthesizeActionsTool11(content string) (result string) {
 	ctx := &logging.ContextMap{}
 
 	var out struct {
@@ -578,9 +578,9 @@ func SynthesizeActionsTool13(content string) (result string) {
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
-	actionValue1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_13_NAME"]
+	actionValue1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_11_NAME"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_13_NAME from the configuration")
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTION_11_NAME from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
@@ -618,17 +618,17 @@ func SynthesizeActionsTool13(content string) (result string) {
 	return
 }
 
-// SynthesizeActionsTool14 synthesize actions based on user instruction
+// SynthesizeActionsTool12 synthesize actions based on user instruction
 //
 // Tags:
-//   - @displayName: SynthesizeActionsTool14
+//   - @displayName: SynthesizeActionsTool12
 //
 // Parameters:
 //   - content: the llm content
 //
 // Returns:
 //   - result: the synthesized string
-func SynthesizeActionsTool14(content string) (result string) {
+func SynthesizeActionsTool12(content string) (result string) {
 	ctx := &logging.ContextMap{}
 
 	var out struct {
@@ -663,9 +663,9 @@ func SynthesizeActionsTool14(content string) (result string) {
 		panic(errorMessage)
 	}
 
-	actionValue1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_14_NAME"]
+	actionValue1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_12_NAME"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_14_NAME from the configuration")
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTION_12_NAME from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}

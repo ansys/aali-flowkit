@@ -606,14 +606,14 @@ func SynthesizeActionsTool11(content string) (result string) {
 
 	resultStream, err := json.Marshal(finalMessage)
 	if err != nil {
-		errorMessage := fmt.Sprintf("failed to marshal final message for tool 13: %v", err)
+		errorMessage := fmt.Sprintf("failed to marshal final message for tool 11: %v", err)
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
 	result = string(resultStream)
-	logging.Log.Infof(ctx, "SynthesizeActionsTool13 result: %s", result)
-	logging.Log.Infof(ctx, "successfully synthesized actions for tool 13")
+	logging.Log.Infof(ctx, "SynthesizeActionsTool11 result: %s", result)
+	logging.Log.Infof(ctx, "successfully synthesized actions for tool 11")
 
 	return
 }
@@ -692,14 +692,102 @@ func SynthesizeActionsTool12(content string) (result string) {
 
 	resultStream, err := json.Marshal(finalMessage)
 	if err != nil {
-		errorMessage := fmt.Sprintf("failed to marshal final message for tool 14: %v", err)
+		errorMessage := fmt.Sprintf("failed to marshal final message for tool 12: %v", err)
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	result = string(resultStream)
+	logging.Log.Infof(ctx, "SynthesizeActionsTool12 result: %s", result)
+	logging.Log.Infof(ctx, "successfully synthesized actions for tool 12")
+
+	return result
+}
+
+// SynthesizeActionsTool17 synthesize actions based on user instruction
+//
+// Tags:
+//   - @displayName: SynthesizeActionsTool17
+//
+// Parameters:
+//   - content: the llm content
+//
+// Returns:
+//   - result: the synthesized string
+func SynthesizeActionsTool17(content string) (result string) {
+	ctx := &logging.ContextMap{}
+
+	var out struct {
+		Argument string `json:"Argument"`
+	}
+
+	logging.Log.Infof(ctx, "SynthesizeActionsTool17 content: %s", content)
+
+	if err := json.Unmarshal([]byte(content), &out); err != nil {
+		panic(fmt.Sprintf("unmarshal Argument failed: %v", err))
+	}
+
+	Argument := out.Argument
+	logging.Log.Infof(ctx, "Synthesized Argument: %s", Argument)
+
+	message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_17_SUCCESS_MESSAGE"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_ACTION_TOOL_17_SUCCESS_MESSAGE from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actionKey1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_KEY_1"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_KEY_1 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actionKey2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_KEY_2"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_KEY_2 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actionValue1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_17_NAME"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTION_17_NAME from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actionValue2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_TARGET_1"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_TARGET_1 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actions := []map[string]string{
+		{
+			actionKey1: actionValue1,
+			actionKey2: actionValue2,
+			"Argument": Argument,
+		},
+	}
+
+	finalMessage := map[string]interface{}{
+		"Message": message,
+		"Actions": actions,
+	}
+
+	resultStream, err := json.Marshal(finalMessage)
+	if err != nil {
+		errorMessage := fmt.Sprintf("failed to marshal final message for tool 17: %v", err)
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
 	result = string(resultStream)
 	logging.Log.Infof(ctx, "SynthesizeActionsTool14 result: %s", result)
-	logging.Log.Infof(ctx, "successfully synthesized actions for tool 14")
+	logging.Log.Infof(ctx, "successfully synthesized actions for tool 17")
 
 	return result
 }

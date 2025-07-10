@@ -1,53 +1,51 @@
 .. _calling_functions:
 
-Calling registered functions
-============================
+Function Calls
+==============
 
-How to invoke registered functions in Flowkit using the gRPC API.
+Flowkit exposes Go functions through gRPC interface calls.
 
-.. grid:: 1
-   :gutter: 2
+gRPC Interface
+--------------
 
-   .. grid-item-card:: Function Invocation Methods
-      :class-card: sd-shadow-sm sd-rounded-md
-      :text-align: left
+The server provides two main RPC methods:
 
-      Registered functions can be called using the gRPC API. Three primary methods are provided:
+1. **ListFunctions** - Returns available function definitions
+2. **RunFunction** - Executes a function with provided inputs
+3. **StreamFunction** - Executes streaming functions
 
-      * `ListFunctions`: Lists all available functions
-      * `RunFunction`: Executes a function and returns a single response
-      * `StreamFunction`: Executes a function and returns a stream of responses
+Request Format
+--------------
 
-      Example usage with `grpcurl`:
+Function execution requires:
 
-      .. code-block:: bash
+- Function name (string)
+- Input parameters (typed according to function definition)
+- Optional metadata for authentication
 
-         # List all available functions
-         grpcurl -plaintext localhost:50051 proto.ExternalFunctions/ListFunctions
+Response Format
+---------------
 
-         # Call a function
-         grpcurl -plaintext -d '{
-           "name": "AssignStringToString",
-           "inputs": [{"name": "inputString", "value": "Hello Flowkit"}]
-         }' \
-         localhost:50051 proto.ExternalFunctions/RunFunction
+Function responses include:
 
-   .. grid-item-card:: Request and Response Format
-      :class-card: sd-shadow-sm sd-rounded-md
-      :text-align: left
+- Output parameters (typed results)
+- Error information if execution fails
+- Execution metadata
 
-      **RunFunction Request (FunctionInputs):**
+Error Handling
+--------------
 
-      * `name`: Name of the registered function (string)
-      * `inputs`: Array of FunctionInput objects with name, value, and type
+The server returns gRPC status codes for:
 
-      **RunFunction Response (FunctionOutputs):**
+- ``NOT_FOUND`` - Function does not exist
+- ``UNAUTHENTICATED`` - Invalid or missing API key
+- ``INTERNAL`` - Function execution error
 
-      * `name`: Name of the executed function
-      * `outputs`: Array of FunctionOutput objects with name, value, and type
+Client Implementation
+---------------------
 
-      **ListFunctions Response (ListFunctionsResponse):**
+Flowkit supports any gRPC-compatible client implementation.
 
-      * `functions`: Map of function names to their definitions
+Refer to the gRPC documentation for language-specific client generation.
 
-      If you call a function that is not registered, you will receive a gRPC error response.
+Next: :doc:`agent_integration`

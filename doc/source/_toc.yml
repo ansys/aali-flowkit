@@ -25,9 +25,3 @@ parts:
           - file: advanced/grpc
           - file: advanced/monitoring_logging
           - file: advanced/api_reference
-
-  - caption: API Reference
-    chapters:
-      - file: api_reference/index
-        sections:
-          - file: api_reference/test/index

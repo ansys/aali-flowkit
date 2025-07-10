@@ -1,6 +1,6 @@
 # Example configuration file for AALI FlowKit
 # This file contains the configuration settings for the AALI system.
-# This file is generally expected at the root of the AALI FlowKit repository.
+# This file is located in the configs/ directory of the AALI FlowKit repository.
 # Replace the values with your own settings as needed.
 
 # Logging settings

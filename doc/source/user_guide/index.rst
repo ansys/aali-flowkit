@@ -3,27 +3,27 @@
 User guide
 ==========
 
-.. grid:: 2 2 2 2
-   :gutter: 3
+.. grid:: 1 2 3 3
+   :gutter: 2
    :class-container: sd-mb-3
 
-   .. grid-item-card:: Function registration
+   .. grid-item-card:: Function Registration
       :link: function_registration
       :link-type: doc
       :class-card: sd-shadow-sm sd-rounded-2 sd-p-2 sd-bg-gradient-info-success
 
-      Register Go functions via gRPC
+      Available function categories
 
-   .. grid-item-card:: Calling functions
+   .. grid-item-card:: Function Calls
       :link: calling
       :link-type: doc
       :class-card: sd-shadow-sm sd-rounded-2 sd-p-2 sd-bg-gradient-success-warning
 
-      Execute functions via gRPC calls
+      gRPC client implementation
 
-   .. grid-item-card:: Agent integration
+   .. grid-item-card:: Agent Integration
       :link: agent_integration
       :link-type: doc
       :class-card: sd-shadow-sm sd-rounded-2 sd-p-2 sd-bg-gradient-warning-danger
 
-      Connect Flowkit with AALI agent
+      Integration with AI agents

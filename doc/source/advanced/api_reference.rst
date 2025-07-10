@@ -3,65 +3,50 @@
 API reference
 =============
 
-Complete API documentation for AALI Flowkit, including all available functions and their parameters.
-
-.. note::
-   The complete API reference documentation is auto-generated during the build process from the Go source code.
+API documentation for AALI Flowkit functions and gRPC interface.
 
 Overview
 --------
 
-Flowkit provides over 170 functions organized into the following categories:
+Flowkit provides 148 functions organized into the following categories:
 
-**Core Functions** (``externalfunctions``)
-   The main functions exposed through the gRPC interface for external use.
+**External Functions** (``externalfunctions``)
+   Functions exposed through the gRPC interface.
 
-**Infrastructure** (``grpcserver``, ``functiondefinitions``)
-   Server setup, function registration, and type definitions.
+**Function Registration** (``functiondefinitions``)
+   Function registration and type definitions.
 
-**Data Management** (``internalstates``)
-   Memory management, state tracking, and session handling.
+**gRPC Server** (``grpcserver``)
+   Server implementation and request handling.
 
-**Integrations** (``privatefunctions_*``)
-   - ``privatefunctions_qdrant``: Vector database operations
-   - ``privatefunctions_graphdb``: Graph database queries
-   - ``privatefunctions_codegeneration``: AI code generation
-   - ``privatefunctions_generic``: Utility functions
+**Internal States** (``internalstates``)
+   State management for function registration.
 
-**Specialized** (``meshpilot_*``)
-   - ``meshpilot_ampgraphdb``: AMP graph database integration
-   - ``meshpilot_azure``: azure cloud services
+Function Categories
+-------------------
 
-Finding functions
------------------
+**LLM Handler Functions**
+   Vector embeddings, general requests, message history management.
 
-To find specific functions:
+**Knowledge Database Functions**
+   Vector storage, similarity search, graph database queries.
 
-1. **By Name**: Use the search feature (Ctrl+K) to find functions by name
-2. **By Feature**: Check the categorized lists below
-3. **By Package**: Browse the auto-generated documentation sections
+**Data Extraction Functions**
+   File content processing, document parsing, collection management.
 
-Common function patterns
-------------------------
+**Generic Utility Functions**
+   UUID generation, string operations, REST API calls.
 
-Most Flowkit functions follow these patterns:
+**ANSYS Service Functions**
+   Integration with ANSYS GPT, Mesh Pilot, and Materials services.
 
-**Input/Output Functions**
-   - Accept specific typed parameters
-   - Return structured results
-   - Handle errors gracefully
+**Authentication Functions**
+   API key validation, user management, token handling.
 
-**State-Aware Functions**
-   - Can access session memory
-   - Preserve context between calls
-   - Support workflow continuity
+gRPC Interface
+--------------
 
-**Integration Functions**
-   - Connect to external services
-   - Transform data formats
-   - Handle authentication
+The server exposes two main RPC methods:
 
-Auto-generated documentation
-----------------------------
-
-All documentation in this section is auto-generated from Go source code using custom parsing tools. This ensures the documentation stays in sync with the actual implementation.
+- ``ListFunctions``: Returns all available functions
+- ``RunFunction``: Executes a function with provided inputs

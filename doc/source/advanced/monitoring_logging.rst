@@ -1,75 +1,62 @@
-Monitoring and logging
-======================
+.. _monitoring_logging:
 
-Monitor function execution performance, track usage metrics, and analyze system patterns.
+Keeping it running
+==================
 
-Metrics
--------
+---------------
 
-Currently, AALI Flowkit uses structured logging for observability rather than exposing HTTP metrics endpoints. Function execution metrics can be gathered from the app logs.
+**Is it running?**
+   Check if Flowkit responds to requests
 
-Logging
--------
+**Are workflows succeeding?**
+   Look for errors in logs
 
-The Flowkit uses structured JSON logging:
+**Is it fast enough?**
+   Monitor response times
 
-.. code-block:: json
-
-   {
-     "level": "info",
-     "timestamp": "2024-01-15T10:30:00Z",
-     "message": "Function execution completed",
-     "function_name": "process_data",
-     "execution_id": "exec123",
-     "duration_ms": 500,
-     "status": "success"
-   }
-
-Log levels
-----------
-
-- ``DEBUG``: Detailed debugging information
-- ``INFO``: General operational messages
-- ``WARN``: Warning conditions
-- ``ERROR``: Error conditions
-
-configuration
+Where to look
 -------------
 
-Configure logging via environment variables:
+Flowkit writes logs that show:
 
-.. code-block:: bash
+- When it starts and stops
+- What it's doing
+- Any problems that occur
 
-   export LOG_LEVEL=info
-   export LOG_FORMAT=json
-   export LOG_OUTPUT=stdout
+Signs of trouble
+----------------
 
-Health monitoring
------------------
+Watch for:
 
-AALI Flowkit runs as a gRPC service and does not expose HTTP health check endpoints. Monitor service health by:
+- Repeated errors
+- Slow responses
+- Connection failures
+- Unusual patterns
 
-- Checking if the gRPC server is accepting connections on the configured port
-- Monitoring the service logs for startup and error messages
-- Using gRPC health check probes if needed (requires implementation)
+Simple monitoring approach
+--------------------------
 
-Alerting
---------
+1. **Check logs daily** when starting out
+2. **Set up alerts** for critical errors
+3. **Review weekly** for patterns
+4. **Adjust as needed**
 
-Set up alerts for:
+Getting help
+------------
 
-- High error rates (>5% for 5 minutes)
-- Long execution times (>30 seconds)
-- High memory usage (>80%)
-- Function execution failures
+If you see issues:
 
-Dashboard
----------
+1. Check the logs for error messages
+2. Verify external services are running
+3. Ensure configuration is correct
+4. Contact support with details
 
-For observability dashboards, consider monitoring:
+Best practices
+--------------
 
-- gRPC request rates and response times
-- Application log error rates
-- System resource usage (CPU, memory)
-- Function execution patterns from log analysis
-- Connection counts to backend services (LLM, databases)
+- Keep logs for troubleshooting
+- Monitor trends, not just errors
+- Plan for log storage
+- Review regularly
+
+For detailed technical information, see the :doc:`../api_reference/index`.

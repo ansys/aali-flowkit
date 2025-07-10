@@ -1,74 +1,68 @@
 .. _agent_integration:
 
-Agent integration
+Agent Integration
 =================
 
-How the AALI agent communicates with Flowkit over gRPC and how to configure the integration.
+Flowkit provides gRPC functions for AI agent integration.
 
-.. grid:: 1
-   :gutter: 2
+Integration Architecture
+------------------------
 
-   .. grid-item-card:: Communication Overview
-      :class-card: sd-shadow-sm sd-rounded-md
-      :text-align: left
+AI agents connect to Flowkit through:
 
-      The AALI agent connects to Flowkit via gRPC to execute workflow steps. For each step, the agent can invoke one or more registered functions.
+1. **gRPC Client** - Standard gRPC client implementation
+2. **Function Discovery** - ListFunctions call to enumerate capabilities
+3. **Function Execution** - RunFunction calls with typed parameters
+4. **Error Handling** - Standard gRPC status codes
 
-      **Call sequence:**
+Function Discovery
+------------------
 
-      1. agent selects a function to invoke
-      2. Sends a gRPC request with input arguments
-      3. Flowkit executes the function and returns a response
-      4. agent processes the result and continues the workflow
+Agents can dynamically discover available functions:
 
-      Both synchronous and streaming (multi-response) functions are supported.
+.. code-block:: protobuf
 
-   .. grid-item-card:: Available Methods
-      :class-card: sd-shadow-sm sd-rounded-md
-      :text-align: left
+   rpc ListFunctions(ListFunctionsRequest) returns (ListFunctionsResponse)
 
-      All available methods are defined in `pkg/externalfunctions/externalfunctions.go`.
+Response includes function definitions with:
 
-      The gRPC service interface is defined in the shared proto files:
+- Function name and description
+- Input parameter types and constraints
+- Output parameter types
+- Function category
 
-      .. code-block:: text
+Function Execution
+------------------
 
-         service ExternalFunctionService {
-             rpc CallFunction (FunctionCallRequest) returns (FunctionCallResponse);
-         }
+Agents execute functions through:
 
-   .. grid-item-card:: Agent configuration
-      :class-card: sd-shadow-sm sd-rounded-md
-      :text-align: left
+.. code-block:: protobuf
 
-      To connect the agent to a running Flowkit instance, set the Flowkit gRPC endpoint in the agent's configuration.
+   rpc RunFunction(FunctionInputs) returns (FunctionOutputs)
 
-      Example config (YAML):
+Parameters include:
 
-      .. code-block:: yaml
+- Function name (string)
+- Typed input parameters
+- Authentication metadata
 
-         flowkit:
-           address: "localhost:50051"
+Authentication
+--------------
 
-      Or set the environment variable:
+API key authentication via gRPC metadata:
 
-      .. code-block:: bash
+.. code-block:: text
 
-         export FLOWKIT_GRPC_ADDR=localhost:50051
+   x-api-key: <api-key-value>
 
-   .. grid-item-card:: Direct gRPC Access
-      :class-card: sd-shadow-sm sd-rounded-md
-      :text-align: left
+Error Codes
+-----------
 
-      Any client can interact with Flowkit using its gRPC API (not just the agent):
+Standard gRPC status codes:
 
-      * Use `grpcurl`, custom scripts, or test clients for debugging and development
-      * Example (list available services):
+- ``UNAUTHENTICATED`` - Missing or invalid API key
+- ``NOT_FOUND`` - Function not found
+- ``INVALID_ARGUMENT`` - Invalid input parameters
+- ``INTERNAL`` - Function execution error
 
-        .. code-block:: bash
-
-           grpcurl -plaintext localhost:50051 list
-
-      For troubleshooting connection errors, check that:
-      * The server is running and reachable on the configured port
-      * The proto file matches the running Flowkit server version
+Next: :doc:`../advanced/index`

@@ -3,8 +3,6 @@
 Getting started
 ===============
 
-Build and run the Flowkit gRPC server.
-
 .. grid:: 1 2 3 3
    :gutter: 2
    :class-container: sd-mb-3

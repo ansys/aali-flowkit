@@ -1,25 +1,22 @@
 .. _quickstart:
 
-Quickstart
-==========
-
+Quick Start
+===========
 
 .. code-block:: bash
 
+   # Quick build and run
    git clone https://github.com/ansys/aali-flowkit.git
    cd aali-flowkit
    go build -o flowkit
    ./flowkit
 
-Expected output::
+The server starts on port **50051**.
 
-   Starting Flowkit gRPC server on :50051
-   Server ready to accept connections
+Test the connection
+-------------------
 
-Test connection
----------------
-
-Install grpcurl to test the server:
+Install **grpcurl** to interact with Flowkit:
 
 .. code-block:: bash
 
@@ -31,21 +28,17 @@ List available services:
 
    grpcurl -plaintext localhost:50051 list
 
-Expected output::
+You should see:
+
+.. code-block:: text
 
    aaliflowkitgrpc.ExternalFunctions
    grpc.reflection.v1alpha.ServerReflection
 
-Call a function
----------------
+Your first function call
+------------------------
 
-List all functions:
-
-.. code-block:: bash
-
-   grpcurl -plaintext localhost:50051 aaliflowkitgrpc.ExternalFunctions/ListFunctions
-
-Call the UUID generator:
+Generate a UUID using a built-in function:
 
 .. code-block:: bash
 
@@ -57,11 +50,18 @@ Response:
 .. code-block:: json
 
    {
-     "outputs": ["f47ac10b-58cc-4372-a567-0e02b2c3d479"],
-     "status": "success"
+     "outputs": [{
+       "name": "uuid",
+       "value": "\"f47ac10b-58cc-4372-a567-0e02b2c3d479\""
+     }]
    }
 
-Next steps
-----------
+What's happening?
+-----------------
 
-See the :doc:`../user_guide/index` for function registration and usage.
+1. **Flowkit** exposes Go functions through gRPC
+2. **AI workflows** can call these functions remotely
+3. **Functions** process data and return results
+4. **No Go knowledge needed** to use the functions
+
+Next: :doc:`configuration`

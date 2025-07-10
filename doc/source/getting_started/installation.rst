@@ -3,32 +3,44 @@
 Installation
 ============
 
-* Go 1.24 or later
-* Git
+Build and run the Flowkit gRPC server.
 
-Build from source
------------------
+Requirements
+------------
+
+- **Go 1.24.2** or later
+- **Git** for cloning the repository
+
+Install from source
+-------------------
+
+Clone and build the server:
 
 .. code-block:: bash
 
+   # Clone the repository
    git clone https://github.com/ansys/aali-flowkit.git
    cd aali-flowkit
+
+   # Download dependencies
    go mod tidy
+
+   # Build the executable
    go build -o flowkit main.go
 
-Docker
-------
+Start the service
+-----------------
 
-.. code-block:: bash
-
-   docker build -t aali-flowkit .
-   docker run -p 50051:50051 aali-flowkit
-
-Run
----
+Run the server:
 
 .. code-block:: bash
 
    ./flowkit
 
-The server listens on port 50051 by default. See :doc:`configuration` for setup options.
+Output:
+
+.. code-block:: text
+
+   Aali FlowKit started successfully; gRPC server listening on address '0.0.0.0:50051'...
+
+Next: :doc:`quickstart`

@@ -171,7 +171,7 @@ func HybridQuery(collectionName string, maxRetrievalCount int, outputFields []st
 			panic(errMessage)
 		}
 		// Get sparse vector
-		sparseVectorInterface, ok := response.LexicalWeights.([]interface{})
+		sparseVectorInterface, ok := response.LexicalWeights.(map[string]interface{})
 		if !ok {
 			errMessage := "error converting lexical weights to interface array"
 			logging.Log.Error(&logging.ContextMap{}, errMessage)
@@ -194,8 +194,6 @@ func HybridQuery(collectionName string, maxRetrievalCount int, outputFields []st
 		}
 	}
 
-	logging.Log.Infof(&logging.ContextMap{}, "Received embeddings response. %v %v %v", len(embedding32), len(sparseVector), len(indexVector))
-
 	if len(embedding32) == 0 {
 		logging.Log.Error(&logging.ContextMap{}, "No embeddings received from LLM handler")
 		panic("No embeddings received from LLM handler")
@@ -211,6 +209,10 @@ func HybridQuery(collectionName string, maxRetrievalCount int, outputFields []st
 		panic("No index vector received from LLM handler")
 	}
 
+	logging.Log.Infof(&logging.ContextMap{}, "Received embedding vector: %s", embedding32)
+	logging.Log.Infof(&logging.ContextMap{}, "Received sparse vector: %s", sparseVector)
+	logging.Log.Infof(&logging.ContextMap{}, "Received index vector: %s", indexVector)
+
 	logCtx := &logging.ContextMap{}
 	client, err := qdrant_utils.QdrantClient()
 	if err != nil {
@@ -222,18 +224,36 @@ func HybridQuery(collectionName string, maxRetrievalCount int, outputFields []st
 	filter := qdrant_utils.DbFiltersAsQdrant(filters)
 	using := "" // or "sparse_vector" based on the query type
 	usingSparse := "sparse_vector"
-	// formula := qdrant.Formula{
-	// 	Expression: &qdrant.SumExpression{
-	// 		Sum: []qdrant.Expression{
-	// 			&qdrant.MultExpression{
-	// 				Mult: []qdrant.Expression{
-	// 					qdrant.NewQueryScore(0, denseWeight),  // Dense vector score
-	// 					qdrant.NewQueryScore(1, sparseWeight), // Sparse vector score
-	// 				},
-	// 			},
-	// 		},
-	// 	},
-	// }
+	logging.Log.Infof(logCtx, "mighty Using collection %s with limit %d", collectionName, limit)
+	expression := qdrant.NewExpressionSum(&qdrant.SumExpression{
+		Sum: []*qdrant.Expression{
+			// qdrant.NewExpressionVariable("$score"),
+			// MultExpression: 0.5 * (tag match h1,h2...)
+			qdrant.NewExpressionMult(&qdrant.MultExpression{
+				Mult: []*qdrant.Expression{
+					qdrant.NewExpressionVariable("$score[0]"),  // dense score
+					qdrant.NewExpressionConstant(float32(0.9)), // weight
+				},
+			}),
+
+			// Another MultExpression: 0.25 * (tag match p,li)
+			qdrant.NewExpressionMult(&qdrant.MultExpression{
+				Mult: []*qdrant.Expression{
+					qdrant.NewExpressionVariable("$score[1]"),   // sparse score
+					qdrant.NewExpressionConstant(float32(0.12)), // weight
+				},
+			}),
+		},
+	})
+
+	// FormulaQuery(
+	//         formula=SumExpression(
+	//             sum=[
+	//                 MultExpression(mult=["$score[0]", dense_weight]),
+	//                 MultExpression(mult=["$score[1]", sparse_weight]),
+	//             ]
+	//         )
+	// 	)
 	query := qdrant.QueryPoints{
 		CollectionName: collectionName,
 		Prefetch: []*qdrant.PrefetchQuery{
@@ -250,20 +270,13 @@ func HybridQuery(collectionName string, maxRetrievalCount int, outputFields []st
 				Filter: filter,                                           // Or: &qdrant.Filter{}
 			},
 		},
-		Limit:       &limit,
-		Filter:      filter,
 		WithVectors: qdrant.NewWithVectorsEnable(false),
 		WithPayload: qdrant.NewWithPayloadInclude(outputFields...),
-		// Query: qdrant.NewQueryFormula(
-		// 	&formula,
-		// ),
-		// FormulaQuery(
-		//         formula=SumExpression(
-		//             sum=[
-		//                 MultExpression(mult=["$score[0]", dense_weight]),
-		//                 MultExpression(mult=["$score[1]", sparse_weight]),
-		//             ]
-		//         )
+		Query: qdrant.NewQueryFormula(
+			&qdrant.Formula{
+				Expression: expression,
+			},
+		),
 	}
 	scoredPoints, err := client.Query(context.TODO(), &query)
 	if err != nil {
@@ -281,5 +294,6 @@ func HybridQuery(collectionName string, maxRetrievalCount int, outputFields []st
 		}
 		databaseResponse[i] = dbResponse
 	}
+	logging.Log.Infof(logCtx, "Converted %s points to aali type", databaseResponse)
 	return databaseResponse
 }

@@ -2077,25 +2077,28 @@ func convertToFloat32Slice(interfaceSlice []interface{}) ([]float32, error) {
 //
 // Returns:
 //   - float32Slice: the float32 slice.
+//   - uint32Slice: the int32 slice
 //   - error: an error if any.
-func convertToSparseVector(interfaceSlice []interface{}) ([]float32, []uint32, error) {
+func convertToSparseVector(sparseVector map[string]interface{}) ([]float32, []uint32, error) {
 	var indices []uint32
 	var values []float32
-	for _, value := range interfaceSlice {
-		// Type assertion to float32
-		f, ok := value.(float32)
-		if !ok {
-			// Type assertion failed, return an error
-			return nil, nil, fmt.Errorf("value %v is not of type float64", f)
+	for k, v := range sparseVector {
+		u64, err := strconv.ParseUint(k, 10, 32)
+		if err != nil {
+			errMessage := "error converting string to int"
+			logging.Log.Error(&logging.ContextMap{}, errMessage)
+			panic(errMessage)
 		}
-		i, ok := value.(uint32)
-		if !ok {
-			// Type assertion failed, return an error
-			return nil, nil, fmt.Errorf("value %v is not of type uint", i)
-		}
-		values = append(values, f)
 
-		indices = append(indices, i)
+		f, ok := v.(float64)
+		if !ok {
+			errMessage := "error converting interface to float"
+			logging.Log.Error(&logging.ContextMap{}, errMessage)
+			panic(errMessage)
+		}
+
+		values = append(values, float32(f))
+		indices = append(indices, uint32(u64))
 	}
 	return values, indices, nil
 }

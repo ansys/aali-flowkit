@@ -853,6 +853,82 @@ func PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiTokenOut
 	return responseAsStr, totalTokenCount
 }
 
+// PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOutputTokenOutput performs a general request to LLM with a specific model
+// and model options, and returns the token count using OpenAI token count model. Does not stream the response.
+//
+// Tags:
+//   - @displayName: General LLM Request (Specific Models, Model Options, No Stream, OpenAI Input & Output Token Output)
+//
+// Parameters:
+//   - input: the user input
+//   - history: the conversation history
+//   - systemPrompt: the system prompt
+//   - modelIds: the model IDs of the AI models to use
+//   - modelOptions: the model options
+//   - tokenCountModelName: the model name to use for token count
+//
+// Returns:
+//   - message: the response message
+//   - inputTokenCount: the input token count
+//   - outputTokenCount: the output token count
+func PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOutputTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, modelOptions sharedtypes.ModelOptions, tokenCountModelName string) (message string, inputTokenCount int, outputTokenCount int) {
+	// get the LLM handler endpoint
+	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
+
+	// Set up WebSocket connection with LLM and send chat request
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, &modelOptions, nil)
+	defer close(responseChannel)
+
+	// else Process all responses
+	var responseAsStr string
+	for response := range responseChannel {
+		// Check if the response is an error
+		if response.Type == "error" {
+			panic(response.Error)
+		}
+
+		// Accumulate the responses
+		responseAsStr += *(response.ChatData)
+
+		// If we are at the last message, break the loop
+		if *(response.IsLast) {
+			break
+		}
+	}
+
+	// get input token count
+	var err error
+	inputTokenCount, err = openAiTokenCount(tokenCountModelName, input+systemPrompt)
+	if err != nil {
+		errorMessage := fmt.Sprintf("Error getting input token count: %v", err)
+		logging.Log.Errorf(&logging.ContextMap{}, "%v", errorMessage)
+		panic(errorMessage)
+	}
+	for _, message := range history {
+		historyTokenCount, err := openAiTokenCount(tokenCountModelName, message.Content)
+		if err != nil {
+			errorMessage := fmt.Sprintf("Error getting history token count: %v", err)
+			logging.Log.Errorf(&logging.ContextMap{}, "%v", errorMessage)
+			panic(errorMessage)
+		}
+		inputTokenCount += historyTokenCount
+	}
+
+	// get the output token count
+	outputTokenCount, err = openAiTokenCount(tokenCountModelName, responseAsStr)
+	if err != nil {
+		errorMessage := fmt.Sprintf("Error getting output token count: %v", err)
+		logging.Log.Errorf(&logging.ContextMap{}, "%v", errorMessage)
+		panic(errorMessage)
+	}
+
+	// log token count
+	logging.Log.Debugf(&logging.ContextMap{}, "Input token count: %d; Output token count: %d", inputTokenCount, outputTokenCount)
+
+	// Return the response
+	return responseAsStr, inputTokenCount, outputTokenCount
+}
+
 // PerformCodeLLMRequest performs a code generation request to LLM
 //
 // Tags:

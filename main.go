@@ -42,6 +42,9 @@ var qdrantFile string
 //go:embed pkg/externalfunctions/generic.go
 var genericFile string
 
+//go:embed pkg/externalfunctions/cast.go
+var castFile string
+
 //go:embed pkg/externalfunctions/knowledgedb.go
 var knowledgeDBFile string
 
@@ -93,6 +96,7 @@ func main() {
 	files := map[string]string{
 		"data_extraction":  dataExtractionFile,
 		"generic":          genericFile,
+		"cast":             castFile,
 		"knowledge_db":     knowledgeDBFile,
 		"llm_handler":      llmHandlerFile,
 		"ansys_gpt":        ansysGPTFile,

@@ -3,8 +3,6 @@
 Keeping it running
 ==================
 
----------------
-
 **Is it running?**
    Check if Flowkit responds to requests
 

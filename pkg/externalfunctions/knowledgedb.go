@@ -202,9 +202,6 @@ func GeneralGraphDbQuery(query string) []map[string]any {
 	if err != nil {
 		logPanic(nil, "error executing cypher query: %q", err)
 	}
-
-	logging.Log.Infof(&logging.ContextMap{}, "Got %d records from graphdb query", len(res))
-	logging.Log.Infof(&logging.ContextMap{}, "Query: %s", res)
 	return res
 }
 

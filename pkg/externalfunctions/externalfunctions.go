@@ -172,4 +172,6 @@ var ExternalFunctionsMap = map[string]interface{}{
 
 	// ace
 	"ConvertJsonToCustomize": ConvertJsonToCustomize,
+	"StringReplaceWithArray": StringReplaceWithArray,
+	"HybridQuery":            HybridQuery,
 }

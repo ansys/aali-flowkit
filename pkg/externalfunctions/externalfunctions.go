@@ -170,6 +170,8 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"LogRequestFailed":                 LogRequestFailed,
 	"LogRequestFailedDebugWithMessage": LogRequestFailedDebugWithMessage,
 	"PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput": PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput,
+	"AddAvailableAttributesToSystemPrompt": AddAvailableAttributesToSystemPrompt,
+	"ExtractDesignRequirementsAndSearchCriteria": ExtractDesignRequirementsAndSearchCriteria,
 
 	// rhsc
 	"SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,

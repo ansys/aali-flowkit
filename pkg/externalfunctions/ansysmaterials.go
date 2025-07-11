@@ -306,6 +306,7 @@ func getTokenCount(modelName, text string) int {
 	return count
 }
 
+
 func ExtractJson(text string) (json string) {
 	re := regexp.MustCompile("{[\\s\\S]*}")
 	matches := re.FindStringSubmatch(text)
@@ -361,4 +362,67 @@ func LogRequestFailed() {
 func LogRequestFailedDebugWithMessage(msg1, msg2 string) {
 	logging.Log.Debugf(&logging.ContextMap{}, "Request failed:%s %s", msg1, msg2)
 	return
+}
+
+// ExtractDesignRequirementsAndSearchCriteria parses the user input JSON and returns the design requirements string
+// and the list of available search criteria GUIDs.
+//
+// Parameters:
+//   - userInput: the user input JSON string
+//
+// Returns:
+//   - designRequirements: the extracted design requirements string
+//   - availableSearchCriteria: the extracted list of attribute GUIDs
+func ExtractDesignRequirementsAndSearchCriteria(userInput string) (designRequirements string, availableSearchCriteria []string) {
+    logging.Log.Debugf(&logging.ContextMap{}, "EXTRACTING DESIGN REQUIREMENTS AND SEARCH CRITERIA FROM USER INPUT: %s", userInput)
+	type promptInput struct {
+        UserDesignRequirements      string   `json:"userDesignRequirements"`
+        AvailableSearchCriteria []string `json:"availableSearchCriteria"`
+    }
+
+    var input promptInput
+    if err := json.Unmarshal([]byte(userInput), &input); err != nil {
+        panic("failed to parse user input: " + err.Error())
+    }
+
+	logging.Log.Debugf(&logging.ContextMap{}, "EXTRACTED DESIGN REQUIREMENTS: %s", input.UserDesignRequirements)
+	logging.Log.Debugf(&logging.ContextMap{}, "EXTRACTED AVAILABLE SEARCH CRITERIA`: %v", input.AvailableSearchCriteria)
+    return input.UserDesignRequirements, input.AvailableSearchCriteria
+}
+
+// AddAvailableAttributesToSystemPrompt adds available attributes to the system prompt template.
+//
+// Parameters:
+//   - userDesignRequirements: design requirements provided by the user
+//   - availableSearchCriteria: the list of available search criteria (GUIDs)
+//   - availableAttributes: the list of all available attributes
+//   - systemPromptTemplate: the prompt template string to modify
+//
+// Returns:
+//   - string: the full system prompt to send to the LLM, including available attributes
+func AddAvailableAttributesToSystemPrompt(userDesignRequirements string, systemPromptTemplate string, allAvailableAttributes []sharedtypes.MaterialAttribute, availableSearchCriteria []string) string {
+    // 1) Filter allAvailableAttributes using availableSearchCriteria (GUIDs)
+    guidSet := make(map[string]struct{}, len(availableSearchCriteria))
+    for _, guid := range availableSearchCriteria {
+        guidSet[guid] = struct{}{}
+    }
+    var filteredAttributes []sharedtypes.MaterialAttribute
+    for _, attr := range allAvailableAttributes {
+        if _, ok := guidSet[attr.Guid]; ok {
+            filteredAttributes = append(filteredAttributes, attr)
+        }
+    }
+
+    // 2) Convert filtered attributes to serialized JSON
+    attributesJson, err := json.MarshalIndent(filteredAttributes, "", "  ")
+    if err != nil {
+        panic("failed to serialize available attributes: " + err.Error())
+    }
+
+    // 3) Replace ***ATTRIBUTES*** with this serialized attributes JSON
+    var fullSystemPrompt = strings.Replace(systemPromptTemplate, "***ATTRIBUTES***", string(attributesJson), 1)
+
+	logging.Log.Debugf(&logging.ContextMap{}, "Full system prompt with attributes: %s", fullSystemPrompt)
+
+	return fullSystemPrompt
 }

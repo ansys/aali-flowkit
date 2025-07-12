@@ -180,7 +180,12 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,
 
 	// ace
-	"ConvertJsonToCustomize": ConvertJsonToCustomize,
-	"StringReplaceWithArray": StringReplaceWithArray,
-	"HybridQuery":            HybridQuery,
+	"ConvertJSONToCustomize":             ConvertJSONToCustomize,
+	"StringReplaceWithArray":             StringReplaceWithArray,
+	"SearchExamples":                     SearchExamples,
+	"SearchElements":                     SearchElements,
+	"WhetherOneOfTheMethodsFits":         WhetherOneOfTheMethodsFits,
+	"CheckWhetherPossibleToSelectMethod": CheckWhetherPossibleToSelectMethod,
+	"CheckForUserInformation":            CheckForUserInformation,
+	"GenerateCode":                       GenerateCode,
 }

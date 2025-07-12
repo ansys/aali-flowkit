@@ -380,7 +380,7 @@ func sendEmbeddingsRequestWithSparseDense(data interface{}, llmHandlerEndpoint s
 	go listener(c, responseChannel, false)
 	go writer(c, requestChannelEmbeddings, responseChannel)
 
-	go sendRequestWithSparseDense("embeddings", data, requestChannelEmbeddings, "", "", getSparseEmbeddings, nil, 0, "", responseChannel, modelIds, nil, nil, true, true)
+	go sendRequestWithSparseDense("embeddings", data, requestChannelEmbeddings, "", "", getSparseEmbeddings, nil, 0, "", responseChannel, modelIds, nil, nil, true, false)
 	return responseChannel // Return the response channel
 }
 

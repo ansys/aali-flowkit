@@ -1193,8 +1193,6 @@ func AppendMessageHistory(newMessage string, role AppendMessageHistoryRole, hist
 	// Append the new message to the history
 	history = append(history, newMessageHistory)
 
-	logging.Log.Infof(&logging.ContextMap{}, "Appended new message to history: %s", history)
-
 	return history
 }
 

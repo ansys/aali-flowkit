@@ -362,3 +362,174 @@ func LogRequestFailedDebugWithMessage(msg1, msg2 string) {
 	logging.Log.Debugf(&logging.ContextMap{}, "Request failed:%s %s", msg1, msg2)
 	return
 }
+
+// CheckApiKeyAuthKvDb checks if the provided API key is authenticated against the KVDB.
+//
+// Tags:
+//   - @displayName: Verify API Key
+//
+// Parameters:
+//   - apiKey: The API key to check
+//
+// Returns:
+//   - isAuthenticated: true if the API key is authenticated, false otherwise
+func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string) (isAuthenticated bool) {
+
+	// Check if the API key is empty
+	if apiKey == "" {
+		logging.Log.Warnf(&logging.ContextMap{}, "API key is empty")
+		return false
+	}
+
+	// Check if the API key exists in the KVDB
+	jsonString, exists, err := kvdbGetEntry(kvdbEndpoint, apiKey)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error in getting API key from KVDB: %v", err)
+		panic(err)
+	}
+	if !exists {
+		logging.Log.Warnf(&logging.ContextMap{}, "API key does not exist in KVDB: %s", apiKey)
+		return false
+	}
+
+	// Unmarshal the JSON string into materials customer object
+	var customer materialsCustomerObject
+	err = json.Unmarshal([]byte(jsonString), &customer)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error unmarshalling JSON string: %v", err)
+		panic(err)
+	}
+
+	// Check if customer is denied access
+	if customer.AccessDenied {
+		logging.Log.Warnf(&logging.ContextMap{}, "Access denied for customer: %s", customer.CustomerName)
+		return false
+	}
+
+	return true
+}
+
+// UpdateTotalTokenCountForCustomerKvDb updates the total token count for a customer in the KVDB
+//
+// Tags:
+//   - @displayName: Update Customer Token Count
+//
+// Parameters:
+//   - apiKey: The API key of the customer
+//   - additionalTokenCount: The number of tokens to add to the customer's total token count
+//
+// Returns:
+//   - tokenLimitReached: true if the new total token count exceeds the customer's token limit, false otherwise
+func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, additionalTokenCount int) (tokenLimitReached bool) {
+	// Check if the API key is empty
+	if apiKey == "" {
+		logging.Log.Errorf(&logging.ContextMap{}, "API key is empty")
+		panic("API key is empty")
+	}
+
+	// Get the current token count for the customer
+	jsonString, exists, err := kvdbGetEntry(kvdbEndpoint, apiKey)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error getting customer object: %v", err)
+		panic(err)
+	}
+	if !exists {
+		logging.Log.Errorf(&logging.ContextMap{}, "API key does not exist in KVDB: %s", apiKey)
+		panic("API key does not exist in KVDB")
+	}
+
+	// Unmarshal the JSON string into materials customer object
+	var customer materialsCustomerObject
+	err = json.Unmarshal([]byte(jsonString), &customer)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error unmarshalling JSON string: %v", err)
+		panic(err)
+	}
+
+	// Get new total token count
+	customer.TotalTokenCount = customer.TotalTokenCount + additionalTokenCount
+
+	// create json string from customer object
+	newJsonString, err := json.Marshal(customer)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error marshalling updated customer object: %v", err)
+		panic(err)
+	}
+
+	// Update the KVDB with the new JSON string
+	err = kvdbSetEntry(kvdbEndpoint, apiKey, string(newJsonString))
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error updating customer token count in KVDB: %v", err)
+		panic(err)
+	}
+
+	// Check if the new token count exceeds the limit
+	if customer.TotalTokenCount > customer.TokenLimit {
+		return true
+	}
+
+	return false
+}
+
+// DenyCustomerAccessAndSendWarningKvDb denies access to a customer and sends a warning if not already sent
+//
+// Tags:
+//   - @displayName: Deny Customer Access and Send Warning
+//
+// Parameters:
+//   - apiKey: The API key of the customer
+//
+// Returns:
+//   - customerName: The name of the customer
+//   - sendWarning: true if a warning was sent, false if it was already sent
+func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string) (customerName string, sendWarning bool) {
+	// Check if the API key is empty
+	if apiKey == "" {
+		logging.Log.Errorf(&logging.ContextMap{}, "API key is empty")
+		panic("API key is empty")
+	}
+
+	// Get the current customer object from KVDB
+	jsonString, exists, err := kvdbGetEntry(kvdbEndpoint, apiKey)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error getting customer object: %v", err)
+		panic(err)
+	}
+	if !exists {
+		logging.Log.Errorf(&logging.ContextMap{}, "API key does not exist in KVDB: %s", apiKey)
+		panic("API key does not exist in KVDB")
+	}
+
+	// Unmarshal the JSON string into materials customer object
+	var customer materialsCustomerObject
+	err = json.Unmarshal([]byte(jsonString), &customer)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error unmarshalling JSON string: %v", err)
+		panic(err)
+	}
+
+	// Check if warning has already been sent
+	if !customer.WarningSent {
+		sendWarning = true
+		customer.WarningSent = true
+	}
+
+	// Deny access by setting the accessDenied flag to true
+	customer.AccessDenied = true
+
+	// create json string from customer object
+	newJsonString, err := json.Marshal(customer)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error marshalling updated customer object: %v", err)
+		panic(err)
+	}
+
+	// Update the KVDB with the new JSON string
+	err = kvdbSetEntry(kvdbEndpoint, apiKey, string(newJsonString))
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error updating customer access in KVDB: %v", err)
+		panic(err)
+	}
+
+	return customer.CustomerName, sendWarning
+}

@@ -118,6 +118,13 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 		panic(errorMessage)
 	}
 
+	toolName9, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_19_NAME"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load tool name 9 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
 	collection1Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["COLLECTION_1_NAME"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load collection name 1 from the configuration")
@@ -160,6 +167,13 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 		panic(errorMessage)
 	}
 
+	collection7Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["COLLECTION_7_NAME"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load collection name 7 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
 	collection_name := ""
 	if toolName == toolName5 {
 		collection_name = collection2Name
@@ -175,7 +189,9 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 		toolName == toolName2 ||
 		toolName == toolName3 {
 		collection_name = collection1Name
-	} else {
+	} else if toolName == toolName9 {
+		collection_name = collection7Name
+	}else {
 		errorMessage := fmt.Sprintf("Invalid Tool Name: %q", toolName)
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
@@ -1022,6 +1038,13 @@ func FinalizeResult(actions []map[string]string, toolName string) (result string
 		panic(errorMessage)
 	}
 
+	toolAction19Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_19_NAME"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load action tool 19 name from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
 	// Get tool 2 action message from configuration
 	toolAction1Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_1_SUCCESS_MESSAGE"]
 	if !exists {
@@ -1141,6 +1164,22 @@ func FinalizeResult(actions []map[string]string, toolName string) (result string
 		panic(errorMessage)
 	}
 
+	// Get tool 19 action message from configuration
+	toolAction19Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_19_SUCCESS_MESSAGE"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load tool 19 action message from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	// Get tool 19 no action message from configuration
+	toolAction19NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_19_NO_ACTION_MESSAGE"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load tool 19 no action message from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
 	if toolName == toolAction1Name {
 		if hasActions {
 			message = toolAction1Message
@@ -1188,6 +1227,12 @@ func FinalizeResult(actions []map[string]string, toolName string) (result string
 			message = toolAction15Message
 		} else {
 			message = toolAction15NoActionMessage
+		}
+	} else if toolName == toolAction19Name {
+		if hasActions {
+			message = toolAction19Message
+		} else {
+			message = toolAction19NoActionMessage
 		}
 	} else {
 		errorMessage := fmt.Sprintf("Invalid toolName %s", toolName)

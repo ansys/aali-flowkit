@@ -41,14 +41,16 @@ type XMLAssembly struct {
 }
 
 type AssemblyMember struct {
-	Name       string                       `xml:"name,attr" json:"name"`
-	Summary    string                       `xml:"summary" json:"summary"`
-	ReturnType string                       `xml:"returnType" json:"return_type"`
-	Returns    string                       `xml:"returns,omitempty" json:"returns"`
-	Params     []sharedtypes.XMLMemberParam `xml:"param" json:"parameters"`          // Handles multiple <param> elements
-	Example    sharedtypes.XMLMemberExample `xml:"example,omitempty" json:"example"` // Optional <example> element
-	Remarks    string                       `xml:"remarks,omitempty" json:"remarks"` // Optional <remarks> element
-	EnumValues string                       `xml:"enumValues,omitempty" json:"enum_values"`
+	Name             string                       `xml:"name,attr" json:"name"`
+	Summary          string                       `xml:"summary" json:"summary"`
+	ReturnType       string                       `xml:"returnType" json:"return_type"`
+	Returns          string                       `xml:"returns,omitempty" json:"returns"`
+	Params           []sharedtypes.XMLMemberParam `xml:"param" json:"parameters"`          // Handles multiple <param> elements
+	Example          sharedtypes.XMLMemberExample `xml:"example,omitempty" json:"example"` // Optional <example> element
+	Remarks          string                       `xml:"remarks,omitempty" json:"remarks"` // Optional <remarks> element
+	EnumValues       string                       `xml:"enumValues,omitempty" json:"enum_values"`
+	VectorDBMetadata map[string]interface{}       `xml:"vectorDBMetadata,omitempty" json:"vector_db_metadata"` // Optional <vectorDBMetadata> element
+	GraphDBMetadata  map[string]interface{}       `xml:"graphDBMetadata,omitempty" json:"graph_db_metadata"`   // Optional <graphDBMetadata> element
 }
 
 type CodeGenerationPseudocodeResponse struct {

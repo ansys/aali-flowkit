@@ -139,6 +139,7 @@ func (graphdb_context *graphDbContext) CreateSchema() error {
 			enum_values STRING[],
 			parameters STRING[],
 			example STRING,
+			metadata JSON,
 
 			PRIMARY KEY (name)
 		)`,
@@ -242,11 +243,12 @@ func (graphdb_context *graphDbContext) AddCodeGenerationElementNodes(nodes []sha
 			"enum_values":         graphdbStringList(node.EnumValues),
 			"parameters":          graphdbStringList(parameters),
 			"example":             aali_graphdb.StringValue("Description: " + node.Example.Description + "\nCode: " + node.Example.Code.Text),
+			"metadata":            aali_graphdb.JSONValue(node.GraphDBMetadata),
 		}
 
 		// build up the query
 		query := `
-			MERGE (n:Element {type: $type, name: $name})
+			MERGE (n:Element {type: $type, name: $name, metadata: to_json($metadata)})
 			SET
 				n.guid = $guid,
 				n.name_pseudocode = $name_pseudocode,

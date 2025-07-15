@@ -2768,3 +2768,117 @@ func sendMCPRequest(ctx context.Context, conn *websocket.Conn, request interface
 
 	return response, nil
 }
+
+// kvdbGetEntry retrieves the value from a specific key from the KVDB
+//
+// Parameters:
+//   - key: The key to retrive the value for.
+//
+// Returns:
+//   - value: The value for the given key.
+//   - exists: A boolean indicating if the given key exists in the KVDB.
+//   - err: An error if marshaling, sending, or receiving fails.
+func kvdbGetEntry(kvdbEndpoint string, key string) (value string, exists bool, err error) {
+	// make GET request to the kvdb
+	url := kvdbEndpoint + "/entries/" + key
+
+	// Create the HTTP request
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", false, fmt.Errorf("error creating request: %v", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+
+	// Create a client and send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", false, fmt.Errorf("error sending request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// check for successful response
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		var errorResp kvdbErrorResponse
+		// Unmarshal the response body into errorResp
+		err = json.Unmarshal(body, &errorResp)
+		if err != nil {
+			return "", false, fmt.Errorf("error decoding error response: %v, Status Code: %d", err, resp.StatusCode)
+		}
+		if errorResp.Error == "Key not found" {
+			// api key not found in kvdb, client is not authenticated
+			return "", false, nil
+		} else {
+			return "", false, fmt.Errorf("error response from KVDB: %s, Status Code: %d", body, resp.StatusCode)
+		}
+	}
+
+	// Unmarshal the response body into a valueResponse struct
+	var valueResp kvdbSingleResponse
+	err = json.NewDecoder(resp.Body).Decode(&valueResp)
+	if err != nil {
+		return "", true, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return valueResp.Value, true, nil
+}
+
+// kvdbSetEntry sets the value for a given key in the KVDB
+//
+// Parameters:
+//   - key: The key to retrive the value for.
+//   - value: The value for the given key.
+//
+// Returns:
+//   - err: An error if marshaling, sending, or receiving fails.
+func kvdbSetEntry(kvdbEndpoint string, key string, value string) (err error) {
+
+	// make PUT request to the kvdb
+	url := kvdbEndpoint + "/entries/" + key
+
+	// Request payload
+	payload := kvdbSingleResponse{
+		Value: value,
+	}
+
+	// Marshal the request payload to JSON
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request payload: %w", err)
+	}
+
+	// Create the HTTP request
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("accept", "*/*")
+
+	// Create a client and send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error sending request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read and print the response
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response: %w", err)
+	}
+
+	// check for successful response status code 200 or 204
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("failed to save snapshot list, status code: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}

@@ -746,10 +746,6 @@ func LoadCodeGenerationElements(content []byte, elementsFilePath string) (elemen
 	}
 
 	logging.Log.Debugf(&logging.ContextMap{}, "Loaded %v code generation elements from file: %s", len(elements), elementsFilePath)
-	for _, element := range elements {
-		fmt.Println("Element Name:", element.Name)
-		fmt.Println("Element Type:", element.VectorDBMetadata)
-	}
 	return elements
 }
 
@@ -776,10 +772,6 @@ func mapToSparseVec(m map[uint]float32) *qdrant.Vector {
 //   - batchSize: batch size for embeddings.
 //   - vectorDistance: the distance metric to use for the vector index (cosine, dot, euclid, manhattan)
 func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement, elementsCollectionName string, batchSize int, vectorDistance string) {
-	for _, element := range elements {
-		fmt.Println("Element VName:", element.Name)
-		fmt.Println("Element VType:", element.VectorDBMetadata)
-	}
 	// Set default batch size if not provided.
 	if batchSize <= 0 {
 		batchSize = 2
@@ -806,8 +798,6 @@ func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement,
 	// vectorElements := []codegeneration.VectorDatabaseElement{}
 	points := make([]*qdrant.PointStruct, len(elements))
 	for i, element := range elements {
-		fmt.Println("Processing object definition:", element.Name)
-		fmt.Println("Object metadata:", element.VectorDBMetadata)
 		points[i] = &qdrant.PointStruct{
 			Id: qdrant.NewIDUUID(element.Guid.String()),
 			Vectors: qdrant.NewVectorsMap(map[string]*qdrant.Vector{
@@ -823,7 +813,6 @@ func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement,
 				"metadata":        element.VectorDBMetadata,
 			}),
 		}
-		fmt.Println("Metadata: ", element.VectorDBMetadata)
 	}
 
 	client, err := qdrant.NewClient(&qdrant.Config{

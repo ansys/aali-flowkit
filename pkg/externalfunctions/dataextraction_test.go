@@ -179,7 +179,7 @@ func setupFlowkitTestContainers(t *testing.T, ctx context.Context, testContainer
 	if testContainerConfig.qdrant {
 		// setup qdrant container
 		qdrantReq := testcontainers.ContainerRequest{
-			Image:        "qdrant/qdrant:latest",
+			Image:        "qdrant/qdrant:v1.13.6",
 			ExposedPorts: []string{"6334/tcp"},
 			WaitingFor: wait.ForAll(
 				wait.ForLog("Qdrant gRPC listening on 6334"),
@@ -308,7 +308,7 @@ func setupFlowkitTestContainers(t *testing.T, ctx context.Context, testContainer
 	if testContainerConfig.aaliGraphDb {
 		// setup aali-graphdb
 		aaliGraphDbReq := testcontainers.ContainerRequest{
-			Image:        "ghcr.io/ansys/aali-graphdb:latest",
+			Image:        "ghcr.io/ansys/aali-graphdb:v1.0.15",
 			ExposedPorts: []string{"8080/tcp"},
 			WaitingFor: wait.ForAll(
 				wait.ForLog("listening on 0.0.0.0:8080"),

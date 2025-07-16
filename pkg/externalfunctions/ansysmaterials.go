@@ -23,15 +23,19 @@
 package externalfunctions
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/ansys/aali-sharedtypes/pkg/config"
 	"github.com/ansys/aali-sharedtypes/pkg/logging"
 	"github.com/ansys/aali-sharedtypes/pkg/sharedtypes"
+	"github.com/google/uuid"
 )
 
 type Response struct {
@@ -41,6 +45,29 @@ type Response struct {
 
 type LlmCriteria struct {
 	Criteria []sharedtypes.MaterialLlmCriterion
+}
+
+func StartTrace() (string, string) {
+	traceID := generateTraceID()
+	spanID := generateSpanID()
+
+	return traceID, spanID
+}
+
+// generateTraceID generates a 128-bit trace ID in decimal format
+func generateTraceID() string {
+	id := uuid.New()
+	traceID := new(big.Int).SetBytes(id[:])
+	return traceID.String()
+}
+
+// generateSpanID generates a 64-bit span ID in decimal format
+func generateSpanID() string {
+	id := uuid.New()
+
+	// Take first 64 bits
+	spanID := binary.BigEndian.Uint64(id[:8])
+	return strconv.FormatUint(spanID, 10)
 }
 
 // SerializeResponse formats the criteria to a response suitable for the UI clients in string format

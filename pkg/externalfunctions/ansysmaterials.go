@@ -47,6 +47,17 @@ type LlmCriteria struct {
 	Criteria []sharedtypes.MaterialLlmCriterion
 }
 
+// StartTrace generates a new trace ID and span ID for tracing
+//
+// Tags:
+//   - @displayName: Start new trace
+//
+// Parameters:
+//   - none
+//
+// Returns:
+//   - traceID: a 128-bit trace ID in decimal format
+//   - spanID: a 64-bit span ID in decimal format
 func StartTrace() (string, string) {
 	traceID := generateTraceID()
 	spanID := generateSpanID()
@@ -68,6 +79,30 @@ func generateSpanID() string {
 	// Take first 64 bits
 	spanID := binary.BigEndian.Uint64(id[:8])
 	return strconv.FormatUint(spanID, 10)
+}
+
+// CreateChildSpan creates a new child span context within an existing trace
+//
+// Tags:
+//   - @displayName: Create child span context
+//
+// Parameters:
+//   - traceID: the parent trace ID in decimal format
+//   - parentSpanID: the parent span ID in decimal format
+//
+// Returns:
+//   - ctx: context with trace and child span information embedded
+func CreateChildSpan(traceID string, parentSpanID string) (ctx *logging.ContextMap) {
+	// Generate a new span ID for the child
+	childSpanID := generateSpanID()
+
+	// Create a new context with trace and span information
+	ctx = &logging.ContextMap{}
+	ctx.Set(logging.TraceIdKey, traceID)
+	ctx.Set(logging.SpanIdKey, childSpanID)
+	ctx.Set(logging.ParentSpanIdKey, parentSpanID)
+
+	return ctx
 }
 
 // SerializeResponse formats the criteria to a response suitable for the UI clients in string format

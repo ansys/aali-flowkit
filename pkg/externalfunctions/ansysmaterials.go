@@ -544,7 +544,7 @@ func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string) (c
 // Returns:
 //   - designRequirements: the extracted design requirements string
 //   - availableSearchCriteria: the extracted list of attribute GUIDs
-func ExtractDesignRequirementsAndSearchCriteria(userInput string) (designRequirements string, availableSearchCriteria []string) {    
+func ExtractDesignRequirementsAndSearchCriteria(userInput string) (designRequirements string, availableSearchCriteria []string) {
 	type promptInput struct {
         UserDesignRequirements      string   `json:"userDesignRequirements"`
         AvailableSearchCriteria []string `json:"availableSearchCriteria"`

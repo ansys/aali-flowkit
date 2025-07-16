@@ -309,3 +309,22 @@ type copilotGenerateOptions struct {
 	MaxIterations    int    `json:"max_iterations"`
 	ForceAzure       bool   `json:"force_azure"`
 }
+
+// kvdbSingleResponse is a struct to hold the response from the KVDB for a single entry.
+type kvdbSingleResponse struct {
+	Value string `json:"value"`
+}
+
+// kvdbErrorResponse is a struct to hold the error response from the KVDB.
+type kvdbErrorResponse struct {
+	Error string `json:"error"`
+}
+
+type materialsCustomerObject struct {
+	ApiKey          string `json:"api_key"`
+	CustomerName    string `json:"customer_name"`
+	AccessDenied    bool   `json:"access_denied"`
+	TotalTokenCount int    `json:"total_token_usage"`
+	TokenLimit      int    `json:"token_limit"`
+	WarningSent     bool   `json:"warning_sent"`
+}

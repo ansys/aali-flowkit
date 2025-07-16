@@ -385,8 +385,8 @@ func ExtractDesignRequirementsAndSearchCriteria(userInput string) (designRequire
         panic("failed to parse user input: " + err.Error())
     }
 
-	logging.Log.Debugf(&logging.ContextMap{}, "EXTRACTED DESIGN REQUIREMENTS: %s", input.UserDesignRequirements)
-	logging.Log.Debugf(&logging.ContextMap{}, "EXTRACTED AVAILABLE SEARCH CRITERIA`: %v", input.AvailableSearchCriteria)
+    logging.Log.Debugf(&logging.ContextMap{}, "EXTRACTED DESIGN REQUIREMENTS: %s", input.UserDesignRequirements)
+    logging.Log.Debugf(&logging.ContextMap{}, "EXTRACTED AVAILABLE SEARCH CRITERIA: %v", input.AvailableSearchCriteria)
     return input.UserDesignRequirements, input.AvailableSearchCriteria
 }
 
@@ -420,7 +420,7 @@ func AddAvailableAttributesToSystemPrompt(userDesignRequirements string, systemP
     }
 
     // 3) Replace ***ATTRIBUTES*** with this serialized attributes JSON
-    var fullSystemPrompt = strings.Replace(systemPromptTemplate, "***ATTRIBUTES***", string(attributesJson), 1)
+    fullSystemPrompt := strings.Replace(systemPromptTemplate, "***ATTRIBUTES***", string(attributesJson), 1)
 
 	logging.Log.Debugf(&logging.ContextMap{}, "Full system prompt with attributes: %s", fullSystemPrompt)
 

@@ -544,8 +544,7 @@ func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string) (c
 // Returns:
 //   - designRequirements: the extracted design requirements string
 //   - availableSearchCriteria: the extracted list of attribute GUIDs
-func ExtractDesignRequirementsAndSearchCriteria(userInput string) (designRequirements string, availableSearchCriteria []string) {
-    logging.Log.Debugf(&logging.ContextMap{}, "EXTRACTING DESIGN REQUIREMENTS AND SEARCH CRITERIA FROM USER INPUT: %s", userInput)
+func ExtractDesignRequirementsAndSearchCriteria(userInput string) (designRequirements string, availableSearchCriteria []string) {    
 	type promptInput struct {
         UserDesignRequirements      string   `json:"userDesignRequirements"`
         AvailableSearchCriteria []string `json:"availableSearchCriteria"`
@@ -556,8 +555,6 @@ func ExtractDesignRequirementsAndSearchCriteria(userInput string) (designRequire
         panic("failed to parse user input: " + err.Error())
     }
 
-    logging.Log.Debugf(&logging.ContextMap{}, "EXTRACTED DESIGN REQUIREMENTS: %s", input.UserDesignRequirements)
-    logging.Log.Debugf(&logging.ContextMap{}, "EXTRACTED AVAILABLE SEARCH CRITERIA: %v", input.AvailableSearchCriteria)
     return input.UserDesignRequirements, input.AvailableSearchCriteria
 }
 

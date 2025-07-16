@@ -83,19 +83,18 @@ func generateSpanID() string {
 	return strconv.FormatUint(spanID, 10)
 }
 
-func CreateChildSpan(traceID string, parentSpanID string) (ctx *logging.ContextMap, childSpanID string) {
+func CreateChildSpan(ctx *logging.ContextMap, traceID string, parentSpanID string) (childSpanID string) {
 	// Generate a new span ID for the child
 	childSpanID = generateSpanID()
 
-	// Create a new context with trace and span information
-	ctx = &logging.ContextMap{}
+	// Update the context with trace and span information
 	ctx.Set(logging.ContextKey("dd.trace_id"), traceID)
 	ctx.Set(logging.ContextKey("dd.span_id"), childSpanID)
 	ctx.Set(logging.ContextKey("dd.parent_id"), parentSpanID)
 
 	logging.Log.Infof(ctx, "Starting child span with trace ID: %s, span ID: %s, and parent span ID: %s", traceID, childSpanID, parentSpanID)
 
-	return ctx, childSpanID
+	return childSpanID
 }
 
 // SerializeResponse formats the criteria to a response suitable for the UI clients in string format
@@ -112,7 +111,8 @@ func CreateChildSpan(traceID string, parentSpanID string) (ctx *logging.ContextM
 //   - result: string representation of the response in JSON format
 //   - childSpanID: the child span ID created for this operation
 func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, tokens int, traceID string, spanID string) (result string, childSpanID string) {
-	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	response := Response{Criteria: criteriaSuggestions, Tokens: tokens}
 
@@ -140,7 +140,8 @@ func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGu
 //   - criteriaWithGuids: the list of criteria with their identities
 //   - childSpanID: the child span ID created for this operation
 func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute, traceID string, spanID string) (criteriaWithGuids []sharedtypes.MaterialCriterionWithGuid, childSpanID string) {
-	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	attributeMap := make(map[string]string)
 	for _, attr := range availableAttributes {
@@ -182,7 +183,8 @@ func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion
 //   - filtered: the list of criteria suggestions excluding those that do not match any of the available attributes
 //   - childSpanID: the child span ID created for this operation
 func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute, traceID string, spanID string) (filtered []sharedtypes.MaterialLlmCriterion, childSpanID string) {
-	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	attributeMap := make(map[string]bool)
 	for _, attr := range availableAttributes {
@@ -215,9 +217,8 @@ func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialLl
 //   - filtered: the list of criteria suggestions excluding duplicates based on attribute names
 //   - childSpanID: the child span ID created for this operation
 func FilterOutDuplicateAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, traceID string, spanID string) (filtered []sharedtypes.MaterialLlmCriterion, childSpanID string) {
-	var ctx *logging.ContextMap
-	ctx, childSpanID = CreateChildSpan(traceID, spanID)
-	_ = ctx
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	seen := make(map[string]bool)
 
@@ -246,7 +247,8 @@ func FilterOutDuplicateAttributes(criteriaSuggestions []sharedtypes.MaterialLlmC
 //   - criteriaSuggestions: the list of criteria suggestions extracted from the LLM response
 //   - childSpanID: the child span ID created for this operation
 func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID string) (criteriaSuggestions []sharedtypes.MaterialLlmCriterion, childSpanID string) {
-	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	criteriaText, _ := ExtractJson(llmResponse, traceID, spanID)
 	if criteriaText == "" {
@@ -293,7 +295,8 @@ func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID strin
 //   - tokenCount: the total token count (input tokens × n + combined output tokens)
 //   - childSpanID: the child span ID created for this operation
 func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string, n int, traceID string, spanID string) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int, childSpanID string) {
-	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
@@ -354,7 +357,8 @@ func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(inp
 }
 
 func runRequestsInParallel(n int, sendRequest func() string, traceID string, spanID string) []string {
-	ctx, _ := CreateChildSpan(traceID, spanID)
+	ctx := &logging.ContextMap{}
+	_ = CreateChildSpan(ctx, traceID, spanID)
 	responseChan := make(chan string, n)
 	var wg sync.WaitGroup
 
@@ -397,7 +401,8 @@ func runRequestsInParallel(n int, sendRequest func() string, traceID string, spa
 //   - count: the token count
 //   - childSpanID: the child span ID created for this operation
 func getTokenCount(modelName, text string, traceID string, spanID string) (count int, childSpanID string) {
-	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	logging.Log.Debugf(ctx, "Getting token count for model: %s", modelName)
 
@@ -413,7 +418,8 @@ func getTokenCount(modelName, text string, traceID string, spanID string) (count
 }
 
 func ExtractJson(text string, traceID string, spanID string) (json string, childSpanID string) {
-	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	re := regexp.MustCompile("{[\\s\\S]*}")
 	matches := re.FindStringSubmatch(text)
@@ -437,7 +443,8 @@ func ExtractJson(text string, traceID string, spanID string) (json string, child
 // Returns:
 //   - childSpanID: the child span ID created for this operation
 func LogRequestSuccess(traceID string, spanID string) (childSpanID string) {
-	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	logging.Log.Infof(ctx, "Request successful")
 	return childSpanID
@@ -455,7 +462,8 @@ func LogRequestSuccess(traceID string, spanID string) (childSpanID string) {
 // Returns:
 //   - childSpanID: the child span ID created for this operation
 func LogRequestFailed(traceID string, spanID string) (childSpanID string) {
-	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	logging.Log.Infof(ctx, "Request failed")
 	return childSpanID
@@ -475,7 +483,8 @@ func LogRequestFailed(traceID string, spanID string) (childSpanID string) {
 // Returns:
 //   - childSpanID: the child span ID created for this operation
 func LogRequestFailedDebugWithMessage(msg1, msg2 string, traceID string, spanID string) (childSpanID string) {
-	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	logging.Log.Debugf(ctx, "Request failed:%s %s", msg1, msg2)
 	return childSpanID
@@ -496,7 +505,8 @@ func LogRequestFailedDebugWithMessage(msg1, msg2 string, traceID string, spanID 
 //   - isAuthenticated: true if the API key is authenticated, false otherwise
 //   - childSpanID: the child span ID created for this operation
 func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spanID string) (isAuthenticated bool, childSpanID string) {
-	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	// Check if the API key is empty
 	if apiKey == "" {
@@ -548,7 +558,8 @@ func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spa
 //   - tokenLimitReached: true if the new total token count exceeds the customer's token limit, false otherwise
 //   - childSpanID: the child span ID created for this operation
 func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, additionalTokenCount int, traceID string, spanID string) (tokenLimitReached bool, childSpanID string) {
-	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	// Check if the API key is empty
 	if apiKey == "" {
@@ -616,7 +627,8 @@ func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, ad
 //   - sendWarning: true if a warning was sent, false if it was already sent
 //   - childSpanID: the child span ID created for this operation
 func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string, traceID string, spanID string) (customerName string, sendWarning bool, childSpanID string) {
-	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	// Check if the API key is empty
 	if apiKey == "" {

@@ -69,7 +69,7 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 		panic(errorMessage)
 	}
 
-	toolName2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_2_NAME"]
+	toolName2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_1_NAME"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool name 2 from the configuration")
 		logging.Log.Error(ctx, errorMessage)
@@ -83,44 +83,37 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 		panic(errorMessage)
 	}
 
-	toolName4, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_4_NAME"]
+	toolName4, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_2_NAME"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool name 4 from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	toolName5, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_5_NAME"]
+	toolName5, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_3_NAME"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool name 5 from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	toolName6, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_6_NAME"]
+	toolName6, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_4_NAME"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool name 6 from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	toolName7, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_7_NAME"]
+	toolName7, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_5_NAME"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool name 7 from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	toolName8, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_8_NAME"]
+	toolName8, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_6_NAME"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool name 8 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolName10, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_10_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool name 10 from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
@@ -167,13 +160,6 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 		panic(errorMessage)
 	}
 
-	collection7Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["COLLECTION_7_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load collection name 7 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
 	collection_name := ""
 	if toolName == toolName5 {
 		collection_name = collection2Name
@@ -185,8 +171,6 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 		collection_name = collection5Name
 	} else if toolName == toolName8 {
 		collection_name = collection6Name
-	} else if toolName == toolName10 {
-		collection_name = collection7Name
 	} else if toolName == toolName1 ||
 		toolName == toolName2 ||
 		toolName == toolName3 {
@@ -257,10 +241,10 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 	return
 }
 
-// FindRelevantPathDescriptionByPrompt finds the relevant description by prompting
+// FindRelevantPathDescription finds the relevant description by prompting
 //
 // Tags:
-//   - @displayName: FindRelevantPathDescriptionByPrompt
+//   - @displayName: FindRelevantPathDescription
 //
 // Parameters:
 //   - descriptions: the list of descriptions
@@ -268,7 +252,7 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 //
 // Returns:
 //   - relevantDescription: the relevant desctiption
-func FindRelevantPathDescriptionByPrompt(descriptions []string, message string) (relevantDescription string) {
+func FindRelevantPathDescription(descriptions []string, message string) (relevantDescription string) {
 
 	relevantDescription = ""
 	ctx := &logging.ContextMap{}
@@ -468,10 +452,10 @@ func FetchActionsPathFromPathDescription(db_name, description, nodeLabel string)
 	return
 }
 
-// SynthesizeActionsTool4 update action as per user instruction
+// SynthesizeActionsTool2 update action as per user instruction
 //
 // Tags:
-//   - @displayName: SynthesizeActionsTool4
+//   - @displayName: SynthesizeActionsTool2
 //
 // Parameters:
 //   - message: the message from the llm
@@ -479,7 +463,7 @@ func FetchActionsPathFromPathDescription(db_name, description, nodeLabel string)
 //
 // Returns:
 //   - updatedActions: the list of synthesized actions
-func SynthesizeActionsTool4(message string, actions []map[string]string) (updatedActions []map[string]string) {
+func SynthesizeActionsTool2(message string, actions []map[string]string) (updatedActions []map[string]string) {
 
 	ctx := &logging.ContextMap{}
 
@@ -507,7 +491,7 @@ func SynthesizeActionsTool4(message string, actions []map[string]string) (update
 
 	err := json.Unmarshal([]byte(cleanedContent), &output)
 	if err != nil {
-		errorMessage := fmt.Sprintf("SynthesizeActionsTool4: Failed to unmarshal response: %v", err)
+		errorMessage := fmt.Sprintf("SynthesizeActionsTool2: Failed to unmarshal response: %v", err)
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
@@ -524,7 +508,7 @@ func SynthesizeActionsTool4(message string, actions []map[string]string) (update
 		panic(errorMessage)
 	}
 
-	synthesizeActionsValue, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_TOOL4_VALUE"]
+	synthesizeActionsValue, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_TOOL2_VALUE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load synthesize actions find key from the configuration")
 		logging.Log.Error(ctx, errorMessage)
@@ -553,17 +537,17 @@ func SynthesizeActionsTool4(message string, actions []map[string]string) (update
 	return
 }
 
-// SynthesizeActionsTool13 synthesize actions based on user instruction
+// SynthesizeActionsTool11 synthesize actions based on user instruction
 //
 // Tags:
-//   - @displayName: SynthesizeActionsTool13
+//   - @displayName: SynthesizeActionsTool11
 //
 // Parameters:
 //   - content: the llm content
 //
 // Returns:
 //   - result: the synthesized string
-func SynthesizeActionsTool13(content string) (result string) {
+func SynthesizeActionsTool11(content string) (result string) {
 	ctx := &logging.ContextMap{}
 
 	var out struct {
@@ -575,9 +559,9 @@ func SynthesizeActionsTool13(content string) (result string) {
 	unitSystem := out.UnitSystem
 	logging.Log.Infof(ctx, "Synthesized UnitSystem: %s", unitSystem)
 
-	message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_13_ACTION_SUCCESS_MESSAGE"]
+	message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_11_SUCCESS_MESSAGE"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_13_ACTION_SUCCESS_MESSAGE from the configuration")
+		errorMessage := fmt.Sprintf("failed to load APP_ACTION_TOOL_11_SUCCESS_MESSAGE from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
@@ -594,9 +578,9 @@ func SynthesizeActionsTool13(content string) (result string) {
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
-	actionValue1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_13_NAME"]
+	actionValue1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_11_NAME"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_13_NAME from the configuration")
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTION_11_NAME from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
@@ -622,29 +606,29 @@ func SynthesizeActionsTool13(content string) (result string) {
 
 	resultStream, err := json.Marshal(finalMessage)
 	if err != nil {
-		errorMessage := fmt.Sprintf("failed to marshal final message for tool 13: %v", err)
+		errorMessage := fmt.Sprintf("failed to marshal final message for tool 11: %v", err)
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
 	result = string(resultStream)
-	logging.Log.Infof(ctx, "SynthesizeActionsTool13 result: %s", result)
-	logging.Log.Infof(ctx, "successfully synthesized actions for tool 13")
+	logging.Log.Infof(ctx, "SynthesizeActionsTool11 result: %s", result)
+	logging.Log.Infof(ctx, "successfully synthesized actions for tool 11")
 
 	return
 }
 
-// SynthesizeActionsTool14 synthesize actions based on user instruction
+// SynthesizeActionsTool12 synthesize actions based on user instruction
 //
 // Tags:
-//   - @displayName: SynthesizeActionsTool14
+//   - @displayName: SynthesizeActionsTool12
 //
 // Parameters:
 //   - content: the llm content
 //
 // Returns:
 //   - result: the synthesized string
-func SynthesizeActionsTool14(content string) (result string) {
+func SynthesizeActionsTool12(content string) (result string) {
 	ctx := &logging.ContextMap{}
 
 	var out struct {
@@ -658,9 +642,9 @@ func SynthesizeActionsTool14(content string) (result string) {
 	Argument := out.Argument
 	logging.Log.Infof(ctx, "Synthesized Argument: %s", Argument)
 
-	message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_14_ACTION_SUCCESS_MESSAGE"]
+	message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_12_SUCCESS_MESSAGE"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_14_ACTION_SUCCESS_MESSAGE from the configuration")
+		errorMessage := fmt.Sprintf("failed to load APP_ACTION_TOOL_12_SUCCESS_MESSAGE from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
@@ -679,9 +663,9 @@ func SynthesizeActionsTool14(content string) (result string) {
 		panic(errorMessage)
 	}
 
-	actionValue1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_14_NAME"]
+	actionValue1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_12_NAME"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_14_NAME from the configuration")
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTION_12_NAME from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
@@ -708,14 +692,102 @@ func SynthesizeActionsTool14(content string) (result string) {
 
 	resultStream, err := json.Marshal(finalMessage)
 	if err != nil {
-		errorMessage := fmt.Sprintf("failed to marshal final message for tool 14: %v", err)
+		errorMessage := fmt.Sprintf("failed to marshal final message for tool 12: %v", err)
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	result = string(resultStream)
+	logging.Log.Infof(ctx, "SynthesizeActionsTool12 result: %s", result)
+	logging.Log.Infof(ctx, "successfully synthesized actions for tool 12")
+
+	return result
+}
+
+// SynthesizeActionsTool17 synthesize actions based on user instruction
+//
+// Tags:
+//   - @displayName: SynthesizeActionsTool17
+//
+// Parameters:
+//   - content: the llm content
+//
+// Returns:
+//   - result: the synthesized string
+func SynthesizeActionsTool17(content string) (result string) {
+	ctx := &logging.ContextMap{}
+
+	var out struct {
+		Argument string `json:"Argument"`
+	}
+
+	logging.Log.Infof(ctx, "SynthesizeActionsTool17 content: %s", content)
+
+	if err := json.Unmarshal([]byte(content), &out); err != nil {
+		panic(fmt.Sprintf("unmarshal Argument failed: %v", err))
+	}
+
+	Argument := out.Argument
+	logging.Log.Infof(ctx, "Synthesized Argument: %s", Argument)
+
+	message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_17_SUCCESS_MESSAGE"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_ACTION_TOOL_17_SUCCESS_MESSAGE from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actionKey1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_KEY_1"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_KEY_1 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actionKey2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_KEY_2"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_KEY_2 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actionValue1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_17_NAME"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTION_17_NAME from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actionValue2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_TARGET_1"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_TARGET_1 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actions := []map[string]string{
+		{
+			actionKey1: actionValue1,
+			actionKey2: actionValue2,
+			"Argument": Argument,
+		},
+	}
+
+	finalMessage := map[string]interface{}{
+		"Message": message,
+		"Actions": actions,
+	}
+
+	resultStream, err := json.Marshal(finalMessage)
+	if err != nil {
+		errorMessage := fmt.Sprintf("failed to marshal final message for tool 17: %v", err)
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
 	result = string(resultStream)
 	logging.Log.Infof(ctx, "SynthesizeActionsTool14 result: %s", result)
-	logging.Log.Infof(ctx, "successfully synthesized actions for tool 14")
+	logging.Log.Infof(ctx, "successfully synthesized actions for tool 17")
 
 	return result
 }
@@ -888,93 +960,85 @@ func FinalizeResult(actions []map[string]string, toolName string) (result string
 	}
 
 	// Get tool 2 name from the configuration
-	tool2Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_2_NAME"]
+	toolAction1Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_1_NAME"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 2 name from the configuration")
+		errorMessage := fmt.Sprintf("failed to load action tool 1 name from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
 	// Get tool 4 name from the configuration
-	tool4Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_4_NAME"]
+	toolAction2Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_2_NAME"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 4 name from the configuration")
+		errorMessage := fmt.Sprintf("failed to load action tool 2 name from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
 	// Get tool 5 name from the configuration
-	tool5Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_5_NAME"]
+	toolAction3Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_3_NAME"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 5 name from the configuration")
+		errorMessage := fmt.Sprintf("failed to load action tool 3 name from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
 	// Get tool 6 name from the configuration
-	tool6Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_6_NAME"]
+	toolAction4Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_4_NAME"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 6 name from the configuration")
+		errorMessage := fmt.Sprintf("failed to load action tool 4 name from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
 	// Get tool 7 name from the configuration
-	tool7Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_7_NAME"]
+	toolAction5Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_5_NAME"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 7 name from the configuration")
+		errorMessage := fmt.Sprintf("failed to load action tool 5 name from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
 	// Get tool 8 name from the configuration
-	tool8Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_8_NAME"]
+	toolAction6Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_6_NAME"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 8 name from the configuration")
+		errorMessage := fmt.Sprintf("failed to load action tool 6 name from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	// Get tool 10 name from the configuration
-	tool10Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_10_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 10 name from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	tool16Name, exexists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_16_NAME"]
+	toolAction14Name, exexists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_14_NAME"]
 	if !exexists {
-		errorMessage := fmt.Sprintf("failed to load tool 16 name from the configuration")
+		errorMessage := fmt.Sprintf("failed to load action tool 14 name from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
 	// Get tool action success message from configuration
-	tool17Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_17_NAME"]
+	toolAction15Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_15_NAME"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 17 name from the configuration")
+		errorMessage := fmt.Sprintf("failed to load action tool 15 name from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
 	// Get tool 2 action message from configuration
-	tool2ActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_2_ACTION_SUCCESS_MESSAGE"]
+	toolAction1Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_1_SUCCESS_MESSAGE"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 2 action message from the configuration")
+		errorMessage := fmt.Sprintf("failed to load action tool 1 message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
 	// Get tool 2 no action message from configuration
-	tool2NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_2_NO_ACTION_MESSAGE"]
+	toolAction1NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_1_NO_ACTION_MESSAGE"]
 	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 2 no action message from the configuration")
+		errorMessage := fmt.Sprintf("failed to load action tool 1 no action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	tool4ActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_4_ACTION_SUCCESS_MESSAGE"]
+	toolAction2Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_2_SUCCESS_MESSAGE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool 4 action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
@@ -982,14 +1046,14 @@ func FinalizeResult(actions []map[string]string, toolName string) (result string
 	}
 
 	// Get tool 4 no action message from configuration
-	tool4NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_4_NO_ACTION_MESSAGE"]
+	toolAction2NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_2_NO_ACTION_MESSAGE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool 4 no action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	tool5ActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_5_ACTION_SUCCESS_MESSAGE"]
+	toolAction3Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_3_SUCCESS_MESSAGE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool 5 action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
@@ -997,14 +1061,14 @@ func FinalizeResult(actions []map[string]string, toolName string) (result string
 	}
 
 	// Get tool 5 no action message from configuration
-	tool5NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_5_NO_ACTION_MESSAGE"]
+	toolAction3NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_3_NO_ACTION_MESSAGE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool 5 no action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	tool6ActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_6_ACTION_SUCCESS_MESSAGE"]
+	toolAction4Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_4_SUCCESS_MESSAGE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool 6 action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
@@ -1012,14 +1076,14 @@ func FinalizeResult(actions []map[string]string, toolName string) (result string
 	}
 
 	// Get tool 6 no action message from configuration
-	tool6NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_6_NO_ACTION_MESSAGE"]
+	toolAction4NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_4_NO_ACTION_MESSAGE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool 6 no action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	tool7ActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_7_ACTION_SUCCESS_MESSAGE"]
+	toolAction5Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_5_SUCCESS_MESSAGE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool 7 action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
@@ -1027,14 +1091,14 @@ func FinalizeResult(actions []map[string]string, toolName string) (result string
 	}
 
 	// Get tool 7 no action message from configuration
-	tool7NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_7_NO_ACTION_MESSAGE"]
+	toolAction5NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_5_NO_ACTION_MESSAGE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool 7 no action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	tool8ActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_8_ACTION_SUCCESS_MESSAGE"]
+	toolAction6Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_6_SUCCESS_MESSAGE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool 8 action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
@@ -1042,109 +1106,88 @@ func FinalizeResult(actions []map[string]string, toolName string) (result string
 	}
 
 	// Get tool 8 no action message from configuration
-	tool8NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_8_NO_ACTION_MESSAGE"]
+	toolAction6NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_6_NO_ACTION_MESSAGE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool 8 no action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	tool10ActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_10_ACTION_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 10 action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 10 no action message from configuration
-	tool10NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_10_NO_ACTION_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 10 no action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	tool16ActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_16_ACTION_SUCCESS_MESSAGE"]
+	toolAction14Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_14_SUCCESS_MESSAGE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool 16 action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	tool16NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_16_NO_ACTION_MESSAGE"]
+	toolAction14NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_14_NO_ACTION_MESSAGE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool 16 no action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	tool17ActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_17_ACTION_SUCCESS_MESSAGE"]
+	toolAction15Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_15_SUCCESS_MESSAGE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool 17 action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	tool17NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_17_NO_ACTION_MESSAGE"]
+	toolAction15NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_15_NO_ACTION_MESSAGE"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load tool 17 no action message from the configuration")
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}
 
-	if toolName == tool2Name {
+	if toolName == toolAction1Name {
 		if hasActions {
-			message = tool2ActionMessage
+			message = toolAction1Message
 		} else {
-			message = tool2NoActionMessage
+			message = toolAction1NoActionMessage
 		}
-	} else if toolName == tool4Name {
+	} else if toolName == toolAction2Name {
 		if hasActions {
-			message = tool4ActionMessage
+			message = toolAction2Message
 		} else {
-			message = tool4NoActionMessage
+			message = toolAction2NoActionMessage
 		}
-	} else if toolName == tool5Name {
+	} else if toolName == toolAction3Name {
 		if hasActions {
-			message = tool5ActionMessage
+			message = toolAction3Message
 		} else {
-			message = tool5NoActionMessage
+			message = toolAction3NoActionMessage
 		}
-	} else if toolName == tool6Name {
+	} else if toolName == toolAction4Name {
 		if hasActions {
-			message = tool6ActionMessage
+			message = toolAction4Message
 		} else {
-			message = tool6NoActionMessage
+			message = toolAction4NoActionMessage
 		}
-	} else if toolName == tool7Name {
+	} else if toolName == toolAction5Name {
 		if hasActions {
-			message = tool7ActionMessage
+			message = toolAction5Message
 		} else {
-			message = tool7NoActionMessage
+			message = toolAction5NoActionMessage
 		}
-	} else if toolName == tool8Name {
+	} else if toolName == toolAction6Name {
 		if hasActions {
-			message = tool8ActionMessage
+			message = toolAction6Message
 		} else {
-			message = tool8NoActionMessage
+			message = toolAction6NoActionMessage
 		}
-	} else if toolName == tool10Name {
+	} else if toolName == toolAction14Name {
 		if hasActions {
-			message = tool10ActionMessage
+			message = toolAction14Message
 		} else {
-			message = tool10NoActionMessage
+			message = toolAction14NoActionMessage
 		}
-	} else if toolName == tool16Name {
+	} else if toolName == toolAction15Name {
 		if hasActions {
-			message = tool16ActionMessage
+			message = toolAction15Message
 		} else {
-			message = tool16NoActionMessage
-		}
-	} else if toolName == tool17Name {
-		if hasActions {
-			message = tool17ActionMessage
-		} else {
-			message = tool17NoActionMessage
+			message = toolAction15NoActionMessage
 		}
 	} else {
 		errorMessage := fmt.Sprintf("Invalid toolName %s", toolName)
@@ -1387,28 +1430,34 @@ func GetActionsFromConfig(toolName string) (result string) {
 	// Configuration keys for different tools, for now only tool 9 and tool 11
 	configKeys := map[string]map[string]string{
 		"tool9": {
-			"resultName":    "APP_TOOL9_RESULT_NAME",
-			"resultMessage": "APP_TOOL9_RESULT_MESSAGE",
-			"actionValue1":  "APP_ACTIONS_VALUE_1_TOOL9",
+			"resultName":    "APP_ACTION_TOOL7_RESULT_NAME",
+			"resultMessage": "APP_ACTION_TOOL7_RESULT_MESSAGE",
+			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL7",
 			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_2",
 		},
 		"tool11": {
-			"resultName":    "APP_TOOL11_RESULT_NAME",
-			"resultMessage": "APP_TOOL11_RESULT_MESSAGE",
-			"actionValue1":  "APP_ACTIONS_VALUE_1_TOOL11",
+			"resultName":    "APP_ACTION_TOOL9_RESULT_NAME",
+			"resultMessage": "APP_ACTION_TOOL9_RESULT_MESSAGE",
+			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL9",
 			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_1",
 		},
 		"tool12": {
-			"resultName":    "APP_TOOL12_RESULT_NAME",
-			"resultMessage": "APP_TOOL12_RESULT_MESSAGE",
-			"actionValue1":  "APP_ACTIONS_VALUE_1_TOOL12",
+			"resultName":    "APP_ACTION_TOOL10_RESULT_NAME",
+			"resultMessage": "APP_ACTION_TOOL10_RESULT_MESSAGE",
+			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL10",
 			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_2",
 		},
 		"tool15": {
-			"resultName":    "APP_TOOL15_RESULT_NAME",
-			"resultMessage": "APP_TOOL15_RESULT_MESSAGE",
-			"actionValue1":  "APP_ACTIONS_VALUE_1_TOOL15",
+			"resultName":    "APP_ACTION_TOOL13_RESULT_NAME",
+			"resultMessage": "APP_ACTION_TOOL13_RESULT_MESSAGE",
+			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL13",
 			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_3",
+		},
+		"tool18": {
+			"resultName":    "APP_ACTION_TOOL16_RESULT_NAME",
+			"resultMessage": "APP_ACTION_TOOL16_RESULT_MESSAGE",
+			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL16",
+			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_1",
 		},
 	}
 
@@ -1428,12 +1477,14 @@ func GetActionsFromConfig(toolName string) (result string) {
 	tool11ResultName := getConfigValue(configKeys["tool11"]["resultName"], "failed to load tool 11 result name from the configuration")
 	tool12ResultName := getConfigValue(configKeys["tool12"]["resultName"], "failed to load tool 12 result name from the configuration")
 	tool15ResultName := getConfigValue(configKeys["tool15"]["resultName"], "failed to load tool 15 result name from the configuration")
+	tool18ResultName := getConfigValue(configKeys["tool18"]["resultName"], "failed to load tool 18 result name from the configuration")
 
 	// Get tool result message from the configuration
 	tool9ResultMessage := getConfigValue(configKeys["tool9"]["resultMessage"], "failed to load tool 9 result message from the configuration")
 	tool11ResultMessage := getConfigValue(configKeys["tool11"]["resultMessage"], "failed to load tool 11 result message from the configuration")
 	tool12ResultMessage := getConfigValue(configKeys["tool12"]["resultMessage"], "failed to load tool 12 result message from the configuration")
 	tool15ResultMessage := getConfigValue(configKeys["tool15"]["resultMessage"], "failed to load tool 15 result message from the configuration")
+	tool18ResultMessage := getConfigValue(configKeys["tool18"]["resultMessage"], "failed to load tool 18 result message from the configuration")
 
 	// Get tool action success message from configuration
 	toolActionSuccessMessage := getConfigValue("APP_TOOL_ACTION_SUCCESS_MESSAGE", "failed to load tool action success message from the configuration")
@@ -1460,6 +1511,10 @@ func GetActionsFromConfig(toolName string) (result string) {
 		actionValue1 = getConfigValue(configKeys["tool15"]["actionValue1"], "failed to load tool 15 action value 1 from the configuration")
 		actionValue2 = getConfigValue(configKeys["tool15"]["actionValue2"], "failed to load tool 15 action value 2 from the configuration")
 		selectedMessage = tool15ResultMessage
+	} else if toolName == tool18ResultName {
+		actionValue1 = getConfigValue(configKeys["tool18"]["actionValue1"], "failed to load tool 18 action value 1 from the configuration")
+		actionValue2 = getConfigValue(configKeys["tool18"]["actionValue2"], "failed to load tool 18 action value 2 from the configuration")
+		selectedMessage = tool18ResultMessage
 	} else {
 		errorMessage := fmt.Sprintf("Invalid toolName %s", toolName)
 		logging.Log.Error(ctx, errorMessage)
@@ -1467,7 +1522,7 @@ func GetActionsFromConfig(toolName string) (result string) {
 	}
 
 	message := toolActionSuccessMessage
-	if toolName == tool9ResultName || toolName == tool11ResultName || toolName == tool12ResultName || toolName == tool15ResultName {
+	if toolName == tool9ResultName || toolName == tool11ResultName || toolName == tool12ResultName || toolName == tool15ResultName || toolName == tool18ResultName {
 		message = selectedMessage
 		actions := []map[string]string{
 			{
@@ -1591,10 +1646,10 @@ func ParseHistoryToHistoricMessages(historyJson string) (history []sharedtypes.H
 	return history
 }
 
-// GenerateSubWorkflowPrompt generates system and user prompts for subworkflow identification.
+// GenerateActionsSubWorkflowPrompt generates system and user prompts for subworkflow identification.
 //
 // Tags:
-//   - @displayName: GenerateSubWorkflowPrompt
+//   - @displayName: GenerateActionsSubWorkflowPrompt
 //
 // Parameters:
 //   - userInstruction: user instruction
@@ -1602,11 +1657,56 @@ func ParseHistoryToHistoricMessages(historyJson string) (history []sharedtypes.H
 // Returns:
 //   - systemPrompt: the system prompt
 //   - userPrompt: the user prompt
-func GenerateSubWorkflowPrompt(userInstruction string) (systemPrompt string, userPrompt string) {
+func GenerateActionsSubWorkflowPrompt(userInstruction string) (systemPrompt string, userPrompt string) {
 	ctx := &logging.ContextMap{}
 
 	// Retrieve subworkflows (name and description)
-	subworkflows := azure.GetSubworkflows()
+	subworkflows := azure.GetActionsSubworkflows()
+	var subworkflowListStr strings.Builder
+	for i, sw := range subworkflows {
+		subworkflowListStr.WriteString(fmt.Sprintf("%d. %s - %s\n", i+1, sw.Name, sw.Description))
+	}
+
+	// Retrieve prompt templates from configuration
+	systemPromptTemplate, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_SUBWORKFLOW_IDENTIFICATION_SYSTEM_PROMPT"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load system prompt template from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+	userPromptTemplate, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_SUBWORKFLOW_IDENTIFICATION_USER_PROMPT"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load user prompt template from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	// Format the prompts
+	systemPrompt = fmt.Sprintf(systemPromptTemplate, subworkflowListStr.String())
+	userPrompt = fmt.Sprintf(userPromptTemplate, userInstruction)
+
+	logging.Log.Debugf(ctx, "Generated System Prompt: %s", systemPrompt)
+
+	logging.Log.Debugf(ctx, "Generated User Prompt: %s", userPrompt)
+	return systemPrompt, userPrompt
+}
+
+// GenerateHelperSubWorkflowPrompt generates system and user prompts for helper subworkflow identification.
+//
+// Tags:
+//   - @displayName: GenerateHelperSubWorkflowPrompt
+//
+// Parameters:
+//   - userInstruction: user instruction
+//
+// Returns:
+//   - systemPrompt: the system prompt
+//   - userPrompt: the user prompt
+func GenerateHelperSubWorkflowPrompt(userInstruction string) (systemPrompt string, userPrompt string) {
+	ctx := &logging.ContextMap{}
+
+	// Retrieve subworkflows (name and description)
+	subworkflows := azure.GetHelperSubworkflows()
 	var subworkflowListStr strings.Builder
 	for i, sw := range subworkflows {
 		subworkflowListStr.WriteString(fmt.Sprintf("%d. %s - %s\n", i+1, sw.Name, sw.Description))
@@ -1657,7 +1757,29 @@ func GenerateUserPrompt(userInstruction string, userPromptTemplate string) (user
 	return
 }
 
-// GenerateUserPrompt generates user instruction prompt based on the provided template, instruction, list.
+// GenerateUserPromptWithContext generates user instruction prompt based on the provided template with instruction and context.
+//
+// Tags:
+//   - @displayName: GenerateUserPromptWithContext
+//
+// Parameters:
+//   - userInstruction: user instruction
+//   - context: user context
+//   - userPromptTemplate: user prompt template
+//
+// Returns:
+//   - userPrompt: the user prompt
+func GenerateUserPromptWithContext(userInstruction string, context string, userPromptTemplate string) (userPrompt string) {
+	ctx := &logging.ContextMap{}
+
+	userPrompt = fmt.Sprintf(userPromptTemplate, userInstruction, context)
+
+	logging.Log.Debugf(ctx, "Generated User Prompt With Context: %s", userPrompt)
+
+	return
+}
+
+// GenerateUserPromptWithList generates user instruction prompt based on the provided template, instruction, list.
 //
 // Tags:
 //   - @displayName: GenerateUserPromptWithList
@@ -1722,6 +1844,54 @@ func ProcessSubworkflowIdentificationOutput(llmOutput string) (status string, wo
 	return "success", result.Subworkflow
 }
 
+// ProcessMainAgentOutput this function process output of llm
+//
+// Tags:
+//   - @displayName: ProcessMainAgentOutput
+//
+// Parameters:
+//   - llmOutput: the llm output for main agent
+//
+// Returns:
+//   - messageTo: send the message to this recipient
+//   - message: message to send to the recipient
+func ProcessMainAgentOutput(llmOutput string) (messageTo string, message string) {
+	ctx := &logging.ContextMap{}
+
+	// Clean up the output in case it is wrapped in code block
+	cleaned := strings.TrimSpace(llmOutput)
+	if strings.HasPrefix(cleaned, "```json") && strings.HasSuffix(cleaned, "```") {
+		cleaned = strings.TrimPrefix(cleaned, "```json")
+		cleaned = strings.TrimSuffix(cleaned, "```")
+		cleaned = strings.TrimSpace(cleaned)
+	}
+
+	// Parse JSON
+	var result struct {
+		MessageTo string `json:"messageTo"`
+		Message   string `json:"message"`
+	}
+
+	err := json.Unmarshal([]byte(cleaned), &result)
+	if err != nil {
+		errorMessage := fmt.Sprintf("Failed to parse LLM output as JSON: %v, content: %s", err, cleaned)
+		logging.Log.Error(ctx, errorMessage)
+		return "user", "Main Agent failed to parse the request. Please try again."
+	}
+
+	// Check if subworkflow is valid
+	if result.MessageTo == "" || result.Message == "" {
+		errorMessage := fmt.Sprintf("No valid messageTo or Message property found in LLM output: %s", cleaned)
+		logging.Log.Error(ctx, errorMessage)
+		return "user", "Main Agent failed to understand the request. Can you please try to rephrase your question?"
+	}
+
+	logging.Log.Debugf(ctx, "Message To: %s", result.MessageTo)
+	logging.Log.Debugf(ctx, "Message: %s", result.Message)
+
+	return result.MessageTo, result.Message
+}
+
 // MarkdownToHTML this function converts markdown to html
 //
 // Tags:
@@ -1774,4 +1944,22 @@ func FinalizeMessage(message string) (result string) {
 	logging.Log.Info(ctx, "successfully converted actions to json")
 
 	return result
+}
+
+// SelectedSolution this function parse the selected solution
+//
+// Tags:
+//   - @displayName: SelectedSolution
+//
+// Parameters:
+//   - selectedSolution: selected solution found by the LLM
+//
+// Returns:
+//   - solution: parsed solution
+func SelectedSolution(selectedSolution string) (solution string) {
+	logging.Log.Info(&logging.ContextMap{}, "Parsing Selected solution...")
+	// Use blackfriday to convert markdown to HTML
+	logging.Log.Debugf(&logging.ContextMap{}, "Selected Solution: %s", selectedSolution)
+	solution = selectedSolution
+	return solution
 }

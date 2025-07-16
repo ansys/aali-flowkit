@@ -275,11 +275,14 @@ type MongoDbCustomerObject struct {
 }
 
 type MongoDbCustomerObjectDisco struct {
-	UserId          string `bson:"user_id"`
-	AccessDenied    bool   `bson:"access_denied"`
-	TotalTokenCount int    `bson:"total_token_usage"`
-	TokenLimit      int    `bson:"token_limit"`
-	WarningSent     bool   `bson:"warning_sent"`
+	UserId              string   `bson:"user_id"`
+	AccessDenied        bool     `bson:"access_denied"`
+	ModelId             []string `bson:"model_id"`
+	InputTokenCount     int      `bson:"input_token_count"`
+	OutputTokenCount    int      `bson:"output_token_count"`
+	TokenLimit          int      `bson:"token_limit"`
+	TokenLimitTimestamp int64    `bson:"token_limit_timestamp"`
+	WarningSent         bool     `bson:"warning_sent"`
 }
 
 // EmailRequest represents the structure of the POST request body
@@ -305,4 +308,23 @@ type copilotGenerateOptions struct {
 	NoCritique       bool   `json:"no_critique"`
 	MaxIterations    int    `json:"max_iterations"`
 	ForceAzure       bool   `json:"force_azure"`
+}
+
+// kvdbSingleResponse is a struct to hold the response from the KVDB for a single entry.
+type kvdbSingleResponse struct {
+	Value string `json:"value"`
+}
+
+// kvdbErrorResponse is a struct to hold the error response from the KVDB.
+type kvdbErrorResponse struct {
+	Error string `json:"error"`
+}
+
+type materialsCustomerObject struct {
+	ApiKey          string `json:"api_key"`
+	CustomerName    string `json:"customer_name"`
+	AccessDenied    bool   `json:"access_denied"`
+	TotalTokenCount int    `json:"total_token_usage"`
+	TokenLimit      int    `json:"token_limit"`
+	WarningSent     bool   `json:"warning_sent"`
 }

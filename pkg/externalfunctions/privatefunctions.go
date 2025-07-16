@@ -37,6 +37,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -2484,7 +2485,7 @@ func mongoDbGetCustomerByApiKey(mongoDbContext *MongoDbContext, apiKey string) (
 //
 // Returns:
 //   - err: An error if any.
-func mongoDbGetCreateCustomerByUserId(mongoDbContext *MongoDbContext, userId string, tokenLimitForNewUsers int) (existingUser bool, customer *MongoDbCustomerObjectDisco, err error) {
+func mongoDbGetCreateCustomerByUserId(mongoDbContext *MongoDbContext, userId string, temporaryTokenLimit int, hoursUntilTokenLimitReset int, modelId []string) (existingUser bool, customer *MongoDbCustomerObjectDisco, err error) {
 	// Create filter for API key
 	filter := bson.M{"user_id": userId}
 
@@ -2501,20 +2502,70 @@ func mongoDbGetCreateCustomerByUserId(mongoDbContext *MongoDbContext, userId str
 		}
 	}
 
+	// get current timestamp in seconds
+	timestamp := time.Now().Unix()
+
 	// if customer does not exist, create it
 	if !existingUser {
 		customer = &MongoDbCustomerObjectDisco{
-			UserId:          userId,
-			AccessDenied:    false,
-			TotalTokenCount: 0,
-			TokenLimit:      tokenLimitForNewUsers,
-			WarningSent:     false,
+			UserId:              userId,
+			AccessDenied:        false,
+			ModelId:             modelId,
+			InputTokenCount:     0,
+			OutputTokenCount:    0,
+			TokenLimit:          temporaryTokenLimit,
+			TokenLimitTimestamp: timestamp,
+			WarningSent:         false,
 		}
 
 		// Insert the new customer document
 		_, err = mongoDbContext.Collection.InsertOne(context.Background(), customer)
 		if err != nil {
 			return false, customer, fmt.Errorf("failed to insert new customer: %v", err)
+		}
+	} else {
+		// check if model Id needs to be updated
+		if !slices.Equal(customer.ModelId, modelId) {
+			// update model Id
+			update := bson.M{
+				"$set": bson.M{
+					"model_id": modelId,
+				},
+			}
+
+			// Update the document
+			result, err := mongoDbContext.Collection.UpdateOne(context.Background(), filter, update)
+			if err != nil {
+				return false, customer, fmt.Errorf("failed to update token usage: %v", err)
+			}
+
+			// Check if the document was updated
+			if result.MatchedCount == 0 {
+				return false, customer, fmt.Errorf("no customer found with id: %s", userId)
+			}
+		}
+
+		// check if token limit timestamp needs to be reset
+		if time.Since(time.Unix(customer.TokenLimitTimestamp, 0)) > time.Duration(hoursUntilTokenLimitReset)*time.Hour {
+			// update timestamp and reset token counts
+			update := bson.M{
+				"$set": bson.M{
+					"token_limit_timestamp": timestamp,
+					"input_token_count":     0,
+					"output_token_count":    0,
+				},
+			}
+
+			// Update the document
+			result, err := mongoDbContext.Collection.UpdateOne(context.Background(), filter, update)
+			if err != nil {
+				return false, customer, fmt.Errorf("failed to update token usage: %v", err)
+			}
+
+			// Check if the document was updated
+			if result.MatchedCount == 0 {
+				return false, customer, fmt.Errorf("no customer found with id: %s", userId)
+			}
 		}
 	}
 
@@ -2551,6 +2602,76 @@ func mongoDbAddToTotalTokenCount(mongoDbContext *MongoDbContext, indetificationK
 	}
 
 	return nil
+}
+
+// mongoDbAddToInputOutputTokenCount increments the input and output token count for a customer
+//
+// Parameters:
+//   - mongoDbContext: The MongoDB context.
+//   - apiKey: The API key.
+//   - additionalInputTokenCount: The number of input tokens to add.
+//   - additionalOutputTokenCount: The number of output tokens to add.
+//
+// Returns:
+//   - err: An error if any.
+func mongoDbAddToInputOutputTokenCountAndCheckLimit(mongoDbContext *MongoDbContext, userId string, additionalInputTokenCount int, additionalOutputTokenCount int, hoursUntilTokenLimitReset int) (tokenLimitReached bool, err error) {
+	// Create filter for API key
+	filter := bson.M{"user_id": userId}
+
+	// Find one document
+	customer := &MongoDbCustomerObjectDisco{}
+	err = mongoDbContext.Collection.FindOne(context.Background(), filter).Decode(&customer)
+	if err != nil {
+		return false, fmt.Errorf("error in finding mongoDb document: %v", err)
+	}
+
+	// check if token limit timestamp needs to be reset
+	if time.Since(time.Unix(customer.TokenLimitTimestamp, 0)) > time.Duration(hoursUntilTokenLimitReset)*time.Hour {
+		// update timestamp and reset token counts
+		update := bson.M{
+			"$set": bson.M{
+				"token_limit_timestamp": time.Now().Unix(),
+				"input_token_count":     0,
+				"output_token_count":    0,
+			},
+		}
+
+		// Update the document
+		result, err := mongoDbContext.Collection.UpdateOne(context.Background(), filter, update)
+		if err != nil {
+			return false, fmt.Errorf("failed to update token usage: %v", err)
+		}
+
+		// Check if the document was updated
+		if result.MatchedCount == 0 {
+			return false, fmt.Errorf("no customer found with id: %s", userId)
+		}
+	}
+
+	// Create filter for API key & update for total token count
+	update := bson.M{
+		"$inc": bson.M{
+			"input_token_count":  additionalInputTokenCount,
+			"output_token_count": additionalOutputTokenCount,
+		},
+	}
+
+	// Update the document
+	result, err := mongoDbContext.Collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return false, fmt.Errorf("failed to update token usage: %v", err)
+	}
+
+	// Check if the document was updated
+	if result.MatchedCount == 0 {
+		return false, fmt.Errorf("no customer found with id: %s", userId)
+	}
+
+	if (customer.InputTokenCount + customer.OutputTokenCount) >= customer.TokenLimit {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // mongoDbUpdateAccessAndWarning updates the access_denied and warning_sent fields
@@ -2646,4 +2767,118 @@ func sendMCPRequest(ctx context.Context, conn *websocket.Conn, request interface
 	}
 
 	return response, nil
+}
+
+// kvdbGetEntry retrieves the value from a specific key from the KVDB
+//
+// Parameters:
+//   - key: The key to retrive the value for.
+//
+// Returns:
+//   - value: The value for the given key.
+//   - exists: A boolean indicating if the given key exists in the KVDB.
+//   - err: An error if marshaling, sending, or receiving fails.
+func kvdbGetEntry(kvdbEndpoint string, key string) (value string, exists bool, err error) {
+	// make GET request to the kvdb
+	url := kvdbEndpoint + "/entries/" + key
+
+	// Create the HTTP request
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", false, fmt.Errorf("error creating request: %v", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+
+	// Create a client and send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", false, fmt.Errorf("error sending request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// check for successful response
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		var errorResp kvdbErrorResponse
+		// Unmarshal the response body into errorResp
+		err = json.Unmarshal(body, &errorResp)
+		if err != nil {
+			return "", false, fmt.Errorf("error decoding error response: %v, Status Code: %d", err, resp.StatusCode)
+		}
+		if errorResp.Error == "Key not found" {
+			// api key not found in kvdb, client is not authenticated
+			return "", false, nil
+		} else {
+			return "", false, fmt.Errorf("error response from KVDB: %s, Status Code: %d", body, resp.StatusCode)
+		}
+	}
+
+	// Unmarshal the response body into a valueResponse struct
+	var valueResp kvdbSingleResponse
+	err = json.NewDecoder(resp.Body).Decode(&valueResp)
+	if err != nil {
+		return "", true, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return valueResp.Value, true, nil
+}
+
+// kvdbSetEntry sets the value for a given key in the KVDB
+//
+// Parameters:
+//   - key: The key to retrive the value for.
+//   - value: The value for the given key.
+//
+// Returns:
+//   - err: An error if marshaling, sending, or receiving fails.
+func kvdbSetEntry(kvdbEndpoint string, key string, value string) (err error) {
+
+	// make PUT request to the kvdb
+	url := kvdbEndpoint + "/entries/" + key
+
+	// Request payload
+	payload := kvdbSingleResponse{
+		Value: value,
+	}
+
+	// Marshal the request payload to JSON
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request payload: %w", err)
+	}
+
+	// Create the HTTP request
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("accept", "*/*")
+
+	// Create a client and send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error sending request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read and print the response
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response: %w", err)
+	}
+
+	// check for successful response status code 200 or 204
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("failed to save snapshot list, status code: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
 }

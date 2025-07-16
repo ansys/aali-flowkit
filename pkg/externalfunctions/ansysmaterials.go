@@ -53,14 +53,16 @@ type LlmCriteria struct {
 //   - @displayName: Start new trace
 //
 // Parameters:
-//   - none
+//   - str: a string
 //
 // Returns:
 //   - traceID: a 128-bit trace ID in decimal format
 //   - spanID: a 64-bit span ID in decimal format
-func StartTrace() (string, string) {
-	traceID := generateTraceID()
-	spanID := generateSpanID()
+func StartTrace() (traceID string, spanID string) {
+	traceID = generateTraceID()
+	spanID = generateSpanID()
+	ctx := &logging.ContextMap{}
+	logging.Log.Infof(ctx, "Starting new trace with trace ID: %s and span ID: %s", traceID, spanID)
 
 	return traceID, spanID
 }
@@ -81,28 +83,19 @@ func generateSpanID() string {
 	return strconv.FormatUint(spanID, 10)
 }
 
-// CreateChildSpan creates a new child span context within an existing trace
-//
-// Tags:
-//   - @displayName: Create child span context
-//
-// Parameters:
-//   - traceID: the parent trace ID in decimal format
-//   - parentSpanID: the parent span ID in decimal format
-//
-// Returns:
-//   - ctx: context with trace and child span information embedded
-func CreateChildSpan(traceID string, parentSpanID string) (ctx *logging.ContextMap) {
+func CreateChildSpan(traceID string, parentSpanID string) (ctx *logging.ContextMap, childSpanID string) {
 	// Generate a new span ID for the child
-	childSpanID := generateSpanID()
+	childSpanID = generateSpanID()
 
 	// Create a new context with trace and span information
 	ctx = &logging.ContextMap{}
-	ctx.Set(logging.TraceIdKey, traceID)
-	ctx.Set(logging.SpanIdKey, childSpanID)
-	ctx.Set(logging.ParentSpanIdKey, parentSpanID)
+	ctx.Set(logging.ContextKey("dd.trace_id"), traceID)
+	ctx.Set(logging.ContextKey("dd.span_id"), childSpanID)
+	ctx.Set(logging.ContextKey("dd.parent_id"), parentSpanID)
 
-	return ctx
+	logging.Log.Infof(ctx, "Starting child span with trace ID: %s, span ID: %s, and parent span ID: %s", traceID, childSpanID, parentSpanID)
+
+	return ctx, childSpanID
 }
 
 // SerializeResponse formats the criteria to a response suitable for the UI clients in string format
@@ -111,15 +104,15 @@ func CreateChildSpan(traceID string, parentSpanID string) (ctx *logging.ContextM
 //   - @displayName: Serialize response for clients
 //
 // Parameters:
-//   - criteriaSuggestions: the list of criteria with their identities
 //   - tokens: tokens consumed by the request
 //   - traceID: the trace ID in decimal format
 //   - spanID: the span ID in decimal format
 //
 // Returns:
 //   - result: string representation of the response in JSON format
-func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, tokens int, traceID string, spanID string) (result string) {
-	ctx := CreateChildSpan(traceID, spanID)
+//   - childSpanID: the child span ID created for this operation
+func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, tokens int, traceID string, spanID string) (result string, childSpanID string) {
+	ctx, childSpanID := CreateChildSpan(traceID, spanID)
 
 	response := Response{Criteria: criteriaSuggestions, Tokens: tokens}
 
@@ -129,7 +122,7 @@ func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGu
 		panic("Failed to serialize suggested criteria into json")
 	}
 
-	return string(responseJson)
+	return string(responseJson), childSpanID
 }
 
 // AddGuidsToAttributes adds GUIDs to the attributes in the criteria
@@ -145,8 +138,9 @@ func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGu
 //
 // Returns:
 //   - criteriaWithGuids: the list of criteria with their identities
-func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute, traceID string, spanID string) (criteriaWithGuids []sharedtypes.MaterialCriterionWithGuid) {
-	ctx := CreateChildSpan(traceID, spanID)
+//   - childSpanID: the child span ID created for this operation
+func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute, traceID string, spanID string) (criteriaWithGuids []sharedtypes.MaterialCriterionWithGuid, childSpanID string) {
+	ctx, childSpanID := CreateChildSpan(traceID, spanID)
 
 	attributeMap := make(map[string]string)
 	for _, attr := range availableAttributes {
@@ -170,7 +164,7 @@ func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion
 		})
 	}
 
-	return criteriaWithGuids
+	return criteriaWithGuids, childSpanID
 }
 
 // FilterOutNonExistingAttributes filters out criteria suggestions that do not match any of the available attributes based on their names
@@ -186,8 +180,9 @@ func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion
 //
 // Returns:
 //   - filtered: the list of criteria suggestions excluding those that do not match any of the available attributes
-func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute, traceID string, spanID string) (filtered []sharedtypes.MaterialLlmCriterion) {
-	ctx := CreateChildSpan(traceID, spanID)
+//   - childSpanID: the child span ID created for this operation
+func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute, traceID string, spanID string) (filtered []sharedtypes.MaterialLlmCriterion, childSpanID string) {
+	ctx, childSpanID := CreateChildSpan(traceID, spanID)
 
 	attributeMap := make(map[string]bool)
 	for _, attr := range availableAttributes {
@@ -203,7 +198,7 @@ func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialLl
 		}
 	}
 
-	return filteredCriteria
+	return filteredCriteria, childSpanID
 }
 
 // FilterOutDuplicateAttributes filters out duplicate attributes from the criteria suggestions based on their names
@@ -218,8 +213,11 @@ func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialLl
 //
 // Returns:
 //   - filtered: the list of criteria suggestions excluding duplicates based on attribute names
-func FilterOutDuplicateAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, traceID string, spanID string) (filtered []sharedtypes.MaterialLlmCriterion) {
-	ctx := CreateChildSpan(traceID, spanID)
+//   - childSpanID: the child span ID created for this operation
+func FilterOutDuplicateAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, traceID string, spanID string) (filtered []sharedtypes.MaterialLlmCriterion, childSpanID string) {
+	var ctx *logging.ContextMap
+	ctx, childSpanID = CreateChildSpan(traceID, spanID)
+	_ = ctx
 
 	seen := make(map[string]bool)
 
@@ -231,7 +229,7 @@ func FilterOutDuplicateAttributes(criteriaSuggestions []sharedtypes.MaterialLlmC
 		}
 	}
 
-	return filtered
+	return filtered, childSpanID
 }
 
 // ExtractCriteriaSuggestions extracts criteria suggestions from the LLM response text
@@ -246,13 +244,14 @@ func FilterOutDuplicateAttributes(criteriaSuggestions []sharedtypes.MaterialLlmC
 //
 // Returns:
 //   - criteriaSuggestions: the list of criteria suggestions extracted from the LLM response
-func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID string) (criteriaSuggestions []sharedtypes.MaterialLlmCriterion) {
-	ctx := CreateChildSpan(traceID, spanID)
+//   - childSpanID: the child span ID created for this operation
+func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID string) (criteriaSuggestions []sharedtypes.MaterialLlmCriterion, childSpanID string) {
+	ctx, childSpanID := CreateChildSpan(traceID, spanID)
 
-	criteriaText := ExtractJson(llmResponse, traceID, spanID)
+	criteriaText, _ := ExtractJson(llmResponse, traceID, spanID)
 	if criteriaText == "" {
 		logging.Log.Debugf(ctx, "No valid JSON found in LLM response: %s", llmResponse)
-		return nil
+		return nil, childSpanID
 	}
 
 	logging.Log.Debugf(ctx, "Attempting to parse JSON:\n%s", criteriaText)
@@ -261,7 +260,7 @@ func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID strin
 	err := json.Unmarshal([]byte(criteriaText), &criteria)
 	if err != nil {
 		logging.Log.Debugf(ctx, "Failed to deserialize criteria JSON from LLM response: %v; Raw JSON: %s", err, criteriaText)
-		return nil
+		return nil, childSpanID
 	}
 
 	if len(criteria.Criteria) == 0 {
@@ -269,7 +268,7 @@ func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID strin
 	} else {
 		logging.Log.Debugf(ctx, "Successfully extracted %d criteria.", len(criteria.Criteria))
 	}
-	return criteria.Criteria
+	return criteria.Criteria, childSpanID
 }
 
 // PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput performs multiple general LLM requests
@@ -292,8 +291,10 @@ func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID strin
 // Returns:
 //   - uniqueCriterion: a deduplicated list of extracted attributes (criteria) from all responses
 //   - tokenCount: the total token count (input tokens × n + combined output tokens)
-func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string, n int, traceID string, spanID string) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int) {
-	ctx := CreateChildSpan(traceID, spanID)
+//   - childSpanID: the child span ID created for this operation
+func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string, n int, traceID string, spanID string) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int, childSpanID string) {
+	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Helper function to send a request and get the response as string
@@ -316,43 +317,44 @@ func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(inp
 
 	logging.Log.Debugf(ctx, "System prompt: %s", systemPrompt)
 
-	// Collect all responses
-	allResponses := runRequestsInParallel(n, sendRequest, traceID, spanID)
+	// Collect all responses with child span for parallel execution
+	allResponses := runRequestsInParallel(n, sendRequest, traceID, childSpanID)
 
+	// Extract criteria from all responses with child span
 	var allCriteria []sharedtypes.MaterialLlmCriterion
 	for _, response := range allResponses {
-		criteria := ExtractCriteriaSuggestions(response, traceID, spanID)
+		criteria, _ := ExtractCriteriaSuggestions(response, traceID, childSpanID)
 		if criteria != nil {
 			allCriteria = append(allCriteria, criteria...)
 		}
 	}
 
 	// get input token count
-	inputTokenCount := getTokenCount(tokenCountModelName, input)
+	inputTokenCount, _ := getTokenCount(tokenCountModelName, input, traceID, childSpanID)
 
 	// get the output token count
 	var combinedResponseText string
 	for _, response := range allResponses {
 		combinedResponseText += response
 	}
-	outputTokenCount := getTokenCount(tokenCountModelName, combinedResponseText)
+	outputTokenCount, _ := getTokenCount(tokenCountModelName, combinedResponseText, traceID, childSpanID)
 
 	var totalTokenCount = inputTokenCount*n + outputTokenCount
 	logging.Log.Debugf(ctx, "Total token count: %d", totalTokenCount)
 
 	if len(allCriteria) == 0 {
 		logging.Log.Debugf(ctx, "No valid criteria found in any response")
-		return []sharedtypes.MaterialLlmCriterion{}, outputTokenCount
+		return []sharedtypes.MaterialLlmCriterion{}, outputTokenCount, childSpanID
 	}
 
 	// Only return unique duplicates
-	uniqueCriterion = FilterOutDuplicateAttributes(allCriteria, traceID, spanID)
+	uniqueCriterion, _ = FilterOutDuplicateAttributes(allCriteria, traceID, childSpanID)
 
-	return uniqueCriterion, totalTokenCount
+	return uniqueCriterion, totalTokenCount, childSpanID
 }
 
 func runRequestsInParallel(n int, sendRequest func() string, traceID string, spanID string) []string {
-	ctx := CreateChildSpan(traceID, spanID)
+	ctx, _ := CreateChildSpan(traceID, spanID)
 	responseChan := make(chan string, n)
 	var wg sync.WaitGroup
 
@@ -383,26 +385,44 @@ func runRequestsInParallel(n int, sendRequest func() string, traceID string, spa
 	return allResponses
 }
 
-func getTokenCount(modelName, text string) int {
-	count, err := openAiTokenCount(modelName, text)
+// getTokenCount gets the token count for the given text using the specified model
+//
+// Parameters:
+//   - modelName: the model name used for token count calculation
+//   - text: the text to count tokens for
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
+//
+// Returns:
+//   - count: the token count
+//   - childSpanID: the child span ID created for this operation
+func getTokenCount(modelName, text string, traceID string, spanID string) (count int, childSpanID string) {
+	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+
+	logging.Log.Debugf(ctx, "Getting token count for model: %s", modelName)
+
+	tokenCount, err := openAiTokenCount(modelName, text)
 	if err != nil {
+		logging.Log.Errorf(ctx, "Error getting token count: %v", err)
 		errorMessage := fmt.Sprintf("Error getting output token count: %v", err)
 		panic(errorMessage)
 	}
-	return count
+
+	logging.Log.Debugf(ctx, "Token count: %d", tokenCount)
+	return tokenCount, childSpanID
 }
 
-func ExtractJson(text string, traceID string, spanID string) (json string) {
-	ctx := CreateChildSpan(traceID, spanID)
+func ExtractJson(text string, traceID string, spanID string) (json string, childSpanID string) {
+	ctx, childSpanID := CreateChildSpan(traceID, spanID)
 
 	re := regexp.MustCompile("{[\\s\\S]*}")
 	matches := re.FindStringSubmatch(text)
 	if len(matches) >= 1 {
-		return strings.TrimSpace(matches[0])
+		return strings.TrimSpace(matches[0]), childSpanID
 	}
 
 	logging.Log.Debugf(ctx, "No valid JSON found in response %s", text)
-	return ""
+	return "", childSpanID
 }
 
 // LogRequestSuccess writes a .Info log entry indicating that a request was completed successfully.
@@ -415,11 +435,12 @@ func ExtractJson(text string, traceID string, spanID string) (json string) {
 //   - spanID: the span ID in decimal format
 //
 // Returns:
-//   - none
-func LogRequestSuccess(traceID string, spanID string) {
-	ctx := CreateChildSpan(traceID, spanID)
+//   - childSpanID: the child span ID created for this operation
+func LogRequestSuccess(traceID string, spanID string) (childSpanID string) {
+	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+
 	logging.Log.Infof(ctx, "Request successful")
-	return
+	return childSpanID
 }
 
 // LogRequestFailed writes a .Info log entry indicating that a request was not completed successfully.
@@ -432,11 +453,12 @@ func LogRequestSuccess(traceID string, spanID string) {
 //   - spanID: the span ID in decimal format
 //
 // Returns:
-//   - none
-func LogRequestFailed(traceID string, spanID string) {
-	ctx := CreateChildSpan(traceID, spanID)
+//   - childSpanID: the child span ID created for this operation
+func LogRequestFailed(traceID string, spanID string) (childSpanID string) {
+	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+
 	logging.Log.Infof(ctx, "Request failed")
-	return
+	return childSpanID
 }
 
 // LogRequestFailedDebugWithMessage writes a .Debug log entry indicating that a request was not completed successfully with additional message.
@@ -451,11 +473,12 @@ func LogRequestFailed(traceID string, spanID string) {
 //   - spanID: the span ID in decimal format
 //
 // Returns:
-//   - none
-func LogRequestFailedDebugWithMessage(msg1, msg2 string, traceID string, spanID string) {
-	ctx := CreateChildSpan(traceID, spanID)
+//   - childSpanID: the child span ID created for this operation
+func LogRequestFailedDebugWithMessage(msg1, msg2 string, traceID string, spanID string) (childSpanID string) {
+	ctx, childSpanID := CreateChildSpan(traceID, spanID)
+
 	logging.Log.Debugf(ctx, "Request failed:%s %s", msg1, msg2)
-	return
+	return childSpanID
 }
 
 // CheckApiKeyAuthKvDb checks if the provided API key is authenticated against the KVDB.
@@ -471,13 +494,14 @@ func LogRequestFailedDebugWithMessage(msg1, msg2 string, traceID string, spanID 
 //
 // Returns:
 //   - isAuthenticated: true if the API key is authenticated, false otherwise
-func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spanID string) (isAuthenticated bool) {
-	ctx := CreateChildSpan(traceID, spanID)
+//   - childSpanID: the child span ID created for this operation
+func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spanID string) (isAuthenticated bool, childSpanID string) {
+	ctx, childSpanID := CreateChildSpan(traceID, spanID)
 
 	// Check if the API key is empty
 	if apiKey == "" {
 		logging.Log.Warnf(ctx, "API key is empty")
-		return false
+		return false, childSpanID
 	}
 
 	// Check if the API key exists in the KVDB
@@ -488,7 +512,7 @@ func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spa
 	}
 	if !exists {
 		logging.Log.Warnf(ctx, "API key does not exist in KVDB: %s", apiKey)
-		return false
+		return false, childSpanID
 	}
 
 	// Unmarshal the JSON string into materials customer object
@@ -502,10 +526,10 @@ func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spa
 	// Check if customer is denied access
 	if customer.AccessDenied {
 		logging.Log.Warnf(ctx, "Access denied for customer: %s", customer.CustomerName)
-		return false
+		return false, childSpanID
 	}
 
-	return true
+	return true, childSpanID
 }
 
 // UpdateTotalTokenCountForCustomerKvDb updates the total token count for a customer in the KVDB
@@ -522,8 +546,9 @@ func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spa
 //
 // Returns:
 //   - tokenLimitReached: true if the new total token count exceeds the customer's token limit, false otherwise
-func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, additionalTokenCount int, traceID string, spanID string) (tokenLimitReached bool) {
-	ctx := CreateChildSpan(traceID, spanID)
+//   - childSpanID: the child span ID created for this operation
+func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, additionalTokenCount int, traceID string, spanID string) (tokenLimitReached bool, childSpanID string) {
+	ctx, childSpanID := CreateChildSpan(traceID, spanID)
 
 	// Check if the API key is empty
 	if apiKey == "" {
@@ -569,10 +594,10 @@ func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, ad
 
 	// Check if the new token count exceeds the limit
 	if customer.TotalTokenCount > customer.TokenLimit {
-		return true
+		return true, childSpanID
 	}
 
-	return false
+	return false, childSpanID
 }
 
 // DenyCustomerAccessAndSendWarningKvDb denies access to a customer and sends a warning if not already sent
@@ -589,8 +614,9 @@ func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, ad
 // Returns:
 //   - customerName: The name of the customer
 //   - sendWarning: true if a warning was sent, false if it was already sent
-func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string, traceID string, spanID string) (customerName string, sendWarning bool) {
-	ctx := CreateChildSpan(traceID, spanID)
+//   - childSpanID: the child span ID created for this operation
+func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string, traceID string, spanID string) (customerName string, sendWarning bool, childSpanID string) {
+	ctx, childSpanID := CreateChildSpan(traceID, spanID)
 
 	// Check if the API key is empty
 	if apiKey == "" {
@@ -640,5 +666,5 @@ func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string, tr
 		panic(err)
 	}
 
-	return customer.CustomerName, sendWarning
+	return customer.CustomerName, sendWarning, childSpanID
 }

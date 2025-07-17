@@ -275,14 +275,11 @@ type MongoDbCustomerObject struct {
 }
 
 type MongoDbCustomerObjectDisco struct {
-	UserId              string   `bson:"user_id"`
-	AccessDenied        bool     `bson:"access_denied"`
-	ModelId             []string `bson:"model_id"`
-	InputTokenCount     int      `bson:"input_token_count"`
-	OutputTokenCount    int      `bson:"output_token_count"`
-	TokenLimit          int      `bson:"token_limit"`
-	TokenLimitTimestamp int64    `bson:"token_limit_timestamp"`
-	WarningSent         bool     `bson:"warning_sent"`
+	UserId          string `bson:"user_id"`
+	AccessDenied    bool   `bson:"access_denied"`
+	TotalTokenCount int    `bson:"total_token_usage"`
+	TokenLimit      int    `bson:"token_limit"`
+	WarningSent     bool   `bson:"warning_sent"`
 }
 
 // EmailRequest represents the structure of the POST request body

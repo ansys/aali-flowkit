@@ -37,7 +37,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -2485,7 +2484,7 @@ func mongoDbGetCustomerByApiKey(mongoDbContext *MongoDbContext, apiKey string) (
 //
 // Returns:
 //   - err: An error if any.
-func mongoDbGetCreateCustomerByUserId(mongoDbContext *MongoDbContext, userId string, temporaryTokenLimit int, hoursUntilTokenLimitReset int, modelId []string) (existingUser bool, customer *MongoDbCustomerObjectDisco, err error) {
+func mongoDbGetCreateCustomerByUserId(mongoDbContext *MongoDbContext, userId string, tokenLimitForNewUsers int) (existingUser bool, customer *MongoDbCustomerObjectDisco, err error) {
 	// Create filter for API key
 	filter := bson.M{"user_id": userId}
 
@@ -2502,70 +2501,20 @@ func mongoDbGetCreateCustomerByUserId(mongoDbContext *MongoDbContext, userId str
 		}
 	}
 
-	// get current timestamp in seconds
-	timestamp := time.Now().Unix()
-
 	// if customer does not exist, create it
 	if !existingUser {
 		customer = &MongoDbCustomerObjectDisco{
-			UserId:              userId,
-			AccessDenied:        false,
-			ModelId:             modelId,
-			InputTokenCount:     0,
-			OutputTokenCount:    0,
-			TokenLimit:          temporaryTokenLimit,
-			TokenLimitTimestamp: timestamp,
-			WarningSent:         false,
+			UserId:          userId,
+			AccessDenied:    false,
+			TotalTokenCount: 0,
+			TokenLimit:      tokenLimitForNewUsers,
+			WarningSent:     false,
 		}
 
 		// Insert the new customer document
 		_, err = mongoDbContext.Collection.InsertOne(context.Background(), customer)
 		if err != nil {
 			return false, customer, fmt.Errorf("failed to insert new customer: %v", err)
-		}
-	} else {
-		// check if model Id needs to be updated
-		if !slices.Equal(customer.ModelId, modelId) {
-			// update model Id
-			update := bson.M{
-				"$set": bson.M{
-					"model_id": modelId,
-				},
-			}
-
-			// Update the document
-			result, err := mongoDbContext.Collection.UpdateOne(context.Background(), filter, update)
-			if err != nil {
-				return false, customer, fmt.Errorf("failed to update token usage: %v", err)
-			}
-
-			// Check if the document was updated
-			if result.MatchedCount == 0 {
-				return false, customer, fmt.Errorf("no customer found with id: %s", userId)
-			}
-		}
-
-		// check if token limit timestamp needs to be reset
-		if time.Since(time.Unix(customer.TokenLimitTimestamp, 0)) > time.Duration(hoursUntilTokenLimitReset)*time.Hour {
-			// update timestamp and reset token counts
-			update := bson.M{
-				"$set": bson.M{
-					"token_limit_timestamp": timestamp,
-					"input_token_count":     0,
-					"output_token_count":    0,
-				},
-			}
-
-			// Update the document
-			result, err := mongoDbContext.Collection.UpdateOne(context.Background(), filter, update)
-			if err != nil {
-				return false, customer, fmt.Errorf("failed to update token usage: %v", err)
-			}
-
-			// Check if the document was updated
-			if result.MatchedCount == 0 {
-				return false, customer, fmt.Errorf("no customer found with id: %s", userId)
-			}
 		}
 	}
 
@@ -2602,76 +2551,6 @@ func mongoDbAddToTotalTokenCount(mongoDbContext *MongoDbContext, indetificationK
 	}
 
 	return nil
-}
-
-// mongoDbAddToInputOutputTokenCount increments the input and output token count for a customer
-//
-// Parameters:
-//   - mongoDbContext: The MongoDB context.
-//   - apiKey: The API key.
-//   - additionalInputTokenCount: The number of input tokens to add.
-//   - additionalOutputTokenCount: The number of output tokens to add.
-//
-// Returns:
-//   - err: An error if any.
-func mongoDbAddToInputOutputTokenCountAndCheckLimit(mongoDbContext *MongoDbContext, userId string, additionalInputTokenCount int, additionalOutputTokenCount int, hoursUntilTokenLimitReset int) (tokenLimitReached bool, err error) {
-	// Create filter for API key
-	filter := bson.M{"user_id": userId}
-
-	// Find one document
-	customer := &MongoDbCustomerObjectDisco{}
-	err = mongoDbContext.Collection.FindOne(context.Background(), filter).Decode(&customer)
-	if err != nil {
-		return false, fmt.Errorf("error in finding mongoDb document: %v", err)
-	}
-
-	// check if token limit timestamp needs to be reset
-	if time.Since(time.Unix(customer.TokenLimitTimestamp, 0)) > time.Duration(hoursUntilTokenLimitReset)*time.Hour {
-		// update timestamp and reset token counts
-		update := bson.M{
-			"$set": bson.M{
-				"token_limit_timestamp": time.Now().Unix(),
-				"input_token_count":     0,
-				"output_token_count":    0,
-			},
-		}
-
-		// Update the document
-		result, err := mongoDbContext.Collection.UpdateOne(context.Background(), filter, update)
-		if err != nil {
-			return false, fmt.Errorf("failed to update token usage: %v", err)
-		}
-
-		// Check if the document was updated
-		if result.MatchedCount == 0 {
-			return false, fmt.Errorf("no customer found with id: %s", userId)
-		}
-	}
-
-	// Create filter for API key & update for total token count
-	update := bson.M{
-		"$inc": bson.M{
-			"input_token_count":  additionalInputTokenCount,
-			"output_token_count": additionalOutputTokenCount,
-		},
-	}
-
-	// Update the document
-	result, err := mongoDbContext.Collection.UpdateOne(context.Background(), filter, update)
-	if err != nil {
-		return false, fmt.Errorf("failed to update token usage: %v", err)
-	}
-
-	// Check if the document was updated
-	if result.MatchedCount == 0 {
-		return false, fmt.Errorf("no customer found with id: %s", userId)
-	}
-
-	if (customer.InputTokenCount + customer.OutputTokenCount) >= customer.TokenLimit {
-		return true, nil
-	}
-
-	return false, nil
 }
 
 // mongoDbUpdateAccessAndWarning updates the access_denied and warning_sent fields

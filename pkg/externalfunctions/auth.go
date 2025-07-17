@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/ansys/aali-sharedtypes/pkg/logging"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 // CheckApiKeyAuthMongoDb checks if the given API key is valid and has access to the service.
@@ -92,7 +91,7 @@ func CheckApiKeyAuthMongoDb(apiKey string, mongoDbUrl string, mongoDatabaseName 
 //
 // Returns:
 //   - existingUser: A boolean indicating whether the user ID already exists.
-func CheckCreateUserIdMongoDb(userId string, temporaryTokenLimit int, hoursUntilTokenLimitReset int, modelId []string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string) (existingUser bool) {
+func CheckCreateUserIdMongoDb(userId string, tokenLimitForNewUsers int, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string) (existingUser bool) {
 
 	// create mongoDb context
 	mongoDbContext, err := mongoDbInitializeClient(mongoDbUrl, mongoDatabaseName, mongoDbCollectionName)
@@ -103,7 +102,7 @@ func CheckCreateUserIdMongoDb(userId string, temporaryTokenLimit int, hoursUntil
 	defer mongoDbContext.Client.Disconnect(context.Background())
 
 	// check if customer for userid exists if not, create it
-	existingUser, _, err = mongoDbGetCreateCustomerByUserId(mongoDbContext, userId, temporaryTokenLimit, hoursUntilTokenLimitReset, modelId)
+	existingUser, _, err = mongoDbGetCreateCustomerByUserId(mongoDbContext, userId, tokenLimitForNewUsers)
 	if err != nil {
 		logging.Log.Errorf(&logging.ContextMap{}, "Error getting or creating customer by userId: %v", err)
 		panic(err)
@@ -170,7 +169,8 @@ func UpdateTotalTokenCountForCustomerMongoDb(apiKey string, mongoDbUrl string, m
 //
 // Returns:
 //   - tokenLimitReached: A boolean indicating whether the customer has reached the token limit.
-func UpdateTotalTokenCountForUserIdMongoDb(userId string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string, additionalInputTokenCount int, additionalOutputTokenCount int, hoursUntilTokenLimitReset int) (tokenLimitReached bool) {
+func UpdateTotalTokenCountForUserIdMongoDb(userId string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string, additionalTokenCount int) (tokenLimitReached bool) {
+
 	// create mongoDb context
 	mongoDbContext, err := mongoDbInitializeClient(mongoDbUrl, mongoDatabaseName, mongoDbCollectionName)
 	if err != nil {
@@ -180,13 +180,23 @@ func UpdateTotalTokenCountForUserIdMongoDb(userId string, mongoDbUrl string, mon
 	defer mongoDbContext.Client.Disconnect(context.Background())
 
 	// update token count
-	tokenLimitReached, err = mongoDbAddToInputOutputTokenCountAndCheckLimit(mongoDbContext, userId, additionalInputTokenCount, additionalOutputTokenCount, hoursUntilTokenLimitReset)
+	err = mongoDbAddToTotalTokenCount(mongoDbContext, "user_id", userId, additionalTokenCount)
 	if err != nil {
 		logging.Log.Errorf(&logging.ContextMap{}, "Error updating total token count for customer: %v", err)
 		panic(err)
 	}
 
-	return tokenLimitReached
+	// check if customer is over the limit
+	exists, customer, err := mongoDbGetCreateCustomerByUserId(mongoDbContext, userId, 0)
+	if err != nil || !exists {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error getting customer by API key: %v", err)
+		panic(err)
+	}
+	if customer.TotalTokenCount >= customer.TokenLimit {
+		return true
+	}
+
+	return false
 }
 
 // DenyCustomerAccessAndSendWarningMongoDb denies access to the customer and sends a warning if necessary.
@@ -255,11 +265,9 @@ func DenyCustomerAccessAndSendWarningMongoDbUserId(userId string, mongoDbUrl str
 	defer mongoDbContext.Client.Disconnect(context.Background())
 
 	// check if warning for customer needs to be sent
-	customer := &MongoDbCustomerObjectDisco{}
-	filter := bson.M{"user_id": userId}
-	err = mongoDbContext.Collection.FindOne(context.Background(), filter).Decode(&customer)
-	if err != nil {
-		logging.Log.Errorf(&logging.ContextMap{}, "Error finding customer by user ID: %v", err)
+	exists, customer, err := mongoDbGetCreateCustomerByUserId(mongoDbContext, userId, 0)
+	if err != nil || !exists {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error getting customer by API key: %v", err)
 		panic(err)
 	}
 	if !customer.WarningSent {

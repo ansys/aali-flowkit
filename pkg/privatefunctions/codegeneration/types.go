@@ -49,8 +49,8 @@ type AssemblyMember struct {
 	Example          sharedtypes.XMLMemberExample `xml:"example,omitempty" json:"example"` // Optional <example> element
 	Remarks          string                       `xml:"remarks,omitempty" json:"remarks"` // Optional <remarks> element
 	EnumValues       string                       `xml:"enumValues,omitempty" json:"enum_values"`
-	VectorDBMetadata map[string]interface{}       `xml:"vectorDBMetadata,omitempty" json:"vector_db_metadata"` // Optional <vectorDBMetadata> element
-	GraphDBMetadata  map[string]interface{}       `xml:"graphDBMetadata,omitempty" json:"graph_db_metadata"`   // Optional <graphDBMetadata> element
+	VectorDBMetadata any                          `xml:"vectorDBMetadata,omitempty" json:"vector_db_metadata"` // Optional <vectorDBMetadata> element
+	GraphDBMetadata  any                          `xml:"graphDBMetadata,omitempty" json:"graph_db_metadata"`   // Optional <graphDBMetadata> element
 }
 
 type CodeGenerationPseudocodeResponse struct {

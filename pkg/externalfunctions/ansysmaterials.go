@@ -103,26 +103,26 @@ func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion
 	return criteriaWithGuids
 }
 
-// FilterOutNonExistingAttributes filters out criteria suggestions that do not match any of the available attributes based on their names
+// FilterOutNonExistingAttributes filters out criteria suggestions that do not match any of the available attributes based on their GUIDs
 //
 // Tags:
 //   - @displayName: Filter out non-existing attributes
 //
 // Parameters:
 //   - criteriaSuggestions: current list of criteria suggestions
-//   - availableAttributes: the list of available attributes
+//   - availableSearchCriteria: the list of available search criteria (GUIDs)
 //
 // Returns:
-//   - filtered: the list of criteria suggestions excluding those that do not match any of the available attributes
-func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute) (filtered []sharedtypes.MaterialLlmCriterion) {
-	attributeMap := make(map[string]bool)
-	for _, attr := range availableAttributes {
-		attributeMap[strings.ToLower(attr.Name)] = true
+//   - filtered: the list of criteria suggestions excluding those that do not match any of the available search criteria
+func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, availableSearchCriteria []string) (filtered []sharedtypes.MaterialCriterionWithGuid) {
+	attributeGuidMap := make(map[string]bool)
+	for _, attr := range availableSearchCriteria {
+		attributeGuidMap[strings.ToLower(attr)] = true
 	}
 
-	var filteredCriteria []sharedtypes.MaterialLlmCriterion
+	var filteredCriteria []sharedtypes.MaterialCriterionWithGuid
 	for _, suggestion := range criteriaSuggestions {
-		if attributeMap[strings.ToLower(suggestion.AttributeName)] {
+		if attributeGuidMap[strings.ToLower(suggestion.AttributeGuid)] {
 			filteredCriteria = append(filteredCriteria, suggestion)
 		} else {
 			logging.Log.Debugf(&logging.ContextMap{}, "Filtered out non existing attribute: %s", suggestion.AttributeName)

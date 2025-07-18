@@ -26,6 +26,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/ansys/aali-flowkit/pkg/privatefunctions/graphdb"
 	qdrant_utils "github.com/ansys/aali-flowkit/pkg/privatefunctions/qdrant"
@@ -216,6 +217,7 @@ func AddGraphDbParameter(parameters aali_graphdb.ParameterMap, name string, valu
 //   - databaseResponse: the graph db response
 func GeneralGraphDbQuery(query string, parameters aali_graphdb.ParameterMap) []map[string]any {
 	// Initialize the graph database.
+	logging.Log.Infof(nil, "starting of the flow time %v", time.Now().Format(time.RFC3339))
 	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
 	if err != nil {
 		logPanic(nil, "error initializing graphdb: %v", err)

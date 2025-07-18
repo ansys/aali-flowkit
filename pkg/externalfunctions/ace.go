@@ -10,19 +10,15 @@
 package externalfunctions
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
-	qdrant_utils "github.com/ansys/aali-flowkit/pkg/privatefunctions/qdrant"
 	"github.com/ansys/aali-sharedtypes/pkg/aali_graphdb"
-	"github.com/ansys/aali-sharedtypes/pkg/config"
 	"github.com/ansys/aali-sharedtypes/pkg/logging"
 	"github.com/ansys/aali-sharedtypes/pkg/sharedtypes"
-	"github.com/qdrant/go-client/qdrant"
 )
 
 // SearchExamples performs a search in the Example collection name.
@@ -43,16 +39,35 @@ import (
 // Returns:
 //   - generatedCode: the generated code as a string
 func SearchExamples(ansysProduct string, collectionName string, maxRetrievalCount int, denseWeight float64, sparseWeight float64, userQuery string) string {
-	systemMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided.
+	startTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamples STARTED - ansysProduct: %s, collectionName: %s, maxRetrievalCount: %d, userQuery: %s", ansysProduct, collectionName, maxRetrievalCount, userQuery)
+	defer func() {
+		duration := time.Since(startTime)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamples COMPLETED - duration: %v", duration)
+	}()
+
+	userMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided.
 		As a first step, you need to search the Examples Vector DB to find any relevant examples. Check if the examples contain enough information to generate the code.
 		If you are sure that the examples are enough, return "true". If you need more examples, return "false".
 
-		The format in the following JSON format, do not add anything else (no extra keys, no extra texts, or formatting (including no code fences)):
-		boolean`, ansysProduct)
+		The format in the following text, do not add anything else (no extra keys, no extra texts, or formatting (including no code fences)):
+		true/false`, ansysProduct)
 
 	outputFields := []string{"text", "document_name", "previous_chunk", "next_chunk", "guid"}
-	historyMessage := []sharedtypes.HistoricMessage{}
+	historyMessage := []sharedtypes.HistoricMessage{
+		sharedtypes.HistoricMessage{
+			Role:    "user",
+			Content: userMessage,
+		},
+	}
+
+	// Time the database query
+	dbStartTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamples - Database query STARTED for query: %s", userQuery)
 	scoredPoints := doHybridQuery(collectionName, maxRetrievalCount, outputFields, userQuery, denseWeight, sparseWeight, "")
+	dbDuration := time.Since(dbStartTime)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamples - Database query COMPLETED - duration: %v, results count: %d", dbDuration, len(scoredPoints))
+
 	if len(scoredPoints) == 0 {
 		logging.Log.Warnf(&logging.ContextMap{}, "No results found for query: %s", userQuery)
 		return ""
@@ -69,7 +84,13 @@ func SearchExamples(ansysProduct string, collectionName string, maxRetrievalCoun
 		exampleBuilder.WriteString(fmt.Sprintf("Example {%s} References: {%s}\n\n", exampleName, exampleRefs))
 	}
 	exampleString := exampleBuilder.String()
-	result, _ := PerformGeneralRequest(exampleString, historyMessage, false, systemMessage)
+
+	// Time the LLM request
+	llmStartTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamples - LLM request STARTED")
+	result, _ := PerformGeneralRequest(exampleString, historyMessage, false, "")
+	llmDuration := time.Since(llmStartTime)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamples - LLM request COMPLETED - duration: %v", llmDuration)
 
 	// Convert string result to boolean using strconv.ParseBool
 	response, err := strconv.ParseBool(result)
@@ -103,13 +124,30 @@ func SearchExamples(ansysProduct string, collectionName string, maxRetrievalCoun
 // Returns:
 //   - examplesString: the formatted examples string containing the method examples and references
 func SearchMethods(tableOfContents string, ansysProduct string, collectionName string, maxRetrievalCount int, denseWeight float64, sparseWeight float64, userQuery string) string {
-	systemMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided. As a first step, you need to search the Ansys API Reference Vector DB to find the relevant Method. Return the optimal search query to search the %s API Reference vector database. Make sure that you do not remove any relevant information from the original query. The format in the following JSON format, do not add anything else (no extra keys, no extra texts, or formatting (including no code fences)): {{ 'response': 'optimal vector db search query' }}`, ansysProduct, ansysProduct)
+	startTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchMethods STARTED - ansysProduct: %s, collectionName: %s, maxRetrievalCount: %d, userQuery: %s", ansysProduct, collectionName, maxRetrievalCount, userQuery)
+	defer func() {
+		duration := time.Since(startTime)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchMethods COMPLETED - duration: %v", duration)
+	}()
 
-	multipleCandidatesSystemMessage := fmt.Sprintf(`In Ansys Fluent-Pyfluent you must create a script to efficiently execute the instructions provided. Propose multiple candidate queries (up to 5 highly relevant variations) that will be useful to completing the user's instruction. If available, scour the User Guide table of contents that can help you generate domain-relevant queries: %s IMPORTANT: - Do not remove any critical domain terms from the user's query. - NO FILLER WORDS OR PHRASES. - Localize to the user's intent if possible (e.g., structural or thermal context). - Keep your answer under 5 meaningful variations max. Return them in valid JSON with the following structure exactly (no extra keys, no extra texts, or formatting (including no code fences)): {{ "candidate_queries": [ "query_variant_1", "query_variant_2", "... up to 5" ] }} `, tableOfContents)
+	userMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided. As a first step, you need to search the Ansys API Reference Vector DB to find the relevant Method. Return the optimal search query to search the %s API Reference vector database. Make sure that you do not remove any relevant information from the original query. The format in the following JSON format, do not add anything else (no extra keys, no extra texts, or formatting (including no code fences)): {{ 'response': 'optimal vector db search query' }}`, ansysProduct, ansysProduct)
 
-	historyMessage := []sharedtypes.HistoricMessage{}
+	multipleCandidatesForUserMessage := fmt.Sprintf(`In Ansys Fluent-Pyfluent you must create a script to efficiently execute the instructions provided. Propose multiple candidate queries (up to 5 highly relevant variations) that will be useful to completing the user's instruction. If available, scour the User Guide table of contents that can help you generate domain-relevant queries: %s IMPORTANT: - Do not remove any critical domain terms from the user's query. - NO FILLER WORDS OR PHRASES. - Localize to the user's intent if possible (e.g., structural or thermal context). - Keep your answer under 5 meaningful variations max. Return them in valid JSON with the following structure exactly (no extra keys, no extra texts, or formatting (including no code fences)): {{ "candidate_queries": [ "query_variant_1", "query_variant_2", "... up to 5" ] }} `, tableOfContents)
 
-	result, _ := PerformGeneralRequest(userQuery, historyMessage, false, multipleCandidatesSystemMessage)
+	historyMessage := []sharedtypes.HistoricMessage{
+		sharedtypes.HistoricMessage{
+			Role:    "user",
+			Content: multipleCandidatesForUserMessage,
+		},
+	}
+
+	// Time the first LLM request for candidate queries
+	llmStartTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchMethods - LLM request (candidate queries) STARTED")
+	result, _ := PerformGeneralRequest(userQuery, historyMessage, false, "")
+	llmDuration := time.Since(llmStartTime)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchMethods - LLM request (candidate queries) COMPLETED - duration: %v", llmDuration)
 
 	messageJSON, err := jsonStringToObject(result)
 	if err != nil {
@@ -129,7 +167,7 @@ func SearchMethods(tableOfContents string, ansysProduct string, collectionName s
 		logging.Log.Warnf(&logging.ContextMap{}, "No candidate queries found, using original query: %s", userQuery)
 		candidateQueries = []interface{}{userQuery}
 	} else {
-		rankingSystemMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided. You have proposed multiple potential queries. Now, please rank these queries in terms of likely effectiveness for searching the %s API to fulfill the user's intent. Then return only the best overall query in JSON (no extra keys, no extra texts, or formatting (including no code fences)). Format: {{ 'response': 'the single best query to scour the API reference to generate code'}} Consider which query would retrieve the most relevant methods or functionalities.`, ansysProduct, ansysProduct)
+		rankingUserMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided. You have proposed multiple potential queries. Now, please rank these queries in terms of likely effectiveness for searching the %s API to fulfill the user's intent. Then return only the best overall query in JSON (no extra keys, no extra texts, or formatting (including no code fences)). Format: {{ 'response': 'the single best query to scour the API reference to generate code'}} Consider which query would retrieve the most relevant methods or functionalities.`, ansysProduct, ansysProduct)
 
 		var candidateBuilder strings.Builder
 		for i, query := range candidateQueries {
@@ -139,8 +177,19 @@ func SearchMethods(tableOfContents string, ansysProduct string, collectionName s
 			candidateBuilder.WriteString(fmt.Sprintf(`"- %s"`, query))
 		}
 		candidateQueriesString := candidateBuilder.String()
+		historyMessage := []sharedtypes.HistoricMessage{
+			sharedtypes.HistoricMessage{
+				Role:    "user",
+				Content: rankingUserMessage,
+			},
+		}
 
-		result, _ := PerformGeneralRequest("Candidate queries:\n"+candidateQueriesString, historyMessage, false, rankingSystemMessage)
+		// Time the ranking LLM request
+		llmRankingStartTime := time.Now()
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchMethods - LLM request (ranking queries) STARTED")
+		result, _ := PerformGeneralRequest("Candidate queries:\n"+candidateQueriesString, historyMessage, false, "")
+		llmRankingDuration := time.Since(llmRankingStartTime)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchMethods - LLM request (ranking queries) COMPLETED - duration: %v", llmRankingDuration)
 
 		messageJSON, err = jsonStringToObject(result)
 
@@ -156,8 +205,19 @@ func SearchMethods(tableOfContents string, ansysProduct string, collectionName s
 		}
 	}
 	if bestQuery == "" {
+		historyMessage := []sharedtypes.HistoricMessage{
+			sharedtypes.HistoricMessage{
+				Role:    "user",
+				Content: userMessage,
+			},
+		}
 		logging.Log.Error(&logging.ContextMap{}, "Best query is empty")
-		result, _ := PerformGeneralRequest(userQuery, historyMessage, false, systemMessage)
+		// Time the fallback LLM request
+		llmFallbackStartTime := time.Now()
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchMethods - LLM request (fallback) STARTED")
+		result, _ := PerformGeneralRequest(userQuery, historyMessage, false, "")
+		llmFallbackDuration := time.Since(llmFallbackStartTime)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchMethods - LLM request (fallback) COMPLETED - duration: %v", llmFallbackDuration)
 		messageJSON, err = jsonStringToObject(result)
 
 		if err != nil {
@@ -173,7 +233,13 @@ func SearchMethods(tableOfContents string, ansysProduct string, collectionName s
 	logging.Log.Warnf(&logging.ContextMap{}, "Best query found: %s", bestQuery)
 
 	outputFields := []string{"text", "document_name", "previous_chunk", "next_chunk", "guid"}
+
+	// Time the database query
+	dbStartTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchMethods - Database query STARTED for best query: %s", bestQuery)
 	scoredPoints := doHybridQuery(collectionName, maxRetrievalCount, outputFields, bestQuery, denseWeight, sparseWeight, "")
+	dbDuration := time.Since(dbStartTime)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchMethods - Database query COMPLETED - duration: %v, results count: %d", dbDuration, len(scoredPoints))
 
 	// Format results as requested
 	var exampleBuilder strings.Builder
@@ -190,19 +256,8 @@ func SearchMethods(tableOfContents string, ansysProduct string, collectionName s
 	if exampleBuilder.Len() == 0 {
 		return ""
 	}
-	return checkWhetherOneOfTheMethodsFits(collectionName, historyMessage, ansysProduct, denseWeight, sparseWeight, maxRetrievalCount, exampleBuilder.String())
-}
-
-func checkWhetherOneOfTheMethodsFits(collectionName string, historyMessage []sharedtypes.HistoricMessage, ansysProduct string, denseWeight float64, sparseWeight float64, maxRetrievalCount int, methods string) string {
-	systemMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided.
-        In this step you must decide whether one of the options provided is unambiguously the right one. If so, return the full path of the MethodW. Otherwise return the explanation for the ambiguity.
-
-        The format is as follows: "<full path of the Method, is mandatory to include the signature with parameters if present>"
-
-        Important: If "unambiguous_method_found" is true, "unambiguous_method_path" must be provided.`, ansysProduct)
-	message, _ := PerformGeneralRequest(methods, historyMessage, false, systemMessage)
-
-	return message
+	// return checkWhetherOneOfTheMethodsFits(collectionName, historyMessage, ansysProduct, denseWeight, sparseWeight, maxRetrievalCount, exampleBuilder.String())
+	return exampleBuilder.String()
 }
 
 // SearchDocumentation performs a general query in the User Guide.
@@ -224,51 +279,102 @@ func checkWhetherOneOfTheMethodsFits(collectionName string, historyMessage []sha
 // Returns:
 //   - userResponse: the formatted user response string
 func SearchDocumentation(collectionName string, maxRetrievalCount int, queryString string, denseWeight float64, sparseWeight float64, ansysProduct string, historyMessage []sharedtypes.HistoricMessage, tableOfContentsString string) string {
-	systemMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided.
-		In this step you must find the right chapter / subchapter within the Ansys User Guide to retrieve more information in order to identify the correct Method. Return Chapter Details of the chapters you want to look into. Order the section names by relevance.
-		Do focus on the task, Interface and Introduction sections should be ignored.
-		If the section match isn't perfect, that's okay. The goal is to find the right chapter / subchapter to look into, so return a boolean to indicate if the section requires references.
-		If you already selected a subchapter in a previous step, please don't select it again, explore other options from the table of contents.
-		Respond in the following JSON format. Do only return the json object without any quotes around it (no extra keys, no extra texts, or formatting (including no code fences)):
+	startTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation STARTED - ansysProduct: %s, collectionName: %s, maxRetrievalCount: %d, queryString: %s", ansysProduct, collectionName, maxRetrievalCount, queryString)
+	defer func() {
+		duration := time.Since(startTime)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation COMPLETED - duration: %v", duration)
+	}()
+
+	userMessage := fmt.Sprintf(`In %s: You need to write a script that finds the most relevant chapter or subchapter in the Ansys User Guide to help answer the User Query.
+	- Focus only on technical content; ignore Interface and Introduction sections.
+	- The section name doesn’t have to match perfectly—just find the best one to explore.
+	- Indicate whether the section needs more references by returning a boolean (true or false).
+	- Don’t repeat subchapters already used—pick new ones.
+	- List chapter details in order of relevance.
+	- Return only the JSON object in this format (no extra text, quotes, or formatting):
 		[
-			"index":  "<Index of the Chapter>",
-			"sub_chapter_name": "<Name of the Chapter / Subchapter>",
-			"section_name": "<complete path as listed in table of contents>",
-			"get_references": "<boolean true or false>"
-		]
-		Output Format is as follows:
-		[
 			{
-				"index": "18.5.1",
-				"sub_chapter_name": "Structural Results",
-				"section_name": "ds_using_select_results_structural_types.xml::Deformation",
-				"get_references": true
-			},
-			{
-				"index": "17.10.1",
-				"sub_chapter_name": "Using Result Trackers",
-				"section_name": "ds_using_solve.xml::Structural Result Trackers",
-				"get_references": false
-			},
-			{
-				"index": "17.8",
-				"sub_chapter_name": "Solving",
-				"section_name": "ds_using_solve.xml::Specifying Solution Information",
-				"get_references": true
+			"index": "<Index of the Chapter>",
+			"sub_chapter_name": "<Chapter/Subchapter Name>",
+			"section_name": "<Full path in Table of Contents>",
+			"get_references": <true or false>
 			}
-		]`, ansysProduct)
-	message, _ := PerformGeneralRequest("User Guide Table of Contents:\n"+tableOfContentsString, historyMessage, false, systemMessage)
+		]
+	- Example output:
+		[
+				{
+					"index": "18.5.1",
+					"sub_chapter_name": "Structural Results",
+					"section_name": "ds_using_select_results_structural_types.xml::Deformation",
+					"get_references": true
+				},
+		]
+		`, ansysProduct, queryString)
+
+	historyMessage = append(historyMessage, sharedtypes.HistoricMessage{
+		Role:    "user",
+		Content: userMessage,
+	})
+
+	historyMessage = append(historyMessage, sharedtypes.HistoricMessage{
+		Role:    "user",
+		Content: "Ansys User Guide:" + tableOfContentsString,
+	})
+
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation - User message for LLM request: %s", userMessage)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation - Table of Contents: %s", tableOfContentsString)
+
+	// Time the LLM request for chapter selection
+	llmStartTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation - LLM request (chapter selection) STARTED")
+	message, _ := PerformGeneralRequest("User Query:\n"+queryString, historyMessage, false, "")
+	llmDuration := time.Since(llmStartTime)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation - LLM request (chapter selection) COMPLETED - duration: %v", llmDuration)
+
+	// Log first 500 chars of response for debugging without overwhelming logs
+	if len(message) > 500 {
+		logging.Log.Infof(&logging.ContextMap{}, "LLM response preview (first 500 chars): %s...", message[:500])
+	} else {
+		logging.Log.Infof(&logging.ContextMap{}, "LLM response: %s", message)
+	}
+
 	// messageJSON is expected to be a slice of map[string]interface{} (JSON array)
 	var chapters []map[string]interface{}
-	err := json.Unmarshal([]byte(message), &chapters)
-	if err != nil {
-		logging.Log.Error(&logging.ContextMap{}, "Error converting message to JSON array: %v", err)
+
+	// Clean and validate JSON before parsing
+	cleanedMessage := strings.TrimSpace(message)
+	if cleanedMessage == "" {
+		logging.Log.Error(&logging.ContextMap{}, "Empty LLM response received")
 		return ""
 	}
-	uniqueSection := map[string]map[string]interface{}{}
+
+	// Extract JSON array if wrapped in other text
+	startIdx := strings.Index(cleanedMessage, "[")
+	endIdx := strings.LastIndex(cleanedMessage, "]")
+	if startIdx == -1 || endIdx == -1 || startIdx >= endIdx {
+		logging.Log.Error(&logging.ContextMap{}, "No valid JSON array found in response")
+		return ""
+	}
+
+	jsonContent := cleanedMessage[startIdx : endIdx+1]
+	err := json.Unmarshal([]byte(jsonContent), &chapters)
+	if err != nil {
+		logging.Log.Error(&logging.ContextMap{}, "Error converting message to JSON array: %v", err)
+		logging.Log.Error(&logging.ContextMap{}, "Failed JSON content: %s", jsonContent)
+		return ""
+	}
+
+	if len(chapters) == 0 {
+		logging.Log.Warn(&logging.ContextMap{}, "No chapters found in LLM response")
+		return ""
+	}
+	// Build unique sections map more efficiently
+	uniqueSection := make(map[string]map[string]interface{}, len(chapters))
 	for _, item := range chapters {
 		name, ok := item["sub_chapter_name"].(string)
 		if !ok {
+			logging.Log.Warn(&logging.ContextMap{}, "Skipping chapter with invalid sub_chapter_name")
 			continue
 		}
 		if _, exists := uniqueSection[name]; !exists {
@@ -276,108 +382,124 @@ func SearchDocumentation(collectionName string, maxRetrievalCount int, queryStri
 		}
 	}
 
-	// Retrieve content for each unique section
+	if len(uniqueSection) == 0 {
+		logging.Log.Warn(&logging.ContextMap{}, "No valid unique sections found")
+		return ""
+	}
+
+	// Pre-allocate string builder with estimated capacity
 	var guideSectionsBuilder strings.Builder
+	guideSectionsBuilder.Grow(len(uniqueSection) * 1000) // Estimate 1KB per section
+
+	// Process sections in parallel-friendly way (though Go's map iteration is random)
 	for _, item := range uniqueSection {
-		sectionName, ok := item["section_name"].(string)
-		if !ok {
-			logging.Log.Error(&logging.ContextMap{}, "section_name is not a string")
+		// Validate all required fields upfront
+		sectionName, sectionOk := item["section_name"].(string)
+		subChapterName, subChapterOk := item["sub_chapter_name"].(string)
+		index, indexOk := item["index"].(string)
+		getReferences, refOk := item["get_references"].(bool)
+
+		if !sectionOk {
+			logging.Log.Error(&logging.ContextMap{}, "section_name is not a string, skipping section")
 			continue
 		}
-		subChapterName, ok := item["sub_chapter_name"].(string)
-		if !ok {
-			logging.Log.Error(&logging.ContextMap{}, "sub_chapter_name is not a string")
+		if !subChapterOk {
+			logging.Log.Error(&logging.ContextMap{}, "sub_chapter_name is not a string, skipping section")
 			continue
 		}
-		index, ok := item["index"].(string)
-		if !ok {
-			logging.Log.Error(&logging.ContextMap{}, "index is not a string")
+		if !indexOk {
+			logging.Log.Error(&logging.ContextMap{}, "index is not a string, skipping section")
 			continue
 		}
-		guideSectionsBuilder.WriteString(fmt.Sprintf("Index: %s, Title: %s, Section Name: %s\n", sectionName, subChapterName, index))
-		getReferences, ok := item["get_references"].(bool)
-		if !ok {
-			logging.Log.Error(&logging.ContextMap{}, "get_references is not a boolean")
+		if !refOk {
+			logging.Log.Error(&logging.ContextMap{}, "get_references is not a boolean, skipping section")
 			continue
 		}
-		userResponse := ""
-		// print collectionName
+
+		// Write section header
+		guideSectionsBuilder.WriteString(fmt.Sprintf("Index: %s, Title: %s, Section Name: %s\n", index, subChapterName, sectionName))
+
+		var userResponse strings.Builder
+		userResponse.Grow(500) // Pre-allocate for efficiency
+
 		if getReferences {
-			// Query the user guide name
+			// Time the user guide query
+			guideQueryStart := time.Now()
 			scoredPoints := queryUserGuideName(sectionName, uint64(3), collectionName)
+			logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation - User guide query for '%s' took %v", sectionName, time.Since(guideQueryStart))
+
 			realSectionName := sectionName
 			if len(scoredPoints) > 0 {
-				// Append the scored point to sections
 				payload := scoredPoints[0].GetPayload()
-				userResponse = "With section texts: " + payload["text"].GetStringValue() + "\n"
+				userResponse.WriteString("With section texts: ")
+				userResponse.WriteString(payload["text"].GetStringValue())
+				userResponse.WriteString("\n")
 				realSectionName = payload["section_name"].GetStringValue()
 			} else {
 				logging.Log.Warnf(&logging.ContextMap{}, "No results found for section: %s", sectionName)
+				continue // Skip sections with no results to save time
 			}
 
-			// Escape the string parameter properly for Cypher
+			// Time the graph database query
+			graphQueryStart := time.Now()
 			escapedSectionName := strings.ReplaceAll(realSectionName, `\`, `\\`)
 			escapedSectionName = strings.ReplaceAll(escapedSectionName, `"`, `\"`)
 			query := fmt.Sprintf("MATCH (n:UserGuide {name: \"%s\"})-[:References]->(reference) RETURN reference.name AS section_name", escapedSectionName)
 			parameters := aali_graphdb.ParameterMap{}
 			result := GeneralGraphDbQuery(query, parameters)
+			logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation - Graph query for '%s' took %v", realSectionName, time.Since(graphQueryStart))
+
 			if len(result) == 0 {
 				logging.Log.Warnf(&logging.ContextMap{}, "No references found for section: %s", sectionName)
-				continue
-			}
-			// Append section name from result
-			logging.Log.Warnf(&logging.ContextMap{}, "Found references for collectionName: %s", collectionName)
-			for index, record := range result {
-				if index > 2 {
-					break
-				}
-				sectionName := record["section_name"]
-				userResponse += "With references: " + sectionName.(string) + "\n"
-				sections := queryUserGuideName(sectionName.(string), uint64(3), collectionName)
-				// Initialize an empty string to store the content
-				content := ""
+				// Continue with just the section text instead of skipping entirely
+			} else {
+				// Limit references to improve performance (max 3 as already limited in loop)
+				for index, record := range result {
+					if index > 2 {
+						break
+					}
+					referenceName := record["section_name"].(string)
+					userResponse.WriteString("With references: ")
+					userResponse.WriteString(referenceName)
+					userResponse.WriteString("\n")
 
-				// Iterate through the retrieved sections and append their text content
-				for _, section := range sections {
-					if section.Payload["text"].GetStringValue() != "" {
-						content += section.Payload["text"].GetStringValue() + "\n"
+					// Time individual section queries
+					refQueryStart := time.Now()
+					sections := queryUserGuideName(referenceName, uint64(3), collectionName)
+					logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation - Reference query for '%s' took %v", referenceName, time.Since(refQueryStart))
+
+					for _, section := range sections {
+						if text := section.Payload["text"].GetStringValue(); text != "" {
+							userResponse.WriteString("With reference section texts: ")
+							userResponse.WriteString(text)
+							userResponse.WriteString("\n")
+						}
 					}
 				}
-				userResponse += "With reference section texts: " + content + "\n"
 			}
-
 		} else {
-			logging.Log.Warnf(&logging.ContextMap{}, "Skipping references for section: %s", sectionName)
+			logging.Log.Infof(&logging.ContextMap{}, "Skipping references for section: %s", sectionName)
+			// Time the simplified query
+			simpleQueryStart := time.Now()
 			scoredPoints := queryUserGuideName(sectionName, uint64(5), collectionName)
-			content := ""
+			logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation - Simple query for '%s' took %v", sectionName, time.Since(simpleQueryStart))
+
 			if len(scoredPoints) > 0 {
-				// Append the scored point to sections
 				payload := scoredPoints[0].Payload
-				content += payload["text"].GetStringValue() + "\n"
+				userResponse.WriteString(payload["text"].GetStringValue())
+				userResponse.WriteString("\n")
 			} else {
 				logging.Log.Warnf(&logging.ContextMap{}, "No results found for section: %s", sectionName)
 			}
-			userResponse = content
 		}
-		guideSectionsBuilder.WriteString(userResponse)
+
+		guideSectionsBuilder.WriteString(userResponse.String())
 		guideSectionsBuilder.WriteString("\n\n\n-------------------\n\n\n")
 	}
 
 	userGuideInformation := "Retrieved information from user guide:\n\n\n" + guideSectionsBuilder.String()
-	return checkWhetherUserInformationFits(ansysProduct, userGuideInformation, historyMessage)
-}
-
-func checkWhetherUserInformationFits(ansysProduct string, userQuery string, historyMessage []sharedtypes.HistoricMessage) string {
-	systemMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided.
-			In this step, you must evaluate the information retrieved from the User Guide and decide whether you have enough information to unambiguously identify the correct Method or whether you need some user input.
-			If you need user input, return the query you would like to ask the user. If you have enough information, return the full path of the Method.
-			Don't ask the user for information that is already provided in the query %s.
-			
-			Respond with the following JSON format: "<full path of the Method, is mandatory to include the signature with parameters if present>
-			`, ansysProduct, userQuery)
-	result, _ := PerformGeneralRequest(userQuery, historyMessage, false, systemMessage)
-
-	return result
+	// return checkWhetherUserInformationFits(ansysProduct, userGuideInformation, historyMessage)
+	return userGuideInformation
 }
 
 // SearchExamplesForMethod performs a search in the Example.
@@ -397,7 +519,20 @@ func checkWhetherUserInformationFits(ansysProduct string, userQuery string, hist
 // Returns:
 //   - returns method examples as a formatted string or empty string
 func SearchExamplesForMethod(collectionName string, ansysProduct string, historyMessage []sharedtypes.HistoricMessage, methodName string, maxExamples int) string {
+	startTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod STARTED - methodName: %s, collectionName: %s, maxExamples: %d", methodName, collectionName, maxExamples)
+	defer func() {
+		duration := time.Since(startTime)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod COMPLETED - duration: %v", duration)
+	}()
+
+	// Time the method lookup
+	methodDbStartTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (method lookup) STARTED for: %s", methodName)
 	nresult := getElementByName(methodName, "Method")
+	methodDbDuration := time.Since(methodDbStartTime)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (method lookup) COMPLETED - duration: %v, results count: %d", methodDbDuration, len(nresult))
+
 	if len(nresult) == 0 {
 		logging.Log.Warnf(&logging.ContextMap{}, "No method found with name: %s", methodName)
 		return ""
@@ -414,7 +549,14 @@ func SearchExamplesForMethod(collectionName string, ansysProduct string, history
 		logging.Log.Warnf(&logging.ContextMap{}, "No API example found for method: %s", methodName)
 		return ""
 	}
+
+	// Time the examples lookup
+	examplesDbStartTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (examples lookup) STARTED for method: %s", methodName)
 	examples := getExampleNodesFromElement("Method", methodName, collectionName)
+	examplesDbDuration := time.Since(examplesDbStartTime)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (examples lookup) COMPLETED - duration: %v, results count: %d", examplesDbDuration, len(examples))
+
 	if len(examples) == 0 {
 		return ""
 	}
@@ -455,8 +597,15 @@ func SearchExamplesForMethod(collectionName string, ansysProduct string, history
 // Returns:
 //   - Code as a string
 func GenerateCode(ansysProduct string, methods string, examples string, methods_from_user_guide string, historyMessages []sharedtypes.HistoricMessage, userQuery string) string {
+	startTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GenerateCode STARTED - ansysProduct: %s, userQuery: %s", ansysProduct, userQuery)
+	defer func() {
+		duration := time.Since(startTime)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GenerateCode COMPLETED - duration: %v", duration)
+	}()
+
 	logging.Log.Infof(&logging.ContextMap{}, "Generating code for ansysProduct: %s, methods: %s, examples: %s, methods_from_user_guide: %s", ansysProduct, methods, examples, methods_from_user_guide)
-	systemMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided.
+	userMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided.
 		Use the API definition and the related APIs found. Do you best to generate the code based on the information available.
 
 		Methods: %s
@@ -472,13 +621,24 @@ func GenerateCode(ansysProduct string, methods string, examples string, methods_
 		Respond with the following format, do not add anything else:
 		The generated Python code only`, ansysProduct, methods, examples, methods_from_user_guide)
 
-	result, _ := PerformGeneralRequest(userQuery, historyMessages, false, systemMessage)
+	historyMessages = append(historyMessages, sharedtypes.HistoricMessage{
+		Role:    "user",
+		Content: userMessage,
+	})
+
+	// Time the LLM request for code generation
+	llmStartTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GenerateCode - LLM request (code generation) STARTED")
+	result, _ := PerformGeneralRequest(userQuery, historyMessages, false, "")
+	llmDuration := time.Since(llmStartTime)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GenerateCode - LLM request (code generation) COMPLETED - duration: %v", llmDuration)
 
 	if result == "" {
 		return result
 	}
 
 	// Format the result as markdown code block
+	logging.Log.Infof(nil, "ending of the flow time %v", time.Now().Format(time.RFC3339))
 	return fmt.Sprintf("%s", result)
 
 }
@@ -505,6 +665,13 @@ type StringReplacementArgs struct {
 // Returns:
 //   - the input string with the replacements applied
 func StringReplaceWithArray(args StringReplacementArgs) string {
+	startTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: StringReplaceWithArray STARTED")
+	defer func() {
+		duration := time.Since(startTime)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: StringReplaceWithArray COMPLETED - duration: %v", duration)
+	}()
+
 	input := args.Input
 
 	// Count the number of placeholders in the input string
@@ -517,35 +684,6 @@ func StringReplaceWithArray(args StringReplacementArgs) string {
 	replacements := buildReplacements(placeholderCount, args)
 
 	return fmt.Sprintf(input, replacements...)
-}
-
-// countPlaceholders counts the number of %s placeholders in the input string
-func countPlaceholders(input string) int {
-	count := 0
-	for i := 0; i < len(input)-1; i++ {
-		if input[i] == '%' && input[i+1] == 's' {
-			count++
-		}
-	}
-	return count
-}
-
-// buildReplacements creates a slice of replacement values based on the count needed
-func buildReplacements(count int, args StringReplacementArgs) []any {
-	switch count {
-	case 1:
-		return []any{args.Placeholder1}
-	case 2:
-		return []any{args.Placeholder1, args.Placeholder2}
-	case 3:
-		return []any{args.Placeholder1, args.Placeholder2, args.Placeholder3}
-	case 4:
-		return []any{args.Placeholder1, args.Placeholder2, args.Placeholder3, args.Placeholder4}
-	case 5:
-		return []any{args.Placeholder1, args.Placeholder2, args.Placeholder3, args.Placeholder4, args.Placeholder5}
-	default:
-		return []any{}
-	}
 }
 
 // ConvertJSONToCustomize converts JSON to customize format
@@ -565,750 +703,15 @@ func buildReplacements(count int, args StringReplacementArgs) []any {
 // 03. API reference (section Name -> api\\api_contents.md)
 // 04. Contributing to PyFluent (section Name -> contributing\\contributing_contents.md)
 // 05. Release notes (section Name -> changelog.md)
-func ConvertJSONToCustomize(object []map[string]any) string {
+func ConvertJSONToCustomize() string {
+	object := GeneralGraphDbQuery("MATCH (chapter:UserGuide {level:1}) WHERE chapter.parent = 'index.md' OPTIONAL MATCH (section:UserGuide {level:2}) WHERE section.parent = chapter.document_name OPTIONAL MATCH (subsection:UserGuide {level:3}) WHERE subsection.parent = section.document_name RETURN chapter.title AS chapter_title, chapter.document_name AS chapter_doc, section.title AS section_title, section.document_name AS section_doc, subsection.title AS subsection_title, subsection.document_name AS subsection_doc ORDER BY chapter.title, section.title, subsection.title", aali_graphdb.ParameterMap{})
+	startTime := time.Now()
+
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: ConvertJSONToCustomize STARTED")
+	defer func() {
+		duration := time.Since(startTime)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: ConvertJSONToCustomize COMPLETED - duration: %v", duration)
+	}()
+
 	return convertJSONToCustomizeHelper(object, 0, "")
-}
-
-// convertJSONToCustomizeHelper is an internal helper with all parameters
-func convertJSONToCustomizeHelper(object []map[string]any, level int, currentIndex string) string {
-	var nodeBuilder strings.Builder
-	for _, item := range object {
-		chapters, ok := item["chapters"].([]interface{})
-		if !ok {
-			fmt.Println("Skipping item: not a chapter list")
-			continue
-		}
-		for idx, chapter := range chapters {
-			currentIndex := fmt.Sprintf("0%d.", idx+1)
-			chapterMap, ok := chapter.(map[string]interface{})
-			if !ok {
-				fmt.Println("Skipping chapter: not a map")
-				continue
-			}
-			nodeBuilder.WriteString(fmt.Sprintf(
-				"%s%s %s (section Name -> %s)\n",
-				repeatString("  ", level),
-				currentIndex,
-				chapterMap["title"],
-				chapterMap["name"],
-			))
-		}
-	}
-	return nodeBuilder.String()
-}
-
-// repeatString returns a string with s repeated count times.
-// Uses strings.Repeat for efficiency.
-func repeatString(s string, count int) string {
-	return strings.Repeat(s, count)
-}
-
-// // SearchElements performs a general query in the KnowledgeDB.
-// //
-// // The function returns the query results.
-// //
-// // Tags:
-// //   - @displayName: Search Elements
-// //
-// // Parameters:
-// //   - collectionName: the name of the collection to which the data objects will be added.
-// //   - maxRetrievalCount: the maximum number of results to be retrieved.
-// //   - queryString: the query string to be used for the query.
-// //   - denseWeight: the weight for the dense vector. (default: 0.9)
-// //   - sparseWeight: the weight for the sparse vector. (default: 0.1)
-// //
-// // Returns:
-// //   - userResponse: the formatted user response string
-// func SearchElements(collectionName string, maxRetrievalCount int, queryString string, denseWeight float64, sparseWeight float64) string {
-// 	outputFields := []string{"name"}
-// 	nodeType := "Method" // Specify the node type to filter by
-// 	scoredPoints := doHybridQuery(collectionName, maxRetrievalCount, outputFields, queryString, denseWeight, sparseWeight, nodeType)
-// 	// Format results as requested
-// 	elements := []string{}
-// 	for _, scoredPoint := range scoredPoints {
-// 		entry := scoredPoint.Payload
-// 		name := entry["name"].GetStringValue()
-// 		result := getElementByName(name, nodeType)
-// 		for _, nentry := range result {
-// 			entry := nentry["n"].(map[string]interface{})
-// 			namePseudocode := entry["name_pseudocode"]
-// 			completeName := entry["name"]
-// 			remarks := entry["remarks"]
-// 			summary := entry["summary"]
-// 			parameters := entry["parameters"]
-// 			element := fmt.Sprintf("%s ; %s ; %s ; Remarks: %s; Parameters: %s\n\n", namePseudocode, completeName, summary, remarks, parameters)
-// 			elements = append(elements, element)
-// 		}
-// 	}
-// 	userResponse := joinStrings(elements, "\n")
-// 	return userResponse
-// }
-
-// joinStrings joins a slice of strings with the given separator.
-// Uses strings.Join for efficiency.
-func joinStrings(strs []string, sep string) string {
-	return strings.Join(strs, sep)
-}
-
-func getExampleReferences(baseSearchNodeComplete string, db string) (string, []interface{}) {
-	var exampleNamesBuilder strings.Builder
-	exampleReferencesInformation := []interface{}{}
-	// Escape the string parameter properly for Cypher
-	escapedName := strings.ReplaceAll(baseSearchNodeComplete, `"`, `\"`)
-	query := fmt.Sprintf(`MATCH (root:Example {name: "%s"})-[r]-(neighbor) RETURN root.name AS rootName, label(r) AS relationshipType, r AS relationshipProps, neighbor.name AS neighborName, label(neighbor) AS neighborLabel, neighbor.parameters AS neighborParameters, neighbor.remarks AS neighborRemarks, neighbor.return_type AS neighborReturn, neighbor.summary AS neighborSummary`, escapedName)
-	parameters := aali_graphdb.ParameterMap{}
-	result := GeneralGraphDbQuery(query, parameters)
-	for _, relationship := range result {
-		element := relationship["neighborName"]
-		elementType := relationship["neighborLabel"]
-		if elementType == nil {
-			elementType = "Unknown" // default value if not found
-		}
-		exampleNamesBuilder.WriteString(fmt.Sprintf("This example uses %s as a %s\n", element, elementType))
-		referenceParameters := relationship["neighborParameters"]
-		if referenceParameters == nil {
-			referenceParameters = "No parameters available."
-		}
-		referenceRemarks := relationship["neighborRemarks"]
-		if referenceRemarks == nil {
-			referenceRemarks = "No remarks available."
-		}
-		referenceReturns := relationship["neighborReturn"]
-		if referenceReturns == nil {
-			referenceReturns = "No return available."
-		}
-		referenceSummary := relationship["neighborSummary"]
-		if referenceSummary == nil {
-			referenceSummary = "No summary available"
-		}
-		referencesInformation := map[string]any{
-			"reference_name":       element,
-			"reference_type":       elementType,
-			"reference_parameters": referenceParameters,
-			"reference_remarks":    referenceRemarks,
-			"reference_returns":    referenceReturns,
-			"reference_summary":    referenceSummary,
-		}
-		exampleReferencesInformation = append(exampleReferencesInformation, referencesInformation)
-	}
-
-	return exampleNamesBuilder.String(), exampleReferencesInformation
-}
-
-func getExampleNodesFromElement(baseSearchType string, baseSearchNodeComplete string, collectionName string) []map[string]interface{} {
-	// Escape the string parameters properly for Cypher
-	escapedNodeComplete := strings.ReplaceAll(baseSearchNodeComplete, `"`, `\"`)
-	escapedType := strings.ReplaceAll(baseSearchType, `"`, `\"`)
-	query := fmt.Sprintf(`MATCH (n:Element) <-[:Uses]- (example:Example)
-			WHERE n.name = "%s" AND n.type = "%s"
-			RETURN example
-			`, escapedNodeComplete, escapedType)
-
-	parameters := aali_graphdb.ParameterMap{}
-
-	result := GeneralGraphDbQuery(query, parameters)
-	preparedExample := []map[string]interface{}{}
-	for _, relationship := range result {
-		element := relationship["example"]
-		if element == nil {
-			logging.Log.Error(&logging.ContextMap{}, "Element is nil")
-			continue
-		}
-		example := element.(map[string]interface{})
-		exampleName := example["name"].(string)
-		exampleText := ""
-		orderedChunks := queryExample(exampleName, collectionName)
-		for _, chunk := range orderedChunks {
-			exampleText += chunk["text"].(string)
-		}
-		preparedExample = append(preparedExample, map[string]interface{}{
-			"name": exampleName,
-			"text": exampleText,
-		})
-	}
-	return preparedExample
-}
-
-func queryExample(exampleName string, collectionName string) []map[string]interface{} {
-	// search database
-	client, err := qdrant_utils.QdrantClient()
-
-	if err != nil {
-		logging.Log.Error(&logging.ContextMap{}, "Error creating Qdrant client: %v", err)
-		return []map[string]interface{}{}
-	}
-	resultCount := uint64(1000)
-	query := qdrant.QueryPoints{
-		CollectionName: collectionName,
-		WithVectors:    qdrant.NewWithVectorsEnable(false),
-		WithPayload:    qdrant.NewWithPayloadInclude([]string{"text", "document_name", "previous_chunk", "next_chunk", "guid"}...),
-		Query:          nil,
-		Limit:          &resultCount,
-		Filter: &qdrant.Filter{
-			Must: []*qdrant.Condition{
-				qdrant.NewMatchKeyword("document_name", exampleName),
-			},
-		},
-	}
-	unorderedDictionary := map[string]interface{}{}
-	firstChunk := map[string]interface{}{}
-	newEntry := map[string]interface{}{}
-
-	scoredPoints, err := client.Query(context.TODO(), &query)
-
-	for _, scoredPoint := range scoredPoints {
-		payload := scoredPoint.GetPayload()
-		newEntry = map[string]interface{}{
-			"text":           payload["text"].GetStringValue(),
-			"document_name":  payload["document_name"].GetStringValue(),
-			"previous_chunk": payload["previous_chunk"].GetStringValue(),
-			"next_chunk":     payload["next_chunk"].GetStringValue(),
-			"guid":           payload["guid"].GetStringValue(),
-		}
-		unorderedDictionary[payload["guid"].GetStringValue()] = newEntry
-
-		if newEntry["previous_chunk"] == "" {
-			firstChunk = newEntry
-		}
-	}
-
-	nextEntryGUID := firstChunk["guid"].(string)
-
-	output := []map[string]interface{}{firstChunk}
-	nextEntry := map[string]interface{}{}
-
-	if nextEntryGUID != "" || len(nextEntryGUID) > 0 {
-		nextEntry = unorderedDictionary[nextEntryGUID].(map[string]interface{})
-		output = append(output, nextEntry)
-		nextEntryGUID = nextEntry["next_chunk"].(string)
-
-		return output
-	}
-
-	return output
-
-}
-
-func queryUserGuideName(name string, resultCount uint64, collectionName string) []*qdrant.ScoredPoint {
-	client, err := qdrant_utils.QdrantClient()
-	query := qdrant.QueryPoints{
-		CollectionName: collectionName,
-		WithVectors:    qdrant.NewWithVectorsEnable(false),
-		WithPayload: qdrant.NewWithPayloadInclude([]string{"document_name",
-			"section_name",
-			"previous_chunk",
-			"next_chunk",
-			"text",
-			"level",
-			"parent_section_name",
-			"guid"}...),
-		Query: nil,
-		Limit: &resultCount,
-		Filter: &qdrant.Filter{
-			Must: []*qdrant.Condition{
-				qdrant.NewMatchKeyword("section_name", name),
-			},
-		},
-	}
-	scoredPoints, err := client.Query(context.TODO(), &query)
-	if err != nil {
-		logPanic(&logging.ContextMap{}, "error in qdrant query: %q", err)
-	}
-	var results []*qdrant.ScoredPoint
-	for _, scoredPoint := range scoredPoints {
-		results = append(results, scoredPoint)
-	}
-	return results
-}
-
-func getDocumentation(baseSearchNodeComplete string, db string) (string, []interface{}) {
-	var exampleNamesBuilder strings.Builder
-	exampleReferencesInformation := []interface{}{}
-	// Escape the string parameter properly for Cypher
-	escapedName := strings.ReplaceAll(baseSearchNodeComplete, `"`, `\"`)
-	query := fmt.Sprintf(`MATCH (root:Example {name: "%s"})-[r]-(neighbor) RETURN root.name AS rootName, label(r) AS relationshipType, r AS relationshipProps, neighbor.name AS neighborName, label(neighbor) AS neighborLabel, neighbor.parameters AS neighborParameters, neighbor.remarks AS neighborRemarks, neighbor.return_type AS neighborReturn, neighbor.summary AS neighborSummary`, escapedName)
-	parameters := aali_graphdb.ParameterMap{}
-	result := GeneralGraphDbQuery(query, parameters)
-	for _, relationship := range result {
-		element := relationship["neighborName"]
-		elementType := relationship["neighborLabel"]
-		if elementType == nil {
-			elementType = "Unknown" // default value if not found
-		}
-		exampleNamesBuilder.WriteString(fmt.Sprintf("This example uses %s as a %s\n", element, elementType))
-		referenceParameters := relationship["neighborParameters"]
-		if referenceParameters == nil {
-			referenceParameters = "No parameters available."
-		}
-		referenceRemarks := relationship["neighborRemarks"]
-		if referenceRemarks == nil {
-			referenceRemarks = "No remarks available."
-		}
-		referenceReturns := relationship["neighborReturn"]
-		if referenceReturns == nil {
-			referenceReturns = "No return available."
-		}
-		referenceSummary := relationship["neighborSummary"]
-		if referenceSummary == nil {
-			referenceSummary = "No summary available"
-		}
-		referencesInformation := map[string]any{
-			"reference_name":       element,
-			"reference_type":       elementType,
-			"reference_parameters": referenceParameters,
-			"reference_remarks":    referenceRemarks,
-			"reference_returns":    referenceReturns,
-			"reference_summary":    referenceSummary,
-		}
-		exampleReferencesInformation = append(exampleReferencesInformation, referencesInformation)
-	}
-
-	return exampleNamesBuilder.String(), exampleReferencesInformation
-}
-
-func PreprocessLLMJSON(s string) string {
-	// Remove code fences and trim
-	s = strings.TrimSpace(s)
-	s = strings.TrimPrefix(s, "```json")
-	s = strings.TrimPrefix(s, "```")
-	s = strings.TrimSuffix(s, "```")
-	s = strings.TrimSpace(s)
-
-	// Extract only the first JSON object or array from the string
-	start := strings.IndexAny(s, "{[")
-	if start == -1 {
-		return s // fallback, not found
-	}
-
-	// Find the matching closing bracket with proper nesting
-	var end int
-	if s[start] == '{' {
-		end = findMatchingBrace(s, start)
-	} else if s[start] == '[' {
-		end = findMatchingBracket(s, start)
-	}
-
-	if end <= start {
-		return s // fallback if no matching bracket found
-	}
-
-	jsonStr := s[start:end]
-
-	// Clean up the JSON string step by step
-	jsonStr = cleanupJSONString(jsonStr)
-
-	return jsonStr
-}
-
-// findMatchingBrace finds the matching closing brace, handling strings properly
-func findMatchingBrace(s string, start int) int {
-	count := 0
-	inString := false
-	escaped := false
-
-	for i := start; i < len(s); i++ {
-		char := s[i]
-
-		if escaped {
-			escaped = false
-			continue
-		}
-
-		if char == '\\' {
-			escaped = true
-			continue
-		}
-
-		if char == '"' && !escaped {
-			inString = !inString
-			continue
-		}
-
-		if !inString {
-			if char == '{' {
-				count++
-			} else if char == '}' {
-				count--
-				if count == 0 {
-					return i + 1
-				}
-			}
-		}
-	}
-	return -1
-}
-
-// findMatchingBracket finds the matching closing bracket, handling strings properly
-func findMatchingBracket(s string, start int) int {
-	count := 0
-	inString := false
-	escaped := false
-
-	for i := start; i < len(s); i++ {
-		char := s[i]
-
-		if escaped {
-			escaped = false
-			continue
-		}
-
-		if char == '\\' {
-			escaped = true
-			continue
-		}
-
-		if char == '"' && !escaped {
-			inString = !inString
-			continue
-		}
-
-		if !inString {
-			if char == '[' {
-				count++
-			} else if char == ']' {
-				count--
-				if count == 0 {
-					return i + 1
-				}
-			}
-		}
-	}
-	return -1
-}
-
-// cleanupJSONString performs comprehensive cleanup of JSON string
-func cleanupJSONString(jsonStr string) string {
-	// Step 1: Fix single quotes in string values (but preserve them in Python code)
-	jsonStr = fixSingleQuotes(jsonStr)
-
-	// Step 2: Remove trailing commas before } and ]
-	reTrailingComma := regexp.MustCompile(`,\s*([}\]])`)
-	jsonStr = reTrailingComma.ReplaceAllString(jsonStr, "$1")
-
-	// Step 3: Escape special characters in string values
-	jsonStr = escapeStringValues(jsonStr)
-
-	return jsonStr
-}
-
-// fixSingleQuotes replaces single quotes with double quotes only where appropriate
-func fixSingleQuotes(s string) string {
-	// Find JSON property values and fix single quotes only in the value part
-	// Pattern: "property": 'value' -> "property": "value"
-	re := regexp.MustCompile(`"([^"]+)":\s*'([^']*)'`)
-	s = re.ReplaceAllStringFunc(s, func(match string) string {
-		parts := regexp.MustCompile(`"([^"]+)":\s*'([^']*)'`).FindStringSubmatch(match)
-		if len(parts) == 3 {
-			key := parts[1]
-			value := parts[2]
-			// Escape any double quotes in the value
-			value = strings.ReplaceAll(value, `"`, `\"`)
-			return fmt.Sprintf(`"%s": "%s"`, key, value)
-		}
-		return match
-	})
-
-	// Handle cases where property names also have single quotes
-	// 'property': 'value' -> "property": "value"
-	re2 := regexp.MustCompile(`'([^']+)':\s*'([^']*)'`)
-	s = re2.ReplaceAllStringFunc(s, func(match string) string {
-		parts := regexp.MustCompile(`'([^']+)':\s*'([^']*)'`).FindStringSubmatch(match)
-		if len(parts) == 3 {
-			key := parts[1]
-			value := parts[2]
-			// Escape any double quotes in the value
-			value = strings.ReplaceAll(value, `"`, `\"`)
-			return fmt.Sprintf(`"%s": "%s"`, key, value)
-		}
-		return match
-	})
-
-	return s
-}
-
-// escapeStringValues properly escapes string values in JSON
-func escapeStringValues(s string) string {
-	// Find all string values and escape them properly
-	re := regexp.MustCompile(`"([^"]+)":\s*"([^"]*)"`)
-	s = re.ReplaceAllStringFunc(s, func(match string) string {
-		parts := regexp.MustCompile(`"([^"]+)":\s*"([^"]*)"`).FindStringSubmatch(match)
-		if len(parts) == 3 {
-			key := parts[1]
-			value := parts[2]
-
-			// Escape backslashes first (they might be in file paths or Python code)
-			value = strings.ReplaceAll(value, `\`, `\\`)
-
-			// Don't double-escape already escaped quotes
-			if !strings.Contains(value, `\"`) {
-				// Escape unescaped quotes
-				value = strings.ReplaceAll(value, `"`, `\"`)
-			}
-
-			return fmt.Sprintf(`"%s": "%s"`, key, value)
-		}
-		return match
-	})
-
-	return s
-}
-
-// Helper: Convert JSON string to map[string]interface{} in Go
-func jsonStringToObject(jsonStr string) (map[string]interface{}, error) {
-	clean := PreprocessLLMJSON(jsonStr)
-
-	var obj map[string]interface{}
-	err := json.Unmarshal([]byte(clean), &obj)
-
-	if err != nil {
-		// If first attempt fails, try additional cleanup
-		logging.Log.Warnf(&logging.ContextMap{}, "First JSON parse failed, attempting additional cleanup: %v", err)
-
-		// Try fixing common issues
-		clean = fixCommonJSONIssues(clean)
-
-		err = json.Unmarshal([]byte(clean), &obj)
-
-		if err != nil {
-			// Last resort: try to extract just the values manually
-			logging.Log.Warnf(&logging.ContextMap{}, "Second JSON parse failed, attempting manual extraction: %v", err)
-			obj = extractJSONManually(clean)
-			if len(obj) > 0 {
-				return obj, nil
-			}
-		}
-	}
-
-	return obj, err
-}
-
-// fixCommonJSONIssues attempts to fix additional common JSON formatting issues
-func fixCommonJSONIssues(s string) string {
-	// Fix unescaped newlines in string values
-	re := regexp.MustCompile(`"([^"]+)":\s*"([^"]*\n[^"]*)"`)
-	s = re.ReplaceAllStringFunc(s, func(match string) string {
-		parts := regexp.MustCompile(`"([^"]+)":\s*"([^"]*)"`).FindStringSubmatch(match)
-		if len(parts) == 3 {
-			key := parts[1]
-			value := parts[2]
-			value = strings.ReplaceAll(value, "\n", "\\n")
-			value = strings.ReplaceAll(value, "\r", "\\r")
-			value = strings.ReplaceAll(value, "\t", "\\t")
-			return fmt.Sprintf(`"%s": "%s"`, key, value)
-		}
-		return match
-	})
-
-	// Fix boolean values that might be strings
-	s = regexp.MustCompile(`"(true|false)"`).ReplaceAllString(s, "$1")
-
-	// Fix number values that might be strings (but preserve actual string numbers)
-	s = regexp.MustCompile(`:\s*"(\d+)"`).ReplaceAllString(s, `: $1`)
-	s = regexp.MustCompile(`:\s*"(\d+\.\d+)"`).ReplaceAllString(s, `: $1`)
-
-	return s
-}
-
-// extractJSONManually attempts to manually extract key-value pairs as a last resort
-func extractJSONManually(s string) map[string]interface{} {
-	obj := make(map[string]interface{})
-
-	// Try to extract simple key-value pairs
-	// Pattern: "key": "value" or "key": value
-	re := regexp.MustCompile(`"([^"]+)":\s*(?:"([^"]*)"|([^,}\]]+))`)
-	matches := re.FindAllStringSubmatch(s, -1)
-
-	for _, match := range matches {
-		if len(match) >= 3 {
-			key := match[1]
-			var value interface{}
-
-			if match[2] != "" {
-				// String value
-				value = match[2]
-			} else if match[3] != "" {
-				// Non-string value
-				trimmed := strings.TrimSpace(match[3])
-				switch trimmed {
-				case "true":
-					value = true
-				case "false":
-					value = false
-				case "null":
-					value = nil
-				default:
-					value = trimmed
-				}
-			}
-
-			obj[key] = value
-		}
-	}
-
-	return obj
-}
-
-func doHybridQuery(
-	collectionName string,
-	maxRetrievalCount int,
-	outputFields []string,
-	queryString string,
-	denseWeight float64,
-	sparseWeight float64,
-	nodeType string) []*qdrant.ScoredPoint {
-
-	// get the LLM handler endpoint
-	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
-
-	// Set up WebSocket connection with LLM and send embeddings request
-	responseChannel := sendEmbeddingsRequestWithSparseDense(queryString, llmHandlerEndpoint, true, nil)
-	defer close(responseChannel)
-
-	// Process the first response and close the channel
-	var embedding32 []float32
-	var sparseVector []float32
-	var indexVector []uint32
-
-	var err error
-	for response := range responseChannel {
-		// Check if the response is an error
-		if response.Type == "error" {
-			if response.Error != nil && response.Error.Message != "" {
-				panic(response.Error.Message)
-			}
-			panic("unknown error in embeddings response")
-		}
-
-		// Get embedded vector array (DENSE VECTOR)
-		if response.EmbeddedData != nil {
-			interfaceArray, ok := response.EmbeddedData.([]interface{})
-			if !ok {
-				errMessage := "error converting embedded data to interface array"
-				logging.Log.Error(&logging.ContextMap{}, errMessage)
-				panic(errMessage)
-			}
-			embedding32, err = convertToFloat32Slice(interfaceArray)
-			if err != nil {
-				errMessage := fmt.Sprintf("error converting embedded data to float32 slice: %v", err)
-				logging.Log.Error(&logging.ContextMap{}, errMessage)
-				panic(errMessage)
-			}
-		}
-
-		// Get sparse vector
-		if response.LexicalWeights != nil {
-			sparseVectorInterface, ok := response.LexicalWeights.(map[string]interface{})
-			if !ok {
-				errMessage := "error converting lexical weights to interface array"
-				logging.Log.Error(&logging.ContextMap{}, errMessage)
-				panic(errMessage)
-			}
-			sparseVector, indexVector, err = convertToSparseVector(sparseVectorInterface)
-			if err != nil {
-				errMessage := fmt.Sprintf("error converting sparse vector: %v", err)
-				logging.Log.Error(&logging.ContextMap{}, errMessage)
-				panic(errMessage)
-			}
-		}
-
-		// Mark that the first response has been received
-		firstResponseReceived := true
-
-		// Exit the loop after processing the first response
-		if firstResponseReceived {
-			break
-		}
-	}
-
-	if len(embedding32) == 0 {
-		logging.Log.Error(&logging.ContextMap{}, "No embeddings received from LLM handler")
-		panic("No embeddings received from LLM handler")
-	}
-
-	if len(sparseVector) == 0 {
-		logging.Log.Error(&logging.ContextMap{}, "No sparse vector received from LLM handler")
-		panic("No sparse vector received from LLM handler")
-	}
-
-	if len(indexVector) == 0 {
-		logging.Log.Error(&logging.ContextMap{}, "No index vector received from LLM handler")
-		panic("No index vector received from LLM handler")
-	}
-
-	logCtx := &logging.ContextMap{}
-	client, err := qdrant_utils.QdrantClient()
-	if err != nil {
-		logPanic(logCtx, "unable to create qdrant client: %q", err)
-	}
-
-	// perform the qdrant query
-	limit := uint64(maxRetrievalCount)
-	var filter *qdrant.Filter
-	if nodeType != "" {
-		filter = &qdrant.Filter{
-			Must: []*qdrant.Condition{
-				qdrant.NewMatchKeyword("type", nodeType),
-			},
-		}
-	}
-
-	using := "" // or "sparse_vector" based on the query type
-	usingSparse := "sparse_vector"
-	expression := qdrant.NewExpressionSum(&qdrant.SumExpression{
-		Sum: []*qdrant.Expression{
-			qdrant.NewExpressionMult(&qdrant.MultExpression{
-				Mult: []*qdrant.Expression{
-					qdrant.NewExpressionVariable("$score[0]"),  // dense score
-					qdrant.NewExpressionConstant(float32(0.9)), // weight
-				},
-			}),
-
-			// Another MultExpression: 0.25 * (tag match p,li)
-			qdrant.NewExpressionMult(&qdrant.MultExpression{
-				Mult: []*qdrant.Expression{
-					qdrant.NewExpressionVariable("$score[1]"),   // sparse score
-					qdrant.NewExpressionConstant(float32(0.12)), // weight
-				},
-			}),
-		},
-	})
-	query := qdrant.QueryPoints{
-		CollectionName: collectionName,
-		Prefetch: []*qdrant.PrefetchQuery{
-			{
-				Limit:  &limit,
-				Query:  qdrant.NewQueryDense(embedding32),
-				Using:  &using,
-				Filter: filter,
-			},
-			{
-				Limit:  &limit,
-				Query:  qdrant.NewQuerySparse(indexVector, sparseVector),
-				Using:  &usingSparse,
-				Filter: filter,
-			},
-		},
-		WithVectors: qdrant.NewWithVectorsEnable(false),
-		WithPayload: qdrant.NewWithPayloadInclude(outputFields...),
-		Query: qdrant.NewQueryFormula(
-			&qdrant.Formula{
-				Expression: expression,
-			},
-		),
-	}
-	scoredPoints, err := client.Query(context.TODO(), &query)
-	if err != nil {
-		logPanic(logCtx, "error in qdrant query: %q", err)
-	}
-
-	return scoredPoints
-}
-
-func getElementByName(nodeName string, nodeType string) []map[string]interface{} {
-	// Escape the string parameters properly for Cypher
-	escapedNodeName := strings.ReplaceAll(nodeName, `'`, `\'`)
-	escapedNodeType := strings.ReplaceAll(nodeType, `'`, `\'`)
-	query := fmt.Sprintf("MATCH (n:Element) WHERE n.name = '%s' AND n.type = '%s' RETURN n", escapedNodeName, escapedNodeType)
-	result := GeneralGraphDbQuery(query, aali_graphdb.ParameterMap{})
-	return result
 }

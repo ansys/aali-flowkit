@@ -306,7 +306,6 @@ func getTokenCount(modelName, text string) int {
 	return count
 }
 
-
 func ExtractJson(text string) (json string) {
 	re := regexp.MustCompile("{[\\s\\S]*}")
 	matches := re.FindStringSubmatch(text)
@@ -549,16 +548,16 @@ func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string) (c
 //   - availableSearchCriteria: the extracted list of attribute GUIDs
 func ExtractDesignRequirementsAndSearchCriteria(userInput string) (designRequirements string, availableSearchCriteria []string) {
 	type promptInput struct {
-        UserDesignRequirements      string   `json:"userDesignRequirements"`
-        AvailableSearchCriteria []string `json:"availableSearchCriteria"`
-    }
+		UserDesignRequirements  string   `json:"userDesignRequirements"`
+		AvailableSearchCriteria []string `json:"availableSearchCriteria"`
+	}
 
-    var input promptInput
-    if err := json.Unmarshal([]byte(userInput), &input); err != nil {
-        panic("failed to parse user input: " + err.Error())
-    }
+	var input promptInput
+	if err := json.Unmarshal([]byte(userInput), &input); err != nil {
+		panic("failed to parse user input: " + err.Error())
+	}
 
-    return input.UserDesignRequirements, input.AvailableSearchCriteria
+	return input.UserDesignRequirements, input.AvailableSearchCriteria
 }
 
 // AddAvailableAttributesToSystemPrompt adds available attributes to the system prompt template.
@@ -575,26 +574,26 @@ func ExtractDesignRequirementsAndSearchCriteria(userInput string) (designRequire
 // Returns:
 //   - string: the full system prompt to send to the LLM, including available attributes
 func AddAvailableAttributesToSystemPrompt(userDesignRequirements string, systemPromptTemplate string, allAvailableAttributes []sharedtypes.MaterialAttribute, availableSearchCriteria []string) string {
-    // 1) Filter allAvailableAttributes using availableSearchCriteria (GUIDs)
-    guidSet := make(map[string]struct{}, len(availableSearchCriteria))
-    for _, guid := range availableSearchCriteria {
-        guidSet[guid] = struct{}{}
-    }
-    var filteredAttributes []sharedtypes.MaterialAttribute
-    for _, attr := range allAvailableAttributes {
-        if _, ok := guidSet[attr.Guid]; ok {
-            filteredAttributes = append(filteredAttributes, attr)
-        }
-    }
+	// 1) Filter allAvailableAttributes using availableSearchCriteria (GUIDs)
+	guidSet := make(map[string]struct{}, len(availableSearchCriteria))
+	for _, guid := range availableSearchCriteria {
+		guidSet[guid] = struct{}{}
+	}
+	var filteredAttributes []sharedtypes.MaterialAttribute
+	for _, attr := range allAvailableAttributes {
+		if _, ok := guidSet[attr.Guid]; ok {
+			filteredAttributes = append(filteredAttributes, attr)
+		}
+	}
 
-    // 2) Convert filtered attributes to serialized JSON
-    attributesJson, err := json.MarshalIndent(filteredAttributes, "", "  ")
-    if err != nil {
-        panic("failed to serialize available attributes: " + err.Error())
-    }
+	// 2) Convert filtered attributes to serialized JSON
+	attributesJson, err := json.MarshalIndent(filteredAttributes, "", "  ")
+	if err != nil {
+		panic("failed to serialize available attributes: " + err.Error())
+	}
 
-    // 3) Replace ***ATTRIBUTES*** with this serialized attributes JSON
-    fullSystemPrompt := strings.Replace(systemPromptTemplate, "***ATTRIBUTES***", string(attributesJson), 1)
+	// 3) Replace ***ATTRIBUTES*** with this serialized attributes JSON
+	fullSystemPrompt := strings.Replace(systemPromptTemplate, "***ATTRIBUTES***", string(attributesJson), 1)
 
 	logging.Log.Debugf(&logging.ContextMap{}, "Full system prompt with attributes: %s", fullSystemPrompt)
 

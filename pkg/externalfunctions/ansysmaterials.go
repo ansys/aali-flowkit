@@ -538,6 +538,9 @@ func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string) (c
 // ExtractDesignRequirementsAndSearchCriteria parses the user input JSON and returns the design requirements string
 // and the list of available search criteria GUIDs.
 //
+// Tags:
+//   - @displayName: Extract Design Requirements and Search Criteria
+//
 // Parameters:
 //   - userInput: the user input JSON string
 //
@@ -559,6 +562,9 @@ func ExtractDesignRequirementsAndSearchCriteria(userInput string) (designRequire
 }
 
 // AddAvailableAttributesToSystemPrompt adds available attributes to the system prompt template.
+//
+// Tags:
+//   - @displayName: Add Available Attributes to System Prompt
 //
 // Parameters:
 //   - userDesignRequirements: design requirements provided by the user

@@ -191,7 +191,7 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 		collection_name = collection1Name
 	} else if toolName == toolName9 {
 		collection_name = collection7Name
-	}else {
+	} else {
 		errorMessage := fmt.Sprintf("Invalid Tool Name: %q", toolName)
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)

@@ -308,7 +308,7 @@ func setupFlowkitTestContainers(t *testing.T, ctx context.Context, testContainer
 	if testContainerConfig.aaliGraphDb {
 		// setup aali-graphdb
 		aaliGraphDbReq := testcontainers.ContainerRequest{
-			Image:        "ghcr.io/ansys/aali-graphdb:v0.1.0",
+			Image:        "ghcr.io/ansys/aali-graphdb:v1.0.15",
 			ExposedPorts: []string{"8080/tcp"},
 			WaitingFor: wait.ForAll(
 				wait.ForLog("listening on 0.0.0.0:8080"),

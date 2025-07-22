@@ -661,6 +661,8 @@ func LoadCodeGenerationElements(content []byte, elementsFilePath string) (elemen
 			Parameters:        objectDefinition.Params,
 			Remarks:           objectDefinition.Remarks,
 			ReturnDescription: objectDefinition.Returns,
+			VectorDBMetadata:  objectDefinition.VectorDBMetadata,
+			GraphDBMetadata:   objectDefinition.GraphDBMetadata,
 		}
 
 		// Create a list with all the return types of the element.
@@ -744,7 +746,6 @@ func LoadCodeGenerationElements(content []byte, elementsFilePath string) (elemen
 	}
 
 	logging.Log.Debugf(&logging.ContextMap{}, "Loaded %v code generation elements from file: %s", len(elements), elementsFilePath)
-
 	return elements
 }
 
@@ -809,6 +810,7 @@ func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement,
 				"name_formatted":  element.NameFormatted,
 				"type":            string(element.Type),
 				"parent_class":    strings.Join(element.Dependencies, "."),
+				"metadata":        element.VectorDBMetadata,
 			}),
 		}
 	}

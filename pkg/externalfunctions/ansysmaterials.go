@@ -89,7 +89,7 @@ func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion
 
 		if !exists {
 			logging.Log.Debugf(&logging.ContextMap{}, "Could not find attribute to match: %s", lowerAttrName)
-			panic("Could not find attribute to match")
+			continue // This might have been an hallucinated attribute, skip it
 		}
 
 		criteriaWithGuids = append(criteriaWithGuids, sharedtypes.MaterialCriterionWithGuid{
@@ -586,16 +586,15 @@ func AddAvailableAttributesToSystemPrompt(userDesignRequirements string, systemP
 		}
 	}
 
-	// 2) Convert filtered attributes to serialized JSON
-	attributesJson, err := json.MarshalIndent(filteredAttributes, "", "  ")
-	if err != nil {
-		panic("failed to serialize available attributes: " + err.Error())
+	// 2) Extract names and create newline-separated list
+	var attributeNames []string
+	for _, attr := range filteredAttributes {
+		attributeNames = append(attributeNames, attr.Name)
 	}
+	attributesList := strings.Join(attributeNames, "\n")
 
 	// 3) Replace ***ATTRIBUTES*** with this serialized attributes JSON
-	fullSystemPrompt := strings.Replace(systemPromptTemplate, "***ATTRIBUTES***", string(attributesJson), 1)
-
-	logging.Log.Debugf(&logging.ContextMap{}, "Full system prompt with attributes: %s", fullSystemPrompt)
+	fullSystemPrompt := strings.Replace(systemPromptTemplate, "***ATTRIBUTES***", attributesList, 1)
 
 	return fullSystemPrompt
 }

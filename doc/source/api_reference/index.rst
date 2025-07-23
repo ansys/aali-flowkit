@@ -1,32 +1,63 @@
-API reference
+.. _api_reference:
+
+API Reference
 =============
 
-.. vale off
+Complete reference for FlowKit packages and functions, automatically generated from source code.
 
-+---------------------------------------------------------+
-| Module                                                  |
-+=========================================================+
-| `externalfunctions <externalfunctions/index.html>`_     |
-+---------------------------------------------------------+
-| `functiondefinitions <functiondefinitions/index.html>`_ |
-+---------------------------------------------------------+
-| `grpcserver <grpcserver/index.html>`_                   |
-+---------------------------------------------------------+
-| `internalstates <internalstates/index.html>`_           |
-+---------------------------------------------------------+
+.. grid:: 2
+   :gutter: 3 3 4 4
 
-.. vale on
+   .. grid-item-card:: gRPC Server
+      :link: grpcserver/index
+      :link-type: doc
+
+      Core gRPC service implementation with RunFunction
+      and ListFunctions RPCs.
+
+   .. grid-item-card:: External Functions
+      :link: externalfunctions/index
+      :link-type: doc
+
+      All 174 functions across 12 categories available
+      through the gRPC interface.
+
+   .. grid-item-card:: Function Definitions
+      :link: functiondefinitions/index
+      :link-type: doc
+
+      AST parsing and function discovery system that
+      extracts metadata from Go source.
+
+   .. grid-item-card:: Internal States
+      :link: internalstates/index
+      :link-type: doc
+
+      Function registry and state management for
+      thread-safe operation.
 
 .. toctree::
-    :maxdepth: 2
-    :hidden:
+   :maxdepth: 2
+   :hidden:
+   :caption: Core Packages
 
-    self
+   grpcserver/index
+   functiondefinitions/index
+   internalstates/index
 
-.. button-ref:: ../index
-    :ref-type: doc
-    :color: primary
-    :shadow:
-    :expand:
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+   :caption: Function Packages
 
-    Go back to landing page
+   externalfunctions/index
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+   :caption: Private Functions
+
+   privatefunctions/codegeneration/index
+   privatefunctions/generic/index
+   privatefunctions/graphdb/index
+   privatefunctions/qdrant/index

@@ -13,10 +13,18 @@ help:
 
 .PHONY: help Makefile
 
+# Build HTML with API docs
+html: api-docs
+
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+# generate API documentation
+api-docs:
+	@echo "Generating API documentation..."
+	@bash scripts/generate_api_docs.sh
 
 # customized clean due to api examples
 clean:

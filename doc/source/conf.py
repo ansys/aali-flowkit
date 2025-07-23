@@ -71,6 +71,7 @@ html_theme_options = {
 extensions = [
     "sphinx_design",
     "sphinx_copybutton",
+    "myst_parser",
 ]
 
 
@@ -85,6 +86,7 @@ master_doc = "index"
 
 source_suffix = {
     ".rst": "restructuredtext",
+    ".md": "markdown",
 }
 
 # The master toctree document.

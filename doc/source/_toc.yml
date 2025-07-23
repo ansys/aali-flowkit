@@ -1,0 +1,53 @@
+# Table of contents
+# Learn more at https://jupyterbook.org/customize/toc.html
+
+format: jb-book
+root: index
+chapters:
+  - title: Getting Started
+    file: getting_started/index
+    sections:
+      - file: getting_started/prerequisites
+        title: Prerequisites
+      - file: getting_started/github
+        title: Installing from GitHub
+      - file: getting_started/configuration
+        title: Configuration
+      - file: getting_started/running
+        title: Running FlowKit
+      - file: getting_started/troubleshooting
+        title: Troubleshooting
+  
+  - title: User Guide
+    file: user_guide/index
+    sections:
+      - file: user_guide/connect
+        title: Connecting to FlowKit
+      - file: user_guide/functions
+        title: Working with Functions
+      - file: user_guide/categories
+        title: Function Categories
+      - file: user_guide/types
+        title: Type System
+      - file: user_guide/architecture
+        title: Architecture
+  
+  - title: API Reference
+    file: api_reference/index
+    sections:
+      - file: api_reference/grpcserver/index
+        title: gRPC Server
+      - file: api_reference/functiondefinitions/index
+        title: Function Definitions
+      - file: api_reference/internalstates/index
+        title: Internal States
+      - file: api_reference/externalfunctions/index
+        title: External Functions
+      - file: api_reference/privatefunctions/codegeneration/index
+        title: Code Generation
+      - file: api_reference/privatefunctions/generic/index
+        title: Private Generic
+      - file: api_reference/privatefunctions/graphdb/index
+        title: Graph Database
+      - file: api_reference/privatefunctions/qdrant/index
+        title: Private Qdrant

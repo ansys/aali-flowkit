@@ -1,22 +1,63 @@
-Aali Flow Kit documentation |version|
-#######################################################
+AALI FlowKit documentation
+##########################
 
+Dynamic function execution service for the AALI ecosystem.
 
 .. toctree::
     :hidden:
 
+    getting_started/index
+    user_guide/index
     api_reference/index
 
-.. grid:: 1
-   :gutter: 2 2 3 4
+.. grid:: 2
+   :gutter: 3 3 4 4
+
+   .. grid-item-card:: Getting started
+      :text-align: center
+
+      :material-regular:`rocket_launch;48px`
+
+      Setup and configuration.
+
+      +++
+      .. button-link:: getting_started/index.html
+         :color: secondary
+         :expand:
+         :outline:
+         :click-parent:
+
+         Getting started
+
+   .. grid-item-card:: User guide
+      :text-align: center
+
+      :material-regular:`book;48px`
+
+      Use and extend FlowKit.
+
+      +++
+      .. button-link:: user_guide/index.html
+         :color: secondary
+         :expand:
+         :outline:
+         :click-parent:
+
+         User guide
+
+.. grid:: 3
+   :gutter: 3
+   :margin: 2 0 0 0
+   :class-container: sd-text-center
+
+   .. grid-item::
 
    .. grid-item-card:: API reference
       :text-align: center
 
       :material-regular:`code;48px`
 
-      Details the Aali flow kit with external functions available for custom workflows,
-      offering a comprehensive reference for developers and users.
+      Function signatures and examples.
 
       +++
       .. button-link:: api_reference/index.html
@@ -25,4 +66,6 @@ Aali Flow Kit documentation |version|
          :outline:
          :click-parent:
 
-            API reference
+         API reference
+
+   .. grid-item::

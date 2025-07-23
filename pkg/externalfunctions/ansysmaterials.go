@@ -688,11 +688,17 @@ func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string, tr
 //
 // Parameters:
 //   - userInput: the user input JSON string
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
 //
 // Returns:
 //   - designRequirements: the extracted design requirements string
 //   - availableSearchCriteria: the extracted list of attribute GUIDs
-func ExtractDesignRequirementsAndSearchCriteria(userInput string) (designRequirements string, availableSearchCriteria []string) {
+//   - childSpanID: the child span ID created for this operation
+func ExtractDesignRequirementsAndSearchCriteria(userInput string, traceID string, spanID string) (designRequirements string, availableSearchCriteria []string, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
 	type promptInput struct {
 		UserDesignRequirements  string   `json:"userDesignRequirements"`
 		AvailableSearchCriteria []string `json:"availableSearchCriteria"`
@@ -700,10 +706,12 @@ func ExtractDesignRequirementsAndSearchCriteria(userInput string) (designRequire
 
 	var input promptInput
 	if err := json.Unmarshal([]byte(userInput), &input); err != nil {
+		logging.Log.Debugf(ctx, "Failed to parse user input: %v", err)
 		panic("failed to parse user input: " + err.Error())
 	}
 
-	return input.UserDesignRequirements, input.AvailableSearchCriteria
+	logging.Log.Debugf(ctx, "Successfully extracted design requirements and %d search criteria", len(input.AvailableSearchCriteria))
+	return input.UserDesignRequirements, input.AvailableSearchCriteria, childSpanID
 }
 
 // AddAvailableAttributesToSystemPrompt adds available attributes to the system prompt template.
@@ -713,13 +721,19 @@ func ExtractDesignRequirementsAndSearchCriteria(userInput string) (designRequire
 //
 // Parameters:
 //   - userDesignRequirements: design requirements provided by the user
-//   - availableSearchCriteria: the list of available search criteria (GUIDs)
-//   - availableAttributes: the list of all available attributes
 //   - systemPromptTemplate: the prompt template string to modify
+//   - allAvailableAttributes: the list of all available attributes
+//   - availableSearchCriteria: the list of available search criteria (GUIDs)
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
 //
 // Returns:
-//   - string: the full system prompt to send to the LLM, including available attributes
-func AddAvailableAttributesToSystemPrompt(userDesignRequirements string, systemPromptTemplate string, allAvailableAttributes []sharedtypes.MaterialAttribute, availableSearchCriteria []string) string {
+//   - fullSystemPrompt: the full system prompt to send to the LLM, including available attributes
+//   - childSpanID: the child span ID created for this operation
+func AddAvailableAttributesToSystemPrompt(userDesignRequirements string, systemPromptTemplate string, allAvailableAttributes []sharedtypes.MaterialAttribute, availableSearchCriteria []string, traceID string, spanID string) (fullSystemPrompt string, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
 	// 1) Filter allAvailableAttributes using availableSearchCriteria (GUIDs)
 	guidSet := make(map[string]struct{}, len(availableSearchCriteria))
 	for _, guid := range availableSearchCriteria {
@@ -732,6 +746,9 @@ func AddAvailableAttributesToSystemPrompt(userDesignRequirements string, systemP
 		}
 	}
 
+	logging.Log.Debugf(ctx, "Filtered %d attributes from %d total attributes using %d search criteria",
+		len(filteredAttributes), len(allAvailableAttributes), len(availableSearchCriteria))
+
 	// 2) Extract names and create newline-separated list
 	var attributeNames []string
 	for _, attr := range filteredAttributes {
@@ -740,7 +757,8 @@ func AddAvailableAttributesToSystemPrompt(userDesignRequirements string, systemP
 	attributesList := strings.Join(attributeNames, "\n")
 
 	// 3) Replace ***ATTRIBUTES*** with this serialized attributes JSON
-	fullSystemPrompt := strings.Replace(systemPromptTemplate, "***ATTRIBUTES***", attributesList, 1)
+	fullSystemPrompt = strings.Replace(systemPromptTemplate, "***ATTRIBUTES***", attributesList, 1)
 
-	return fullSystemPrompt
+	logging.Log.Debugf(ctx, "Successfully created system prompt with %d attributes", len(filteredAttributes))
+	return fullSystemPrompt, childSpanID
 }

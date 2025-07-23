@@ -5,7 +5,7 @@
 
 # Logging settings
 ###############################
-LOG_LEVEL: "info" # can be "deubg", "info", "warning", "error", "fatal"
+LOG_LEVEL: "info" # can be "debug", "info", "warning", "error", "fatal"
 ERROR_FILE_LOCATION: "error.log" # Location of the error file where fatal errors are logged
 # Local logs
 LOCAL_LOGS: true # If true, a local log file is created

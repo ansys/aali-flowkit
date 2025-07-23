@@ -3,320 +3,311 @@
 Configuration
 =============
 
-FlowKit uses YAML configuration and environment variables. Supports local files and Azure Key Vault.
+This documentation provides a comprehensive guide to the configuration settings for **FlowKit** service.
 
-Configuration file
-~~~~~~~~~~~~~~~~~~
+FlowKit uses a YAML configuration file located at ``configs/config.yaml``. All parameters are read at startup.
 
-Copy the example configuration:
-
-.. code-block:: bash
-
-    cp configs/config.yaml.example configs/config.yaml
-
-Core settings
-~~~~~~~~~~~~~
-
-Service
--------
-
-.. code-block:: yaml
-
-    FLOWKIT_ADDRESS: "0.0.0.0:50051"  # gRPC server
-    FLOWKIT_API_KEY: "your-api-key"   # Authentication
-
-* ``localhost:50051`` for local development
-* ``0.0.0.0:50051`` for Docker
-
-Logging
--------
-
-.. code-block:: yaml
-
-    LOG_LEVEL: "info"                 # debug, info, warning, error, fatal
-    ERROR_FILE_LOCATION: "error.log"
-
-    # Local logs
-    LOCAL_LOGS: true
-    LOCAL_LOGS_LOCATION: "logs.log"
-
-    # Datadog (optional)
-    DATADOG_LOGS: false
-    LOGGING_URL: "https://http-intake.logs.datadoghq.eu/api/v2/logs"
-    LOGGING_API_KEY: ""
-
-    # Metadata
-    STAGE: "DEV"
-    VERSION: "1.0.0"
-    SERVICE_NAME: "aali-flowkit"
-
-External services
-~~~~~~~~~~~~~~~~~
-
-LLM handler
------------
-
-.. code-block:: yaml
-
-    LLM_HANDLER_ENDPOINT: "ws://aali-llm:9003"
-
-Databases
----------
-
-.. code-block:: yaml
-
-    # Graph database
-    GRAPHDB_ADDRESS: "aali-graphdb:8080"
-
-    # Qdrant
-    QDRANT_HOST: "qdrant"
-    QDRANT_PORT: 6334
-
-Security
-~~~~~~~~
-
-SSL/TLS
--------
-
-.. code-block:: yaml
-
-    USE_SSL: false
-    SSL_CERT_PUBLIC_KEY_FILE: "/path/to/cert.pem"
-    SSL_CERT_PRIVATE_KEY_FILE: "/path/to/key.pem"
-
-Azure Key Vault
----------------
-
-.. code-block:: yaml
-
-    EXTRACT_CONFIG_FROM_AZURE_KEY_VAULT: true
-    AZURE_KEY_VAULT_NAME: "your-vault-name"
-    AZURE_MANAGED_IDENTITY_ID: "your-identity-id"
-
-Environment variables
-~~~~~~~~~~~~~~~~~~~~~
-
-Configuration file location
-----------------------------
-
-By default, FlowKit looks for ``configs/config.yaml`` in the working directory.
-Override with ``AALI_CONFIG_PATH``:
-
-.. code-block:: bash
-
-    export AALI_CONFIG_PATH=/custom/path/to/config.yaml
-    export AALI_CONFIG_PATH=/etc/aali/flowkit.yaml  # System-wide config
-    export AALI_CONFIG_PATH=./env/production.yaml   # Environment-specific
-
-Override configuration values
------------------------------
-
-Override any config value:
-
-.. code-block:: bash
-
-    export LOG_LEVEL=debug
-    export FLOWKIT_ADDRESS=localhost:50051
-    export LLM_HANDLER_ENDPOINT=ws://localhost:9003
-
-Environment variables take precedence over ``config.yaml``.
-
-.. _advanced-configuration:
-
-Advanced Configuration Options
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-For production deployments and specialized use cases, FlowKit supports additional configuration options.
-
-Workflow Engine Settings
--------------------------
-
-Configure dynamic workflow execution and tool management:
-
-.. code-block:: yaml
-
-    # Meshpilot Database
-    MESHPILOT_DB_ENDPOINT: "your-meshpilot-endpoint"
-
-    # Collection Configuration
-    COLLECTION_1_NAME: "primary_collection"
-    COLLECTION_2_NAME: "secondary_collection"
-    COLLECTION_3_NAME: "tertiary_collection"
-    COLLECTION_4_NAME: "workflow_collection"
-    COLLECTION_5_NAME: "cache_collection"
-    COLLECTION_6_NAME: "metadata_collection"
-
-Tool Configuration
-------------------
-
-Dynamic tool and action configuration:
-
-.. code-block:: yaml
-
-    # Tool Counts (determines how many tools are loaded)
-    APP_ACTIONS_TOOL_TOTAL_AMOUNT: 17
-    APP_HELPER_TOOL_TOTAL_AMOUNT: 6
-
-    # Tool Definitions (examples for first few tools)
-    APP_TOOL_1_NAME: "primary_tool"
-    APP_TOOL_3_NAME: "analysis_tool"
-
-    # Action Definitions
-    APP_TOOL_ACTION_1_NAME: "initialize_workflow"
-    APP_TOOL_ACTION_2_NAME: "process_data"
-    APP_TOOL_ACTION_3_NAME: "validate_results"
-    APP_TOOL_ACTION_4_NAME: "generate_report"
-    APP_TOOL_ACTION_5_NAME: "cleanup_resources"
-    APP_TOOL_ACTION_6_NAME: "archive_results"
-
-    # Additional actions (11, 12, 14, 15, 17 are commonly used)
-    APP_TOOL_ACTION_11_NAME: "mesh_analysis"
-    APP_TOOL_ACTION_12_NAME: "optimization"
-    APP_TOOL_ACTION_14_NAME: "quality_check"
-    APP_TOOL_ACTION_15_NAME: "post_processing"
-    APP_TOOL_ACTION_17_NAME: "final_validation"
-
-Database Query Templates
-------------------------
-
-Customize database interaction patterns:
-
-.. code-block:: yaml
-
-    # Node and Property Queries
-    APP_DATABASE_GET_PROPERTIES_QUERY: "MATCH (n) RETURN properties(n)"
-    APP_DATABASE_GET_STATE_NODE_QUERY: "MATCH (s:State) RETURN s"
-
-    # Path Queries
-    APP_DATABASE_FETCH_PATH_NODES_QUERY_NODE_LABEL_1: "primary_nodes"
-    APP_DATABASE_FETCH_PATH_NODES_QUERY_NODE_LABEL_2: "secondary_nodes"
-
-    # Action Queries
-    APP_DATABASE_GET_ACTIONS_QUERY_LABEL_1: "workflow_actions"
-    APP_DATABASE_GET_ACTIONS_QUERY_LABEL_2: "system_actions"
-    APP_DATABASE_GET_SOLUTIONS_QUERY: "MATCH (sol:Solution) RETURN sol"
-
-Prompt Templates
+General settings
 ----------------
 
-Configure AI prompt templates for workflow synthesis:
+.. list-table::
+   :header-rows: 1
+   :widths: 30 15 55 15 15
+
+   * - Argument
+     - Type
+     - Description
+     - Required
+     - Default
+
+   * - STAGE
+     - string
+     - Specifies the environment stage.
+     - ``False``
+     - ``DEV``
+
+   * - VERSION
+     - string
+     - Specifies the version of the service.
+     - ``False``
+     - ``1.0.0``
+
+   * - SERVICE_NAME
+     - string
+     - Defines the name of the service.
+     - ``False``
+     - ``aali``
+
+   * - FLOWKIT_ADDRESS
+     - string
+     - Address where FlowKit listens for incoming gRPC requests.
+     - ``True``
+     - ``''``
+
+   * - FLOWKIT_API_KEY
+     - string
+     - API key used to authenticate with FlowKit.
+     - ``True``
+     - ``''``
+
+   * - USE_SSL
+     - bool
+     - Whether to use SSL for securing the endpoints.
+     - ``False``
+     - ``false``
+
+   * - SSL_CERT_PUBLIC_KEY_FILE
+     - string
+     - Path to the public key file for SSL.
+     - ``False``
+     - ``''``
+
+   * - SSL_CERT_PRIVATE_KEY_FILE
+     - string
+     - Path to the private key file for SSL.
+     - ``False``
+     - ``''``
+
+Service endpoints
+-----------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 15 55 15
+
+   * - Argument
+     - Type
+     - Description
+     - Default
+
+   * - LLM_HANDLER_ENDPOINT
+     - string
+     - Endpoint where FlowKit connects to aali-llm.
+     - ``ws://aali-llm:9003``
+
+   * - GRAPHDB_ADDRESS
+     - string
+     - Address of the aali-graphdb service.
+     - ``aali-graphdb:8080``
+
+   * - QDRANT_HOST
+     - string
+     - Hostname of the Qdrant vector database.
+     - ``qdrant``
+
+   * - QDRANT_PORT
+     - int
+     - Port of the Qdrant vector database.
+     - ``6334``
+
+   * - EXTERNALFUNCTIONS_GRPC_PORT
+     - int
+     - Legacy port definition for gRPC server. Used with FLOWKIT_ADDRESS for backward compatibility.
+     - ``''``
+
+External service authentication
+-------------------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 15 55 15
+
+   * - Argument
+     - Type
+     - Description
+     - Default
+
+   * - ANSYS_AUTHORIZATION_URL
+     - string
+     - URL for Ansys authorization service and token usage tracking.
+     - ``''``
+
+   * - LLM_API_KEY
+     - string
+     - API key for LLM service authentication.
+     - ``''``
+
+   * - FLOWKIT_PYTHON_ENDPOINT
+     - string
+     - Endpoint for FlowKit Python splitter service.
+     - ``''``
+
+   * - FLOWKIT_PYTHON_API_KEY
+     - string
+     - API key for FlowKit Python service.
+     - ``''``
+
+Workflow configuration
+----------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 15 55 15
+
+   * - Argument
+     - Type
+     - Description
+     - Default
+
+   * - WORKFLOW_CONFIG_VARIABLES
+     - map
+     - Key-value pairs for workflow-specific configuration. Used primarily by ansysmeshpilot functions for tool names, collection names, database queries, and prompt templates.
+     - ``{}``
+
+Logging settings
+----------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 15 55 15
+
+   * - Argument
+     - Type
+     - Description
+     - Default
+
+   * - LOG_LEVEL
+     - string
+     - Specifies the logging level. Valid values: "debug," "info," "warning," "error," "fatal."
+     - ``info``
+
+   * - ERROR_FILE_LOCATION
+     - string
+     - Location where fatal errors are logged.
+     - ``error.log``
+
+   * - LOCAL_LOGS
+     - boolean
+     - If true, a local log file is created.
+     - ``true``
+
+   * - LOCAL_LOGS_LOCATION
+     - string
+     - Location of the local log file.
+     - ``logs.log``
+
+   * - DATADOG_LOGS
+     - boolean
+     - If true, logs are sent to Datadog.
+     - ``false``
+
+   * - LOGGING_URL
+     - string
+     - Datadog URL where logs are sent.
+     - ``https://http-intake.logs.datadoghq.eu/api/v2/logs``
+
+   * - LOGGING_API_KEY
+     - string
+     - Datadog API key for authentication.
+     - ``''``
+
+   * - DATADOG_SOURCE
+     - string
+     - Datadog source identifier.
+     - ``nginx``
+
+   * - DATADOG_METRICS
+     - boolean
+     - If true, metrics are sent to Datadog.
+     - ``false``
+
+   * - METRICS_URL
+     - string
+     - Datadog URL where metrics are sent.
+     - ``''``
+
+Azure Key Vault settings
+------------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 15 55 15
+
+   * - Argument
+     - Type
+     - Description
+     - Default
+
+   * - EXTRACT_CONFIG_FROM_AZURE_KEY_VAULT
+     - boolean
+     - If true, configuration is extracted from Azure Key Vault.
+     - ``false``
+
+   * - AZURE_KEY_VAULT_NAME
+     - string
+     - Name of the Azure Key Vault.
+     - ``''``
+
+   * - AZURE_MANAGED_IDENTITY_ID
+     - string
+     - Azure Managed Identity ID for authentication.
+     - ``''``
+
+Configuration examples
+----------------------
+
+Create a ``config.yaml`` file in the ``configs`` directory with your settings.
+
+**Local development configuration**
 
 .. code-block:: yaml
 
-    # Action Synthesis
-    APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_FIND_KEY: "search_pattern"
-    APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_TOOL2_VALUE: "analysis_prompt"
-    APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_REPLACE_KEY_1: "replace_pattern_1"
-    APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_REPLACE_KEY_2: "replace_pattern_2"
+   # Logging settings
+   LOG_LEVEL: "debug"
+   ERROR_FILE_LOCATION: "error.log"
+   LOCAL_LOGS: true
+   LOCAL_LOGS_LOCATION: "logs.log"
+   DATADOG_LOGS: false
+   STAGE: "DEV"
+   VERSION: "1.0.0"
+   SERVICE_NAME: "aali"
 
-    # Output Synthesis
-    APP_PROMPT_TEMPLATE_SYNTHESIZE_OUTPUT_KEY_1: "output_format_1"
-    APP_PROMPT_TEMPLATE_SYNTHESIZE_OUTPUT_KEY_2: "output_format_2"
+   # FlowKit settings
+   FLOWKIT_ADDRESS: "localhost:50051"
+   FLOWKIT_API_KEY: "dev-api-key"
 
-    # Workflow Identification
-    APP_SUBWORKFLOW_IDENTIFICATION_SYSTEM_PROMPT: "You are a workflow analyzer..."
-    APP_SUBWORKFLOW_IDENTIFICATION_USER_PROMPT: "Identify the workflow pattern..."
+   # Service endpoints
+   LLM_HANDLER_ENDPOINT: "ws://localhost:9003"
+   GRAPHDB_ADDRESS: "localhost:8080"
+   QDRANT_HOST: "localhost"
+   QDRANT_PORT: 6334
 
-External Service Integration
-----------------------------
-
-Additional service endpoints beyond basic configuration:
-
-.. code-block:: yaml
-
-    # Extended LLM Services
-    LLM_API_KEY: "your-llm-api-key"
-
-    # Python Integration
-    FLOWKIT_PYTHON_ENDPOINT: "http://python-service:8000"
-    FLOWKIT_PYTHON_API_KEY: "python-service-key"
-
-    # Authorization Services
-    ANSYS_AUTHORIZATION_URL: "https://auth.ansys.com/oauth/token"
-
-    # Additional gRPC Ports
-    EXTERNALFUNCTIONS_GRPC_PORT: 50052
-
-Success and Status Messages
----------------------------
-
-Customize user-facing messages for different tool outcomes:
+**Docker configuration**
 
 .. code-block:: yaml
 
-    # Success Messages
-    APP_ACTION_TOOL_1_SUCCESS_MESSAGE: "Primary tool executed successfully"
-    APP_ACTION_TOOL_2_SUCCESS_MESSAGE: "Secondary tool completed"
-    APP_ACTION_TOOL_3_SUCCESS_MESSAGE: "Analysis tool finished"
-    APP_ACTION_TOOL_4_SUCCESS_MESSAGE: "Report generated"
-    APP_ACTION_TOOL_5_SUCCESS_MESSAGE: "Cleanup completed"
-    APP_ACTION_TOOL_6_SUCCESS_MESSAGE: "Results archived"
+   # Logging settings
+   LOG_LEVEL: "info"
+   ERROR_FILE_LOCATION: "error.log"
+   LOCAL_LOGS: false
+   DATADOG_LOGS: false
+   STAGE: "PROD"
+   VERSION: "1.0.0"
+   SERVICE_NAME: "aali-flowkit"
 
-    # No Action Messages
-    APP_ACTION_TOOL_1_NO_ACTION_MESSAGE: "Primary tool: no action required"
-    APP_ACTION_TOOL_2_NO_ACTION_MESSAGE: "Secondary tool: skipped"
-    APP_ACTION_TOOL_3_NO_ACTION_MESSAGE: "Analysis tool: no changes needed"
+   # FlowKit settings
+   FLOWKIT_ADDRESS: "0.0.0.0:50051"
+   FLOWKIT_API_KEY: "your-secure-api-key"
 
-    # Extended Action Messages
-    APP_ACTION_TOOL_11_SUCCESS_MESSAGE: "Mesh analysis completed"
-    APP_ACTION_TOOL_12_SUCCESS_MESSAGE: "Optimization finished"
-    APP_ACTION_TOOL_14_SUCCESS_MESSAGE: "Quality check passed"
-    APP_ACTION_TOOL_15_SUCCESS_MESSAGE: "Post-processing done"
-    APP_ACTION_TOOL_17_SUCCESS_MESSAGE: "Final validation successful"
+   # Service endpoints
+   LLM_HANDLER_ENDPOINT: "ws://aali-llm:9003"
+   GRAPHDB_ADDRESS: "aali-graphdb:8080"
+   QDRANT_HOST: "qdrant"
+   QDRANT_PORT: 6334
 
-    APP_ACTION_TOOL_14_NO_ACTION_MESSAGE: "Quality check: no issues found"
-    APP_ACTION_TOOL_15_NO_ACTION_MESSAGE: "Post-processing: not required"
+   # External service authentication (optional)
+   ANSYS_AUTHORIZATION_URL: "https://auth.ansys.com"
+   LLM_API_KEY: "your-llm-api-key"
+   FLOWKIT_PYTHON_ENDPOINT: "http://flowkit-python:8000"
+   FLOWKIT_PYTHON_API_KEY: "python-service-key"
 
-Tool Action Configuration
--------------------------
+   # SSL settings
+   USE_SSL: true
+   SSL_CERT_PUBLIC_KEY_FILE: "/certs/flowkit.crt"
+   SSL_CERT_PRIVATE_KEY_FILE: "/certs/flowkit.key"
 
-Configure tool behavior and targeting:
-
-.. code-block:: yaml
-
-    # Action Keys and Targets
-    APP_TOOL_ACTIONS_KEY_1: "primary_action_set"
-    APP_TOOL_ACTIONS_KEY_2: "secondary_action_set"
-    APP_TOOL_ACTIONS_TARGET_1: "workflow_target"
-
-.. note::
-
-   **When to use Advanced Configuration:**
-
-   * **Workflow Engine Settings**: When deploying custom Meshpilot workflows
-   * **Tool Configuration**: For dynamic tool loading and custom actions
-   * **Prompt Templates**: When customizing AI-driven workflow synthesis
-   * **External Services**: For additional API integrations beyond basic setup
-
-   Most users only need the preceding :ref:`Core settings <configuration>` to get started.
-
-Defaults
-~~~~~~~~
-
-.. code-block:: go
-
-    // Code fragment - part of larger implementation
-    config.InitConfig([]string{}, map[string]interface{}{
-        "SERVICE_NAME":        "aali-flowkit",
-        "VERSION":             "1.0",
-        "STAGE":               "PROD",
-        "LOG_LEVEL":           "error",
-        "ERROR_FILE_LOCATION": "error.log",
-        "LOCAL_LOGS_LOCATION": "logs.log",
-        "DATADOG_SOURCE":      "nginx",
-    })
-
-Validation
-~~~~~~~~~~
-
-Check connectivity:
-
-.. code-block:: bash
-
-    curl -X GET http://aali-graphdb:8080/health
-    curl -X GET http://qdrant:6333/health
-
-Next steps
-~~~~~~~~~~
-
-* :doc:`running` - Start FlowKit
+   # Workflow configuration (optional)
+   WORKFLOW_CONFIG_VARIABLES:
+     MESHPILOT_DB_ENDPOINT: "http://meshpilot-db:8080"
+     APP_TOOL_1_NAME: "MeshGenerator"
+     COLLECTION_1_NAME: "mesh_collection"

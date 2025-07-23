@@ -8,6 +8,7 @@ Dynamic function execution service for the AALI ecosystem.
 
     getting_started/index
     user_guide/index
+    developer_guide/index
     api_reference/index
 
 .. grid:: 2
@@ -16,7 +17,7 @@ Dynamic function execution service for the AALI ecosystem.
    .. grid-item-card:: Getting started
       :text-align: center
 
-      :material-regular:`rocket_launch;48px`
+      :material-regular:`directions_run;48px`
 
       Setup and configuration.
 
@@ -45,12 +46,24 @@ Dynamic function execution service for the AALI ecosystem.
 
          User guide
 
-.. grid:: 3
-   :gutter: 3
-   :margin: 2 0 0 0
-   :class-container: sd-text-center
+.. grid:: 2
+   :gutter: 3 3 4 4
 
-   .. grid-item::
+   .. grid-item-card:: Developer guide
+      :text-align: center
+
+      :material-regular:`engineering;48px`
+
+      Extend FlowKit with custom functions.
+
+      +++
+      .. button-link:: developer_guide/index.html
+         :color: secondary
+         :expand:
+         :outline:
+         :click-parent:
+
+         Developer guide
 
    .. grid-item-card:: API reference
       :text-align: center
@@ -67,5 +80,3 @@ Dynamic function execution service for the AALI ecosystem.
          :click-parent:
 
          API reference
-
-   .. grid-item::

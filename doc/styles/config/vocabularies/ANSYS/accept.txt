@@ -63,6 +63,7 @@ llm_handler
 ansys_gpt
 knowledge_db
 ansys_mesh_pilot
+ansysmeshpilot
 ansys_materials
 mcp
 rhsc
@@ -230,6 +231,7 @@ messageWithContext
 # Additional technical terms
 Protobuf
 protoc
+proto
 Meshpilot
 APIs
 automations
@@ -240,3 +242,6 @@ Redistributions
 Affirmer's
 MPa
 Booleans
+Datadog
+docstring
+Hostname

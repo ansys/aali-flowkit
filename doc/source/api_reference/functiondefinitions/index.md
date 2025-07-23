@@ -18,7 +18,7 @@ import "github.com/ansys/aali-flowkit/pkg/functiondefinitions"
 func ExtractFunctionDefinitionsFromPackage(content string, category string) error
 ```
 
-ExtractFunctionDefinitionsFromPackage parses the given file for public functions and populates internalstates.AvailableFunctions. The function definitions are stored in the internalstates.AvailableFunctions map. The key is the function name and the value is a FunctionDefinition struct. The FunctionDefinition struct contains the function's name, description, package, inputs, and outputs. The inputs and outputs are stored as FunctionInput and FunctionOutput structs, respectively. The FunctionInput and FunctionOutput structs contain the name, type, and GoType of the input/output. The GoType is the Go type of the input/output, while the Type is a simplified type string \(for example, "string," "number," "boolean," "json."\)
+ExtractFunctionDefinitionsFromPackage parses the given file for public functions and populates internalstates.AvailableFunctions. The function definitions are stored in the internalstates.AvailableFunctions map. The key is the function name and the value is a FunctionDefinition struct. The FunctionDefinition struct contains the function's name, description, package, inputs, and outputs. The inputs and outputs are stored as FunctionInput and FunctionOutput structs, respectively. The FunctionInput and FunctionOutput structs contain the name, type, and GoType of the input/output. The GoType is the Go type of the input/output, while the Type is a simplified type string \(e.g., "string", "number", "boolean", "json"\).
 
 The function returns an error if the file cannot be parsed.
 

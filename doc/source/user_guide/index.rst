@@ -1,45 +1,35 @@
-User guide
+User Guide
 ==========
 
-Learn how to use AALI FlowKit effectively in your projects.
+This section describes how to interact with FlowKit and which output can be expected.
 
 .. grid:: 2
-   :gutter: 3 3 4 4
 
-   .. grid-item-card:: Connecting to FlowKit
+   .. grid-item-card:: Connect
       :link: connect
       :link-type: doc
 
-      Learn how to establish gRPC connections to FlowKit
-      and authenticate your applications.
+      Shows you how to connect via gRPC to the FlowKit server once the app is running.
 
-   .. grid-item-card:: Working with Functions
+   .. grid-item-card:: Functions
       :link: functions
       :link-type: doc
 
-      Understand how to discover, call, and chain functions
-      to build powerful workflows.
+      Learn how to discover and execute functions through the gRPC interface.
 
-   .. grid-item-card:: Function Categories
-      :link: categories
+.. grid:: 2
+
+   .. grid-item-card:: Responses
+      :link: responses
       :link-type: doc
 
-      Explore the categories organizing FlowKit's
-      extensive function library by purpose and domain.
+      Learn how to interpret the responses from function executions.
 
-   .. grid-item-card:: Type System
-      :link: types
+   .. grid-item-card:: Errors
+      :link: errors
       :link-type: doc
 
-      Understanding FlowKit's type system and
-      working with different data types.
-
-   .. grid-item-card:: Architecture
-      :link: architecture
-      :link-type: doc
-
-      Deep dive into FlowKit's embed → parse → expose
-      architecture and service components.
+      Learn how to interpret the error responses from the FlowKit server.
 
 
 .. toctree::
@@ -47,6 +37,5 @@ Learn how to use AALI FlowKit effectively in your projects.
 
     connect
     functions
-    categories
-    types
-    architecture
+    responses
+    errors

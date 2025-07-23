@@ -13,24 +13,28 @@ chapters:
         title: Installing from GitHub
       - file: getting_started/configuration
         title: Configuration
-      - file: getting_started/running
-        title: Running FlowKit
-      - file: getting_started/troubleshooting
-        title: Troubleshooting
 
   - title: User Guide
     file: user_guide/index
     sections:
       - file: user_guide/connect
-        title: Connecting to FlowKit
+        title: Connect
       - file: user_guide/functions
-        title: Working with Functions
-      - file: user_guide/categories
-        title: Function Categories
-      - file: user_guide/types
-        title: Type System
-      - file: user_guide/architecture
-        title: Architecture
+        title: Functions
+      - file: user_guide/responses
+        title: Responses
+      - file: user_guide/errors
+        title: Errors
+
+  - title: Developer Guide
+    file: developer_guide/index
+    sections:
+      - file: developer_guide/functions
+        title: Adding Functions
+      - file: developer_guide/types
+        title: Adding Types
+      - file: developer_guide/categories
+        title: Adding Categories
 
   - title: API Reference
     file: api_reference/index

@@ -1,134 +1,76 @@
-.. _prerequisites:
-
 Prerequisites
 =============
 
-FlowKit requires the following tools and services.
+1. Install GO
+-------------
 
-Platform
-~~~~~~~~
+.. tab-set::
 
-* **Linux**: Ubuntu 20.04 LTS or later
-* **macOS**: macOS 11 or later
-* **Windows**: Windows 10/11 with WSL2
+   .. tab-item:: macOS
 
-Required for Running FlowKit
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Follow these steps to install Go on macOS.
 
-These tools are essential to run FlowKit.
+    1. Install Homebrew if you haven't already. You can find instructions on the `Homebrew website <https://brew.sh/>`_.
+    2. Open a Terminal and run the following commands:
 
-Go 1.21+
---------
+     .. code:: bash
 
-**Installation time:** ~5 minutes
+        brew update
+        brew install go
 
-.. code-block:: bash
+   .. tab-item:: Ubuntu
 
-    # Verify Go installation
-    go version
+      .. code:: bash
 
-    # Install Go (Linux)
-    wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz
-    sudo tar -C /usr/local -xzf go1.21.5.linux-amd64.tar.gz
-    export PATH=$PATH:/usr/local/go/bin
+         sudo apt update
+         sudo apt install snapd
+         sudo snap install go --classic
 
-Git
----
+   .. tab-item:: Windows
 
-**Installation time:** ~2 minutes
+      Follow these steps to install Go on Windows:
 
-.. code-block:: bash
+      1. Download the Go installer from the official website: `Go Downloads <https://golang.org/dl/>`_.
+      2. Run the installer executable and follow the on-screen instructions.
+      3. Once the installation is complete, open a new Command Prompt and verify the installation by running the command:
 
-    # Ubuntu/Debian
-    sudo apt-get update && sudo apt-get install git
+      .. code:: bash
 
-    # macOS (with Homebrew)
-    brew install git
+        go version
 
-Make (Build Tool)
------------------
+2. Install Git
+--------------
 
-**Installation time:** ~2 minutes
+.. tab-set::
 
-.. code-block:: bash
+   .. tab-item:: macOS
 
-    # Ubuntu/Debian
-    sudo apt-get install build-essential
+      .. code:: bash
 
-    # macOS - typically pre-installed with Xcode Command Line Tools
-    xcode-select --install
+        brew install git
 
-Required for Development Only
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   .. tab-item:: Ubuntu
 
-These tools are only needed if you plan to modify gRPC definitions or regenerate code.
+      .. code:: bash
 
-Protobuf Compiler
------------------
+         sudo apt update
+         sudo apt install git
 
-**Installation time:** ~5 minutes
+   .. tab-item:: Windows
 
-.. code-block:: bash
+      1. Download the Git installer from the official website: `Git Downloads <https://git-scm.com/download/win>`_.
+      2. Run the installer executable and follow the on-screen instructions.
+      3. Once the installation is complete, open a new Command Prompt and verify the installation by running the command:
 
-    # Ubuntu/Debian
-    sudo apt-get install protobuf-compiler
+      .. code:: bash
 
-    # macOS
-    brew install protobuf
-
-Go gRPC Code Generation Tools
------------------------------
-
-**Installation time:** ~3 minutes
-
-.. code-block:: bash
-
-    # Install protoc plugins for Go
-    go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-
-Optional tools
-~~~~~~~~~~~~~~
-
-Docker
-------
-
-.. code-block:: bash
-
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sudo sh get-docker.sh
-
-The Docker image includes Python 3.10+ and PyAnsys libraries.
+        git --version
 
 
-Service dependencies
-~~~~~~~~~~~~~~~~~~~~
+.. button-ref:: index
+    :ref-type: doc
+    :color: primary
+    :shadow:
+    :expand:
 
-Required credentials for:
-
-* MongoDB (authentication)
-* Qdrant (vector storage)
-* Azure Key Vault (secrets)
-* LLM endpoints
-
-Environment setup
-~~~~~~~~~~~~~~~~~
-
-.. code-block:: bash
-
-    export SERVICE_NAME="aali-flowkit"
-    export LOG_LEVEL="info"
-    export GRPC_PORT="50051"
-
-    # Service endpoints
-    export LLM_HANDLER_ENDPOINT="https://your-llm-service"
-    export KNOWLEDGE_DB_ENDPOINT="https://your-knowledge-db"
-    export QDRANT_ENDPOINT="https://your-qdrant-instance"
-
-
-
-Next steps
-~~~~~~~~~~
-
-* :doc:`github` - Clone the repository
-* :doc:`configuration` - Configure FlowKit
+    Go to Getting started

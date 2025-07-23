@@ -1,125 +1,93 @@
-.. _github:
+Installing FlowKit
+==================
 
-Installing from GitHub
-======================
+Install from GitHub
+-------------------
 
-Clone and build FlowKit from source.
+To install the FlowKit repository from GitHub, execute the following commands:
 
-Quick Start Alternative
-~~~~~~~~~~~~~~~~~~~~~~~
+.. code:: bash
 
-For automated setup, use the quick start script:
+   git clone https://github.com/ansys/aali-flowkit.git
+   cd aali-flowkit
 
-.. code-block:: bash
+Create configuration file
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    curl -sSL https://raw.githubusercontent.com/ansys/aali-flowkit/main/scripts/quick_start.sh | bash
+Create ``config.yaml`` to manage configuration settings.
+You can use the example configuration file in the ``configs`` folder.
 
-Or if you've already cloned the repository:
+Required values
+~~~~~~~~~~~~~~~
 
-.. code-block:: bash
+.. code:: bash
 
-    ./scripts/quick_start.sh
+   FLOWKIT_ADDRESS: "localhost:50051"  # Use 0.0.0.0:50051 for Docker
+   FLOWKIT_API_KEY: "your-api-key"
 
-The script checks prerequisites, downloads dependencies, and builds FlowKit automatically.
+Optional values
+~~~~~~~~~~~~~~~
 
-Clone repository
-~~~~~~~~~~~~~~~~
+.. code:: bash
 
-.. code-block:: bash
+   # General settings
+   STAGE: PROD
+   VERSION: 1.0
+   SERVICE_NAME: aali-flowkit
 
-    git clone https://github.com/ansys/aali-flowkit.git
-    cd aali-flowkit
+   # Logging settings
+   LOG_LEVEL: info
+   ERROR_FILE_LOCATION: error.log
+   LOCAL_LOGS: false
+   LOCAL_LOGS_LOCATION: logs.log
 
-Repository structure
-~~~~~~~~~~~~~~~~~~~~
+   # Datadog (optional)
+   DATADOG_LOGS: false
+   LOGGING_URL: https://http-intake.logs.datadoghq.eu/api/v2/logs
+   LOGGING_API_KEY: ""
+   DATADOG_SOURCE: nginx
 
-.. code-block:: bash
+   # Service endpoints
+   LLM_HANDLER_ENDPOINT: ws://aali-llm:9003
+   GRAPHDB_ADDRESS: http://aali-graphdb:8080
+   QDRANT_HOST: qdrant
+   QDRANT_PORT: 6334
 
-    ls -la
+   # SSL (optional)
+   USE_SSL: false
+   SSL_CERT_PUBLIC_KEY_FILE: ""
+   SSL_CERT_PRIVATE_KEY_FILE: ""
 
-Key files:
+The configuration file serves as a central repository for managing FlowKit settings.
+To understand each parameter's purpose, refer to the configuration documentation.
 
-* ``main.go`` - Entry point
-* ``pkg/`` - Go packages
-* ``configs/`` - Configuration
-* ``docker/`` - Docker files
-* ``go.mod`` - Dependencies
+Start the app
+---------------------
 
-Install dependencies
-~~~~~~~~~~~~~~~~~~~~
+Start FlowKit by running the following command from the root folder:
 
-.. note::
-   The ``go mod download`` step may take 5-10 minutes on first run
-   depending on your internet connection. No output during download is normal.
+.. code:: bash
 
-.. code-block:: bash
+   go run main.go
 
-    go mod download  # This downloads ~500MB of dependencies
-    go mod verify
+Starting the app
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-Build
-~~~~~
+.. code:: bash
 
-Development build:
+   {"level":"info","msg":"Aali FlowKit started successfully; gRPC server listening on address 'localhost:50051.'"}
 
-.. code-block:: bash
+Handling errors during startup
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    go build -o aali-flowkit main.go  # Takes 30-60 seconds
+If there is an error starting the app, FlowKit generates a log file named ``error.log`` in the root folder.
 
-Production build:
+By following these logs, you can monitor FlowKit status and troubleshoot any issues during runtime.
 
-.. code-block:: bash
+.. button-ref:: index
+    :ref-type: doc
+    :color: primary
+    :shadow:
+    :expand:
 
-    go build -ldflags="-s -w" -o aali-flowkit main.go  # Takes 30-60 seconds
-
-Docker:
-
-.. note::
-   Docker build can take 5-10 minutes on first run as it downloads
-   base images and installs Python dependencies.
-
-.. code-block:: bash
-
-    docker build -f docker/Dockerfile -t aali-flowkit:latest .
-
-Verify
-~~~~~~
-
-.. code-block:: bash
-
-    # Check if binary was built successfully
-    ls -la aali-flowkit
-
-    # Check version from VERSION file
-    cat VERSION
-
-    # Docker - verify image was built
-    docker images | grep aali-flowkit
-
-Development
-~~~~~~~~~~~
-
-Hot reload:
-
-.. code-block:: bash
-
-    go install github.com/cosmtrek/air@latest
-    air
-
-Run tests:
-
-.. code-block:: bash
-
-    go test ./...
-
-Generate code:
-
-.. code-block:: bash
-
-    go generate ./...
-
-Next steps
-~~~~~~~~~~
-
-* :doc:`configuration` - Configure FlowKit
-* :doc:`running` - Start the service
+    Go to Getting started

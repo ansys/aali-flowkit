@@ -24,6 +24,7 @@ package graphdb
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -139,6 +140,7 @@ func (graphdb_context *graphDbContext) CreateSchema() error {
 			enum_values STRING[],
 			parameters STRING[],
 			example STRING,
+			metadata JSON,
 
 			PRIMARY KEY (name)
 		)`,
@@ -225,6 +227,13 @@ func (graphdb_context *graphDbContext) AddCodeGenerationElementNodes(nodes []sha
 			parameters = append(parameters, parameterString)
 		}
 
+		// Marshal the metadata map to JSON string
+		metadataJSON, err := json.Marshal(node.GraphDBMetadata)
+		if err != nil {
+			log.Fatalf("Failed to marshal metadata: %v", err)
+		}
+		metadataString := string(metadataJSON)
+
 		// update all fields except for: type, name
 		queryParams := aali_graphdb.ParameterMap{
 			"type":                aali_graphdb.StringValue(node.Type),
@@ -245,8 +254,8 @@ func (graphdb_context *graphDbContext) AddCodeGenerationElementNodes(nodes []sha
 		}
 
 		// build up the query
-		query := `
-			MERGE (n:Element {type: $type, name: $name})
+		query := fmt.Sprintf(`
+			MERGE (n:Element {type: $type, name: $name, metadata: %s})
 			SET
 				n.guid = $guid,
 				n.name_pseudocode = $name_pseudocode,
@@ -261,10 +270,10 @@ func (graphdb_context *graphDbContext) AddCodeGenerationElementNodes(nodes []sha
 				n.enum_values = $enum_values,
 				n.parameters = $parameters,
 				n.example = $example
-			`
+			`, metadataString)
 
 		// Create node dynamically using the map
-		_, err := graphdb_context.client.CypherQueryWrite(
+		_, err = graphdb_context.client.CypherQueryWrite(
 			graphdb_context.dbname,
 			query,
 			queryParams,

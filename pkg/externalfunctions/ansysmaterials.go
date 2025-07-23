@@ -89,7 +89,7 @@ func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion
 
 		if !exists {
 			logging.Log.Debugf(&logging.ContextMap{}, "Could not find attribute to match: %s", lowerAttrName)
-			panic("Could not find attribute to match")
+			continue // This might have been an hallucinated attribute, skip it
 		}
 
 		criteriaWithGuids = append(criteriaWithGuids, sharedtypes.MaterialCriterionWithGuid{
@@ -103,26 +103,26 @@ func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion
 	return criteriaWithGuids
 }
 
-// FilterOutNonExistingAttributes filters out criteria suggestions that do not match any of the available attributes based on their names
+// FilterOutNonExistingAttributes filters out criteria suggestions that do not match any of the available attributes based on their GUIDs
 //
 // Tags:
 //   - @displayName: Filter out non-existing attributes
 //
 // Parameters:
 //   - criteriaSuggestions: current list of criteria suggestions
-//   - availableAttributes: the list of available attributes
+//   - availableSearchCriteria: the list of available search criteria (GUIDs)
 //
 // Returns:
-//   - filtered: the list of criteria suggestions excluding those that do not match any of the available attributes
-func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute) (filtered []sharedtypes.MaterialLlmCriterion) {
-	attributeMap := make(map[string]bool)
-	for _, attr := range availableAttributes {
-		attributeMap[strings.ToLower(attr.Name)] = true
+//   - filtered: the list of criteria suggestions excluding those that do not match any of the available search criteria
+func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, availableSearchCriteria []string) (filtered []sharedtypes.MaterialCriterionWithGuid) {
+	attributeGuidMap := make(map[string]bool)
+	for _, attr := range availableSearchCriteria {
+		attributeGuidMap[strings.ToLower(attr)] = true
 	}
 
-	var filteredCriteria []sharedtypes.MaterialLlmCriterion
+	var filteredCriteria []sharedtypes.MaterialCriterionWithGuid
 	for _, suggestion := range criteriaSuggestions {
-		if attributeMap[strings.ToLower(suggestion.AttributeName)] {
+		if attributeGuidMap[strings.ToLower(suggestion.AttributeGuid)] {
 			filteredCriteria = append(filteredCriteria, suggestion)
 		} else {
 			logging.Log.Debugf(&logging.ContextMap{}, "Filtered out non existing attribute: %s", suggestion.AttributeName)
@@ -532,4 +532,69 @@ func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string) (c
 	}
 
 	return customer.CustomerName, sendWarning
+}
+
+// ExtractDesignRequirementsAndSearchCriteria parses the user input JSON and returns the design requirements string
+// and the list of available search criteria GUIDs.
+//
+// Tags:
+//   - @displayName: Extract Design Requirements and Search Criteria
+//
+// Parameters:
+//   - userInput: the user input JSON string
+//
+// Returns:
+//   - designRequirements: the extracted design requirements string
+//   - availableSearchCriteria: the extracted list of attribute GUIDs
+func ExtractDesignRequirementsAndSearchCriteria(userInput string) (designRequirements string, availableSearchCriteria []string) {
+	type promptInput struct {
+		UserDesignRequirements  string   `json:"userDesignRequirements"`
+		AvailableSearchCriteria []string `json:"availableSearchCriteria"`
+	}
+
+	var input promptInput
+	if err := json.Unmarshal([]byte(userInput), &input); err != nil {
+		panic("failed to parse user input: " + err.Error())
+	}
+
+	return input.UserDesignRequirements, input.AvailableSearchCriteria
+}
+
+// AddAvailableAttributesToSystemPrompt adds available attributes to the system prompt template.
+//
+// Tags:
+//   - @displayName: Add Available Attributes to System Prompt
+//
+// Parameters:
+//   - userDesignRequirements: design requirements provided by the user
+//   - availableSearchCriteria: the list of available search criteria (GUIDs)
+//   - availableAttributes: the list of all available attributes
+//   - systemPromptTemplate: the prompt template string to modify
+//
+// Returns:
+//   - string: the full system prompt to send to the LLM, including available attributes
+func AddAvailableAttributesToSystemPrompt(userDesignRequirements string, systemPromptTemplate string, allAvailableAttributes []sharedtypes.MaterialAttribute, availableSearchCriteria []string) string {
+	// 1) Filter allAvailableAttributes using availableSearchCriteria (GUIDs)
+	guidSet := make(map[string]struct{}, len(availableSearchCriteria))
+	for _, guid := range availableSearchCriteria {
+		guidSet[guid] = struct{}{}
+	}
+	var filteredAttributes []sharedtypes.MaterialAttribute
+	for _, attr := range allAvailableAttributes {
+		if _, ok := guidSet[attr.Guid]; ok {
+			filteredAttributes = append(filteredAttributes, attr)
+		}
+	}
+
+	// 2) Extract names and create newline-separated list
+	var attributeNames []string
+	for _, attr := range filteredAttributes {
+		attributeNames = append(attributeNames, attr.Name)
+	}
+	attributesList := strings.Join(attributeNames, "\n")
+
+	// 3) Replace ***ATTRIBUTES*** with this serialized attributes JSON
+	fullSystemPrompt := strings.Replace(systemPromptTemplate, "***ATTRIBUTES***", attributesList, 1)
+
+	return fullSystemPrompt
 }

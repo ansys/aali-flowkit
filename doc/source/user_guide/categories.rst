@@ -52,7 +52,7 @@ Engineering-focused AI capabilities with Ansys domain knowledge:
 - ``AnsysGPTACSSemanticHybridSearchs`` - Search Azure Cognitive Search indices
 - ``AnsysGPTReorderSearchResponseAndReturnOnlyTopK`` - Rank results by relevance
 
-**Real Use Case**: Engineers query "fatigue analysis for titanium at 500°C". FlowKit extracts material (titanium), property (fatigue), and condition (500°C) to search Ansys knowledge bases with proper citations.
+**Real Use Case**: Engineers query "fatigue analysis for titanium at 500°C." FlowKit extracts material (titanium), property (fatigue), and condition (500°C) to search Ansys knowledge bases with proper citations.
 
 Ansys Mesh Pilot Functions
 --------------------------

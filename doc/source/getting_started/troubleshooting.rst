@@ -24,16 +24,16 @@ Go version errors
     echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
     source ~/.bashrc
 
-**Problem:** Go version is too old (< 1.21)
+**Problem:** go version is too old (< 1.21)
 
-**Solution:** Download and install the latest Go version from https://go.dev/dl/
+**Solution:** download and install the latest Go version from https://go.dev/dl/
 
 Missing protoc (Development Only)
 ---------------------------------
 
 **Problem:** ``protoc: command not found``
 
-**Solution:** This is only needed for development. If you're just running FlowKit, you can ignore this error.
+**Solution:** this is only needed for development. If you're just running FlowKit, you can ignore this error.
 
 Build Issues
 ~~~~~~~~~~~~
@@ -43,7 +43,7 @@ Dependency download hangs
 
 **Problem:** ``go mod download`` appears stuck
 
-**Solution:** This is normal. The command downloads ~500MB of dependencies and shows no progress. Wait 5-10 minutes.
+**Solution:** this is normal. The command downloads ~500 MB of dependencies and shows no progress. Wait 5-10 minutes.
 
 If it's truly stuck:
 
@@ -58,7 +58,7 @@ If it's truly stuck:
 Build fails with permission errors
 -----------------------------------
 
-**Problem:** Permission denied when building
+**Problem:** permission denied when building
 
 **Solution:**
 
@@ -80,7 +80,7 @@ Config file not found
 
 **Problem:** ``configs/config.yaml.example`` not found
 
-**Solution:** Use the existing ``configs/config.yaml`` as your example:
+**Solution:** use the existing ``configs/config.yaml`` as your example:
 
 .. code-block:: bash
 
@@ -93,7 +93,7 @@ Invalid configuration values
 
 **Problem:** FlowKit fails to start with config errors
 
-**Solution:** Check these common settings:
+**Solution:** check these common settings:
 
 - ``FLOWKIT_ADDRESS``: Use ``localhost:50051`` for local, ``0.0.0.0:50051`` for Docker
 - ``LLM_HANDLER_ENDPOINT``: Must be a valid WebSocket URL (ws:// or wss://)
@@ -123,9 +123,9 @@ Port already in use
 Cannot connect to dependencies
 ------------------------------
 
-**Problem:** Cannot connect to GraphDB, Qdrant, or LLM handler
+**Problem:** cannot connect to GraphDB, Qdrant, or LLM handler
 
-**Solution:** These are optional services. FlowKit starts without them but some features won't work.
+**Solution:** these are optional services. FlowKit starts without them but some features won't work.
 
 To run with full features:
 
@@ -160,9 +160,9 @@ Docker Issues
 Docker build fails
 ------------------
 
-**Problem:** Docker build errors
+**Problem:** docker build errors
 
-**Solution:** Ensure Docker daemon is running and you have sufficient disk space:
+**Solution:** ensure Docker daemon is running and you have sufficient disk space:
 
 .. code-block:: bash
 

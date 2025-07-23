@@ -226,3 +226,17 @@ displayFixedMessageToUser
 updatedHistory
 updatedToolHistory
 messageWithContext
+
+# Additional technical terms
+Protobuf
+protoc
+Meshpilot
+APIs
+automations
+Automations
+euclid
+sublicensable
+Redistributions
+Affirmer's
+MPa
+Booleans

@@ -334,15 +334,14 @@ func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(inp
 
 	// get input token count
 	inputTokenCount, _ := getTokenCount(tokenCountModelName, input, traceID, childSpanID)
+	promptTokenCount, _ := getTokenCount(tokenCountModelName, systemPrompt, traceID, childSpanID)
 
 	// get the output token count
-	var combinedResponseText string
-	for _, response := range allResponses {
-		combinedResponseText += response
-	}
+	combinedResponseText := strings.Join(allResponses, "\n")
 	outputTokenCount, _ := getTokenCount(tokenCountModelName, combinedResponseText, traceID, childSpanID)
 
-	var totalTokenCount = inputTokenCount*n + outputTokenCount
+	var totalTokenCount = (promptTokenCount+inputTokenCount)*n + outputTokenCount
+	logging.Log.Debugf(ctx, "Output token count: %d", outputTokenCount)
 	logging.Log.Debugf(ctx, "Total token count: %d", totalTokenCount)
 
 	if len(allCriteria) == 0 {

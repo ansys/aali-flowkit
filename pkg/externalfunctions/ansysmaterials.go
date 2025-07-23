@@ -182,7 +182,7 @@ func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion
 // Returns:
 //   - filtered: the list of criteria suggestions excluding those that do not match any of the available search criteria
 //   - childSpanID: the child span ID created for this operation
-func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, availableSearchCriteria []string, traceID string, spanID string) (filtered []sharedtypes.MaterialCriterionWithGuid) {
+func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, availableSearchCriteria []string, traceID string, spanID string) (filtered []sharedtypes.MaterialCriterionWithGuid, childSpanID string) {
 	ctx := &logging.ContextMap{}
 	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 

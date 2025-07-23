@@ -89,7 +89,7 @@ Verify
 
     # Check if binary was built successfully
     ls -la aali-flowkit
-    
+
     # Check version from VERSION file
     cat VERSION
 

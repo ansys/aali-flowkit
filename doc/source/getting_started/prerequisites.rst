@@ -41,7 +41,7 @@ Git
 
     # Ubuntu/Debian
     sudo apt-get update && sudo apt-get install git
-    
+
     # macOS (with Homebrew)
     brew install git
 
@@ -54,7 +54,7 @@ Make (Build Tool)
 
     # Ubuntu/Debian
     sudo apt-get install build-essential
-    
+
     # macOS - typically pre-installed with Xcode Command Line Tools
     xcode-select --install
 

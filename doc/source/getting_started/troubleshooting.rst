@@ -19,7 +19,7 @@ Go version errors
 
     # Ensure Go is in your PATH
     export PATH=$PATH:/usr/local/go/bin
-    
+
     # Add to your shell profile for persistence
     echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
     source ~/.bashrc
@@ -51,7 +51,7 @@ If it's truly stuck:
 
     # Check your Go proxy settings
     go env GOPROXY
-    
+
     # Set a different proxy if needed
     export GOPROXY=https://proxy.golang.org,direct
 
@@ -66,7 +66,7 @@ Build fails with permission errors
 
     # Ensure you own the directory
     sudo chown -R $USER:$USER .
-    
+
     # Or build in your home directory
     cd ~
     git clone https://github.com/ansys/aali-flowkit.git
@@ -113,10 +113,10 @@ Port already in use
 
     # Find what's using the port
     lsof -i :50051
-    
+
     # Use a different port
     export FLOWKIT_ADDRESS=localhost:50052
-    
+
     # Or in config.yaml
     FLOWKIT_ADDRESS: "localhost:50052"
 
@@ -133,7 +133,7 @@ To run with full features:
 
     # Use Docker Compose (if available)
     docker-compose up -d
-    
+
     # Or disable in config
     EXTRACT_CONFIG_FROM_AZURE_KEY_VAULT: false
     DATADOG_LOGS: false
@@ -150,7 +150,7 @@ Binary won't start
 
     # Make it executable
     chmod +x aali-flowkit
-    
+
     # Run it
     ./aali-flowkit
 
@@ -168,10 +168,10 @@ Docker build fails
 
     # Check Docker
     docker info
-    
+
     # Clean up old images
     docker system prune -a
-    
+
     # Build with no cache
     docker build --no-cache -f docker/Dockerfile -t aali-flowkit:latest .
 
@@ -189,10 +189,10 @@ Cannot clone repository
 
     # Check network connectivity
     ping github.com
-    
+
     # Try SSH instead of HTTPS
     git clone git@github.com:ansys/aali-flowkit.git
-    
+
     # Or use a proxy if behind firewall
     export https_proxy=http://your-proxy:port
     git clone https://github.com/ansys/aali-flowkit.git
@@ -206,7 +206,7 @@ If you encounter issues not covered here:
 2. Review the complete logs: ``cat logs.log`` or ``cat error.log``
 3. Run with debug logging: ``export LOG_LEVEL=debug``
 4. Create a new issue with:
-   
+
    - Your OS and Go version
    - Complete error messages
    - Steps to reproduce

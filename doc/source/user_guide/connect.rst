@@ -11,7 +11,7 @@ Quick Start
 Connect to FlowKit in seconds:
 
 1. Install the client library
-2. Get your API key from your administrator  
+2. Get your API key from your administrator
 3. Start automating
 
 Python Client
@@ -20,19 +20,19 @@ Python Client
 .. code-block:: python
 
     from aali_client import FlowKitClient
-    
+
     # Connect to FlowKit
     client = FlowKitClient(api_key="your-api-key")
-    
+
     # See what functions are available
     functions = client.list_functions()
     print(f"Found {len(functions)} functions to work with")
-    
+
     # Example: generate a unique ID
     result = client.run_function("GenerateUUID", {})
     print(f"Generated ID: {result}")
 
-Common Connection Scenarios  
+Common Connection Scenarios
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Connect to External APIs**
@@ -40,13 +40,13 @@ Common Connection Scenarios
 .. code-block:: python
 
     from aali_client import FlowKitClient
-    
+
     # Initialize client with your credentials
     client = FlowKitClient(
         address="localhost:50051",  # or your FlowKit server address
         api_key="your-api-key"
     )
-    
+
     # Example: fetch engineering simulation results from Ansys Cloud
     try:
         response = client.run_function("SendRestAPICall", {
@@ -57,7 +57,7 @@ Common Connection Scenarios
                 "Accept": "application/json"
             }
         })
-        
+
         # Handle the response
         if response["status_code"] == 200:
             results = response["body"]
@@ -65,7 +65,7 @@ Common Connection Scenarios
             print(f"Max stress: {results['max_stress_mpa']} MPa")
         else:
             print(f"Error: {response['status_code']} - {response['body']}")
-            
+
     except Exception as e:
         print(f"Failed to fetch results: {e}")
 
@@ -75,12 +75,12 @@ Common Connection Scenarios
 
     from aali_client import FlowKitClient
     import json
-    
+
     client = FlowKitClient(
         address="localhost:50051",
         api_key="your-api-key"
     )
-    
+
     # Example: store engineering documentation for semantic search
     documents = [
         {
@@ -91,14 +91,14 @@ Common Connection Scenarios
             "tags": ["turbulence", "k-epsilon", "fluent"]
         },
         {
-            "id": "doc_002", 
+            "id": "doc_002",
             "title": "Mechanical APDL - Contact Analysis",
             "content": "Contact elements allow modeling of two surfaces coming into contact...",
             "category": "FEA",
             "tags": ["contact", "nonlinear", "mechanical"]
         }
     ]
-    
+
     try:
         # Store documents with automatic embedding generation
         result = client.run_function("StoreElementsInVectorDatabase", {
@@ -107,10 +107,10 @@ Common Connection Scenarios
             "embeddingField": "content",  # Field to generate embeddings from
             "metadataFields": ["title", "category", "tags"]  # Additional searchable fields
         })
-        
+
         print(f"Successfully stored {result['stored_count']} documents")
         print(f"Collection: {result['collection']}")
-        
+
     except Exception as e:
         print(f"Failed to store documents: {e}")
 
@@ -201,18 +201,18 @@ Implement robust error handling in your FlowKit applications:
 
    from aali_client import FlowKitClient
    import json
-   
+
    client = FlowKitClient(
        address="localhost:50051",
        api_key="your-api-key"
    )
-   
+
    try:
        result = client.run_function("SendRestAPICall", {
            "url": "https://api.example.com/data",
            "method": "GET"
        })
-       
+
        # Handle successful response
        if result.get("status_code") == 200:
            data = result["body"]
@@ -220,7 +220,7 @@ Implement robust error handling in your FlowKit applications:
        else:
            # Handle HTTP errors
            print(f"HTTP Error {result['status_code']}: {result['body']}")
-           
+
    except Exception as e:
        # Parse FlowKit error response
        try:
@@ -228,11 +228,11 @@ Implement robust error handling in your FlowKit applications:
            error_code = error_data.get("code", "UNKNOWN_ERROR")
            error_msg = error_data.get("error", str(e))
            error_details = error_data.get("details", "")
-           
+
            print(f"FlowKit Error [{error_code}]: {error_msg}")
            if error_details:
                print(f"Details: {error_details}")
-               
+
            # Handle specific error types
            if error_code == "FUNCTION_NOT_FOUND":
                print("Try client.list_functions() to see available functions")
@@ -240,7 +240,7 @@ Implement robust error handling in your FlowKit applications:
                print("Check your configuration settings")
            elif error_code == "AUTH_ERROR":
                print("Verify your API key is correct")
-               
+
        except (json.JSONDecodeError, AttributeError):
            # Fallback for non-FlowKit errors
            print(f"Unexpected error: {e}")
@@ -249,5 +249,5 @@ Next Steps
 ~~~~~~~~~~
 
 - :doc:`functions` - Learn about available functions
-- :doc:`categories` - Explore function categories  
+- :doc:`categories` - Explore function categories
 - Build your first automation workflow

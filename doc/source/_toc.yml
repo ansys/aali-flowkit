@@ -17,7 +17,7 @@ chapters:
         title: Running FlowKit
       - file: getting_started/troubleshooting
         title: Troubleshooting
-  
+
   - title: User Guide
     file: user_guide/index
     sections:
@@ -31,7 +31,7 @@ chapters:
         title: Type System
       - file: user_guide/architecture
         title: Architecture
-  
+
   - title: API Reference
     file: api_reference/index
     sections:

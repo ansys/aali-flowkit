@@ -43,45 +43,45 @@ Complete Workflow Example:
     import os
     import json
     from datetime import datetime
-    
+
     # Initialize FlowKit client
     client = FlowKitClient(
         address="localhost:50051",
         api_key="your-api-key"
     )
-    
+
     def process_engineering_documentation():
         """
         Complete workflow: extract, process, store, and search engineering docs
         """
-        
+
         # Configuration
         doc_directory = "/path/to/ansys/documentation"
         collection_name = "ansys_knowledge_base"
         processed_files = []
         errors = []
-        
+
         try:
             # Step 1: Find all documentation files
             print("Step 1: Discovering documentation files...")
-            
+
             file_result = client.run_function("GetLocalFilesToExtract", {
                 "directory": doc_directory,
                 "pattern": "*.pdf,*.docx,*.html",
                 "recursive": True,
                 "exclude_patterns": ["*draft*", "*temp*"]
             })
-            
+
             if not file_result["success"]:
                 raise Exception(f"Failed to find files: {file_result['error']}")
-                
+
             files = file_result["files"]
             print(f"Found {len(files)} documentation files")
-            
+
             # Step 2: Process each file
             for i, file_path in enumerate(files):
                 print(f"\nStep 2.{i+1}: Processing {os.path.basename(file_path)}...")
-                
+
                 try:
                     # Extract content
                     content_result = client.run_function("GetLocalFileContent", {
@@ -89,11 +89,11 @@ Complete Workflow Example:
                         "extract_metadata": True,
                         "preserve_formatting": True
                     })
-                    
+
                     if not content_result["success"]:
                         errors.append(f"Failed to read {file_path}: {content_result['error']}")
                         continue
-                    
+
                     # Split into semantic chunks
                     split_result = client.run_function("LangchainSplitter", {
                         "content": content_result["content"],
@@ -102,7 +102,7 @@ Complete Workflow Example:
                         "separator": "\n\n",  # Split on paragraphs
                         "keep_separator": True
                     })
-                    
+
                     # Prepare chunks with metadata
                     chunks = []
                     for j, chunk_text in enumerate(split_result["chunks"]):
@@ -118,7 +118,7 @@ Complete Workflow Example:
                                 "processed_date": datetime.now().isoformat()
                             }
                         })
-                    
+
                     # Store chunks with embeddings
                     store_result = client.run_function("StoreElementsInVectorDatabase", {
                         "elements": chunks,
@@ -127,26 +127,26 @@ Complete Workflow Example:
                         "metadataFields": ["metadata"],
                         "batch_size": 100  # Process in batches for large files
                     })
-                    
+
                     if store_result["success"]:
                         processed_files.append(file_path)
                         print(f"✓ Stored {store_result['stored_count']} chunks")
                     else:
                         errors.append(f"Failed to store {file_path}: {store_result['error']}")
-                        
+
                 except Exception as e:
                     errors.append(f"Error processing {file_path}: {str(e)}")
                     continue
-            
+
             # Step 3: Test the search functionality
             print("\nStep 3: Testing search functionality...")
-            
+
             test_queries = [
                 "How to set up turbulence models in Fluent?",
                 "Contact analysis best practices",
                 "Mesh refinement techniques"
             ]
-            
+
             for query in test_queries:
                 search_result = client.run_function("SimilaritySearch", {
                     "query": query,
@@ -154,13 +154,13 @@ Complete Workflow Example:
                     "top_k": 3,
                     "include_metadata": True
                 })
-                
+
                 if search_result["success"]:
                     print(f"\nQuery: '{query}'")
                     print(f"Found {len(search_result['matches'])} relevant chunks:")
                     for match in search_result['matches']:
                         print(f"  - Score: {match['score']:.3f} | Source: {match['metadata']['source_file']}")
-            
+
             # Summary
             print(f"\n{'='*60}")
             print("WORKFLOW COMPLETE")
@@ -168,18 +168,18 @@ Complete Workflow Example:
             print(f"✓ Processed files: {len(processed_files)}")
             print(f"✗ Errors: {len(errors)}")
             print(f"✓ Collection: {collection_name}")
-            
+
             if errors:
                 print("\nErrors encountered:")
                 for error in errors[:5]:  # Show first 5 errors
                     print(f"  - {error}")
-                    
+
             return {
                 "success": True,
                 "processed": processed_files,
                 "errors": errors
             }
-            
+
         except Exception as e:
             print(f"\nWorkflow failed: {e}")
             return {
@@ -188,11 +188,11 @@ Complete Workflow Example:
                 "processed": processed_files,
                 "errors": errors
             }
-    
+
     # Run the workflow
     if __name__ == "__main__":
         result = process_engineering_documentation()
-        
+
         # Save results for audit
         with open("workflow_results.json", "w") as f:
             json.dump(result, f, indent=2)
@@ -201,7 +201,7 @@ Why FlowKit?
 ~~~~~~~~~~~~
 
 - **No infrastructure setup**: Focus on your automation logic
-- **Pre-built integrations**: Connect popular databases and APIs instantly  
+- **Pre-built integrations**: Connect popular databases and APIs instantly
 - **Scalable**: Handle everything from simple scripts to complex pipelines
 - **Developer-friendly**: Use Python, Go, or any gRPC-compatible language
 

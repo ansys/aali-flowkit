@@ -17,7 +17,7 @@ AALI FlowKit is a gRPC service written in Go, designed to provide dynamic functi
       :link: github
       :link-type: doc
 
-      Learn how to clone the AALI FlowKit repository from GitHub 
+      Learn how to clone the AALI FlowKit repository from GitHub
       and set up your development environment.
 
    .. grid-item-card:: Configuration

@@ -120,7 +120,7 @@ Essential operations for workflow automation:
 Based on code analysis in:
 - ``pkg/externalfunctions/`` - Function implementations
 - ``pkg/privatefunctions/qdrant/`` - Qdrant client
-- ``pkg/privatefunctions/graphdb/`` - Graph database client  
+- ``pkg/privatefunctions/graphdb/`` - Graph database client
 - ``configs/config.yaml`` - Service endpoints
 
 **NOT Found**: PostgreSQL, Redis, CRM integrations, invoice processing, or generic business automation features. FlowKit is specifically built for engineering data processing within AALI.

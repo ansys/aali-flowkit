@@ -10,7 +10,7 @@ Common Data Types
 
 **Text and Numbers**
     - Strings for text, URLs, file paths
-    - Numbers for counts, measurements, IDs  
+    - Numbers for counts, measurements, IDs
     - Booleans for true/false conditions
 
 **Collections**
@@ -32,12 +32,12 @@ FlowKit provides automatic conversions when needed:
 .. code-block:: python
 
     from aali_client import FlowKitClient
-    
+
     client = FlowKitClient(
         address="localhost:50051",
         api_key="your-api-key"
     )
-    
+
     # Example: convert mixed data types for processing
     simulation_data = {
         "temperature": 273.15,
@@ -46,28 +46,28 @@ FlowKit provides automatic conversions when needed:
         "iterations": 1000,
         "residuals": [1e-3, 1e-4, 1e-5]
     }
-    
+
     try:
         # Convert complex data to string for logging
         text_result = client.run_function("CastAnyToString", {
             "input": simulation_data
         })
         print(f"Simulation summary: {text_result['output']}")
-        
+
         # Convert string input to number for calculations
         user_input = "350.75"  # Temperature in Kelvin from UI
-        
+
         number_result = client.run_function("CastAnyToFloat64", {
             "input": user_input
         })
-        
+
         if number_result["success"]:
             temp_kelvin = number_result["output"]
             temp_celsius = temp_kelvin - 273.15
             print(f"Temperature: {temp_kelvin}K = {temp_celsius:.2f}°C")
         else:
             print(f"Conversion failed: {number_result['error']}")
-            
+
     except Exception as e:
         print(f"Type conversion error: {e}")
 
@@ -80,12 +80,12 @@ Get responses as they happen for better user experience:
 
     from aali_client import FlowKitClient
     import sys
-    
+
     client = FlowKitClient(
         address="localhost:50051",
         api_key="your-api-key"
     )
-    
+
     # Example: stream engineering analysis explanations
     try:
         # Request streaming response for complex technical query
@@ -96,11 +96,11 @@ Get responses as they happen for better user experience:
             "temperature": 0.7,  # Balance creativity and accuracy
             "context": "User is a mechanical engineer familiar with CAD but new to FEA"
         })
-        
+
         # Stream response in real-time
         print("Assistant: ", end='')
         total_tokens = 0
-        
+
         for chunk in response["stream"]:
             if chunk["type"] == "content":
                 print(chunk["text"], end='', flush=True)
@@ -109,9 +109,9 @@ Get responses as they happen for better user experience:
             elif chunk["type"] == "error":
                 print(f"\nError: {chunk['message']}")
                 break
-                
+
         print(f"\n\nTokens used: {total_tokens}")
-        
+
     except Exception as e:
         print(f"Streaming error: {e}")
 
@@ -124,12 +124,12 @@ FlowKit accepts various data structures without rigid schemas:
 
     from aali_client import FlowKitClient
     from datetime import datetime
-    
+
     client = FlowKitClient(
         address="localhost:50051",
         api_key="your-api-key"
     )
-    
+
     # Example: store heterogeneous engineering data
     try:
         # Different document structures in same collection
@@ -173,7 +173,7 @@ FlowKit accepts various data structures without rigid schemas:
                 "status": "approved"
             }
         ]
-        
+
         # Store all different formats together
         result = client.run_function("StoreElementsInVectorDatabase", {
             "collection": "engineering_knowledge",
@@ -181,13 +181,13 @@ FlowKit accepts various data structures without rigid schemas:
             "embeddingField": "auto",  # FlowKit determines best field
             "preserveStructure": True   # Keep original structure intact
         })
-        
+
         if result["success"]:
             print(f"✓ Stored {result['stored_count']} documents")
             print(f"✓ Handled {result['unique_schemas']} different formats")
         else:
             print(f"✗ Storage failed: {result['error']}")
-            
+
     except Exception as e:
         print(f"Data handling error: {e}")
 

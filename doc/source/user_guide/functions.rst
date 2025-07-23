@@ -52,17 +52,17 @@ See what functions you can use:
 .. code-block:: python
 
     from aali_client import FlowKitClient
-    
+
     # Connect to FlowKit
     client = FlowKitClient(
         address="localhost:50051",
         api_key="your-api-key"
     )
-    
+
     try:
         # Get all available functions
         functions = client.list_functions()
-        
+
         # Organize by category for easier browsing
         by_category = {}
         for name, info in functions.items():
@@ -74,13 +74,13 @@ See what functions you can use:
                 'display': info.display_name,
                 'description': info.description
             })
-        
+
         # Display functions by category
         for category, funcs in sorted(by_category.items()):
             print(f"\n{category.upper()} Functions:")
             for func in funcs:
                 print(f"  - {func['name']}: {func['display']}")
-                
+
     except Exception as e:
         print(f"Failed to list functions: {e}")
 
@@ -100,12 +100,12 @@ Calling Functions
 
     from aali_client import FlowKitClient
     import time
-    
+
     client = FlowKitClient(
         address="localhost:50051",
         api_key="your-api-key"
     )
-    
+
     # Example: process and store technical documents
     documents = [
         {
@@ -118,7 +118,7 @@ Calling Functions
         }
         for i in range(1, 4)
     ]
-    
+
     try:
         # Store documents with automatic embedding generation
         result = client.run_function(
@@ -130,7 +130,7 @@ Calling Functions
                 "metadataFields": ["title", "author", "tags"]  # Store as metadata
             }
         )
-        
+
         # Check results
         if result["success"]:
             print(f"✓ Stored {result['stored_count']} documents")
@@ -138,7 +138,7 @@ Calling Functions
             print(f"✓ Embedding dimension: {result['vector_dimension']}")
         else:
             print(f"✗ Storage failed: {result['error']}")
-            
+
     except Exception as e:
         print(f"Error calling function: {e}")
 
@@ -149,7 +149,7 @@ Common Use Cases
     - ``SendRestAPICall`` - Call any REST API
     - ``GenerateUUID`` - Create unique identifiers
 
-**Data Processing**  
+**Data Processing**
     - ``GetLocalFilesToExtract`` - Find files to process
     - ``LangchainSplitter`` - Split documents intelligently
     - ``StoreElementsInVectorDatabase`` - Enable semantic search
@@ -167,12 +167,12 @@ Find similar content using vector search:
 .. code-block:: python
 
     from aali_client import FlowKitClient
-    
+
     client = FlowKitClient(
         address="localhost:50051",
         api_key="your-api-key"
     )
-    
+
     # Example: find similar engineering problems and solutions
     try:
         # Search for similar content
@@ -187,11 +187,11 @@ Find similar content using vector search:
                 "tags": {"$contains": "turbulence"}  # Must contain this tag
             }
         })
-        
+
         # Process search results
         if results["success"]:
             print(f"Found {len(results['matches'])} similar documents:\n")
-            
+
             for i, match in enumerate(results['matches'], 1):
                 print(f"{i}. {match['metadata']['title']}")
                 print(f"   Score: {match['score']:.3f}")
@@ -200,7 +200,7 @@ Find similar content using vector search:
                 print(f"   ID: {match['id']}\n")
         else:
             print(f"Search failed: {results['error']}")
-            
+
     except Exception as e:
         print(f"Error performing search: {e}")
 
@@ -212,19 +212,19 @@ Convert text to vectors for AI operations:
 .. code-block:: python
 
     from aali_client import FlowKitClient
-    
+
     client = FlowKitClient(
         address="localhost:50051",
         api_key="your-api-key"
     )
-    
+
     # Example: generate embeddings for technical queries
     queries = [
         "stress analysis of composite materials",
         "thermal simulation in electronic components",
         "fluid-structure interaction in turbomachinery"
     ]
-    
+
     try:
         # Generate embeddings for multiple texts
         result = client.run_function("PerformVectorEmbeddingRequest", {
@@ -233,28 +233,28 @@ Convert text to vectors for AI operations:
             "normalize": True,  # Normalize vectors for cosine similarity
             "return_tokens": True  # Include token count for billing
         })
-        
+
         if result["success"]:
             embeddings = result["embeddings"]
             print(f"Generated {len(embeddings)} embeddings")
             print(f"Embedding dimension: {len(embeddings[0])}")
             print(f"Total tokens used: {result['total_tokens']}")
-            
+
             # Example: calculate similarity between first two queries
             import numpy as np
-            
+
             vec1 = np.array(embeddings[0])
             vec2 = np.array(embeddings[1])
             similarity = np.dot(vec1, vec2)  # Cosine similarity (normalized)
-            
+
             print(f"\nSimilarity between:")
             print(f"  '{queries[0]}'")
             print(f"  '{queries[1]}'")
             print(f"  Score: {similarity:.3f}")
-            
+
         else:
             print(f"Embedding generation failed: {result['error']}")
-            
+
     except Exception as e:
         print(f"Error generating embeddings: {e}")
 

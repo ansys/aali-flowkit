@@ -35,16 +35,16 @@ Logging
 
     LOG_LEVEL: "info"                 # debug, info, warning, error, fatal
     ERROR_FILE_LOCATION: "error.log"
-    
+
     # Local logs
     LOCAL_LOGS: true
     LOCAL_LOGS_LOCATION: "logs.log"
-    
+
     # Datadog (optional)
     DATADOG_LOGS: false
     LOGGING_URL: "https://http-intake.logs.datadoghq.eu/api/v2/logs"
     LOGGING_API_KEY: ""
-    
+
     # Metadata
     STAGE: "DEV"
     VERSION: "1.0.0"
@@ -67,7 +67,7 @@ Databases
 
     # Graph database
     GRAPHDB_ADDRESS: "aali-graphdb:8080"
-    
+
     # Qdrant
     QDRANT_HOST: "qdrant"
     QDRANT_PORT: 6334
@@ -99,7 +99,7 @@ Environment variables
 Configuration file location
 ----------------------------
 
-By default, FlowKit looks for ``configs/config.yaml`` in the working directory. 
+By default, FlowKit looks for ``configs/config.yaml`` in the working directory.
 Override with ``AALI_CONFIG_PATH``:
 
 .. code-block:: bash
@@ -137,7 +137,7 @@ Configure dynamic workflow execution and tool management:
 
     # Meshpilot Database
     MESHPILOT_DB_ENDPOINT: "your-meshpilot-endpoint"
-    
+
     # Collection Configuration
     COLLECTION_1_NAME: "primary_collection"
     COLLECTION_2_NAME: "secondary_collection"
@@ -156,11 +156,11 @@ Dynamic tool and action configuration:
     # Tool Counts (determines how many tools are loaded)
     APP_ACTIONS_TOOL_TOTAL_AMOUNT: 17
     APP_HELPER_TOOL_TOTAL_AMOUNT: 6
-    
+
     # Tool Definitions (examples for first few tools)
     APP_TOOL_1_NAME: "primary_tool"
     APP_TOOL_3_NAME: "analysis_tool"
-    
+
     # Action Definitions
     APP_TOOL_ACTION_1_NAME: "initialize_workflow"
     APP_TOOL_ACTION_2_NAME: "process_data"
@@ -168,7 +168,7 @@ Dynamic tool and action configuration:
     APP_TOOL_ACTION_4_NAME: "generate_report"
     APP_TOOL_ACTION_5_NAME: "cleanup_resources"
     APP_TOOL_ACTION_6_NAME: "archive_results"
-    
+
     # Additional actions (11, 12, 14, 15, 17 are commonly used)
     APP_TOOL_ACTION_11_NAME: "mesh_analysis"
     APP_TOOL_ACTION_12_NAME: "optimization"
@@ -186,11 +186,11 @@ Customize database interaction patterns:
     # Node and Property Queries
     APP_DATABASE_GET_PROPERTIES_QUERY: "MATCH (n) RETURN properties(n)"
     APP_DATABASE_GET_STATE_NODE_QUERY: "MATCH (s:State) RETURN s"
-    
+
     # Path Queries
     APP_DATABASE_FETCH_PATH_NODES_QUERY_NODE_LABEL_1: "primary_nodes"
     APP_DATABASE_FETCH_PATH_NODES_QUERY_NODE_LABEL_2: "secondary_nodes"
-    
+
     # Action Queries
     APP_DATABASE_GET_ACTIONS_QUERY_LABEL_1: "workflow_actions"
     APP_DATABASE_GET_ACTIONS_QUERY_LABEL_2: "system_actions"
@@ -208,11 +208,11 @@ Configure AI prompt templates for workflow synthesis:
     APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_TOOL2_VALUE: "analysis_prompt"
     APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_REPLACE_KEY_1: "replace_pattern_1"
     APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_REPLACE_KEY_2: "replace_pattern_2"
-    
+
     # Output Synthesis
     APP_PROMPT_TEMPLATE_SYNTHESIZE_OUTPUT_KEY_1: "output_format_1"
     APP_PROMPT_TEMPLATE_SYNTHESIZE_OUTPUT_KEY_2: "output_format_2"
-    
+
     # Workflow Identification
     APP_SUBWORKFLOW_IDENTIFICATION_SYSTEM_PROMPT: "You are a workflow analyzer..."
     APP_SUBWORKFLOW_IDENTIFICATION_USER_PROMPT: "Identify the workflow pattern..."
@@ -226,14 +226,14 @@ Additional service endpoints beyond basic configuration:
 
     # Extended LLM Services
     LLM_API_KEY: "your-llm-api-key"
-    
+
     # Python Integration
     FLOWKIT_PYTHON_ENDPOINT: "http://python-service:8000"
     FLOWKIT_PYTHON_API_KEY: "python-service-key"
-    
+
     # Authorization Services
     ANSYS_AUTHORIZATION_URL: "https://auth.ansys.com/oauth/token"
-    
+
     # Additional gRPC Ports
     EXTERNALFUNCTIONS_GRPC_PORT: 50052
 
@@ -251,19 +251,19 @@ Customize user-facing messages for different tool outcomes:
     APP_ACTION_TOOL_4_SUCCESS_MESSAGE: "Report generated"
     APP_ACTION_TOOL_5_SUCCESS_MESSAGE: "Cleanup completed"
     APP_ACTION_TOOL_6_SUCCESS_MESSAGE: "Results archived"
-    
-    # No Action Messages  
+
+    # No Action Messages
     APP_ACTION_TOOL_1_NO_ACTION_MESSAGE: "Primary tool: no action required"
     APP_ACTION_TOOL_2_NO_ACTION_MESSAGE: "Secondary tool: skipped"
     APP_ACTION_TOOL_3_NO_ACTION_MESSAGE: "Analysis tool: no changes needed"
-    
+
     # Extended Action Messages
     APP_ACTION_TOOL_11_SUCCESS_MESSAGE: "Mesh analysis completed"
     APP_ACTION_TOOL_12_SUCCESS_MESSAGE: "Optimization finished"
     APP_ACTION_TOOL_14_SUCCESS_MESSAGE: "Quality check passed"
     APP_ACTION_TOOL_15_SUCCESS_MESSAGE: "Post-processing done"
     APP_ACTION_TOOL_17_SUCCESS_MESSAGE: "Final validation successful"
-    
+
     APP_ACTION_TOOL_14_NO_ACTION_MESSAGE: "Quality check: no issues found"
     APP_ACTION_TOOL_15_NO_ACTION_MESSAGE: "Post-processing: not required"
 
@@ -280,14 +280,14 @@ Configure tool behavior and targeting:
     APP_TOOL_ACTIONS_TARGET_1: "workflow_target"
 
 .. note::
-   
+
    **When to use Advanced Configuration:**
-   
+
    * **Workflow Engine Settings**: When deploying custom Meshpilot workflows
-   * **Tool Configuration**: For dynamic tool loading and custom actions  
+   * **Tool Configuration**: For dynamic tool loading and custom actions
    * **Prompt Templates**: When customizing AI-driven workflow synthesis
    * **External Services**: For additional API integrations beyond basic setup
-   
+
    Most users only need the preceding :ref:`Core settings <configuration>` to get started.
 
 Defaults

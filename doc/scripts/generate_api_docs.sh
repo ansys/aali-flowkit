@@ -65,7 +65,7 @@ gomarkdoc --output "$API_REF_DIR/externalfunctions/index.md" \
 # Also generate docs for private functions subdirectories
 if [ -d "./pkg/privatefunctions" ]; then
     echo "Generating documentation for private functions..."
-    
+
     # Generate docs for each subdirectory
     for subdir in codegeneration generic graphdb qdrant; do
         if [ -d "./pkg/privatefunctions/$subdir" ]; then

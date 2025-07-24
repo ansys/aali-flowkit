@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	qdrant_utils "github.com/ansys/aali-flowkit/pkg/privatefunctions/qdrant"
 	"github.com/ansys/aali-sharedtypes/pkg/aali_graphdb"
@@ -41,19 +42,72 @@ func checkWhetherOneOfTheMethodsFits(collectionName string, historyMessage []sha
 }
 
 // checkWhetherUserInformationFits evaluates the information retrieved from the User Guide
-func checkWhetherUserInformationFits(ansysProduct string, userQuery string, historyMessage []sharedtypes.HistoricMessage) string {
+func checkWhetherUserInformationFits(ansysProduct string, userGuideInformation string, historyMessage []sharedtypes.HistoricMessage, userQuery string) (string, string, string) {
 
-	systemMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided.
-			In this step, you must evaluate the information retrieved from the User Guide and decide whether you have enough information to unambiguously identify the correct Method or whether you need some user input.
-			If you need user input, return the query you would like to ask the user. If you have enough information, return the full path of the Method.
-			Don't ask the user for information that is already provided in the query %s.
-			
-			Respond with the following JSON format: "<full path of the Method, is mandatory to include the signature with parameters if present>
-			`, ansysProduct, userQuery)
+	systemMessage := fmt.Sprintf(`In %s:  You need to create a script to execute the instructions provided.
+        In this step, you must evaluate the information retrieved from the User Guide together with the user's response and decide whether you have enough information to unambiguously identify the correct Method. You have the following options:
+        1. Adapt query to API Reference Vector DB with a more specific query.
+        2. Ask the user for more information. Before asking for user input, ensure the user did not already provide the information in previous steps. Also, try to query the API Reference Vector DB for the information.
+        3. If you have enough information, return the full path of the Method with its signature (mandatory to include parametersif they exist). Example: Path.To.Method(param1, param2).
+        4. If the method full path looks like Path.To.Method, is **MANDATORY** not add any additional characters or information (such as "()").
+		Don't ask the user for information that is already provided in the query %s.
+		5. If there are multiple methods in api reference that match the query, return the full path of the Method with its signature (mandatory to include parameters if they exist). Example: Path.To.Method(param1, param2).
+
+		Below mentioned options are mandatory to include in the response:
+
+			1. unambiguous_method_found: true/false
+			2. unambiguous_method_path: <full path of the Method, including signature>
+			3. query_to_api_reference_required": true/false,
+            4. ask_user_question_required": true/false,
+            5. reasoning_for_decision": "reasoning_for_decision",
+            6. question_to_user": "question_to_user",
+            7. query_to_api_reference": "Make this query as specific as possible"
+
+		Response format:
+		    <unambiguous_method_found>-----<unambiguous_method_path>-----<query_to_api_reference_required>-----<ask_user_question_required>-----<reasoning_for_decision>-----<question_to_user>-----<query_to_api_reference>
+
+		Example: 
+			true-----Path.To.Method(param1, param2)-----false-----true-----"I need more information about the parameters"-----"What is the value of param1?	"-----"Path.To.Method(param1, param2)"
+
+			`, ansysProduct, userGuideInformation)
 
 	result, _ := PerformGeneralRequest(userQuery, historyMessage, false, systemMessage)
 
-	return result
+	// Split the result by the separator
+	parts := strings.Split(result, "-----")
+	if len(parts) < 7 {
+		logging.Log.Errorf(&logging.ContextMap{}, "Invalid response format: %s", result)
+		return "", "", ""
+	}
+	// Extract the parts
+	unambiguousMethodFound := strings.TrimSpace(parts[0])
+	unambiguousMethodPath := strings.TrimSpace(parts[1])
+	queryToApiReferenceRequired := strings.TrimSpace(parts[2])
+	askUserQuestionRequired := strings.TrimSpace(parts[3])
+	reasoningForDecision := strings.TrimSpace(parts[4])
+	questionToUser := strings.TrimSpace(parts[5])
+	queryToApiReference := strings.TrimSpace(parts[6])
+	// Log the extracted parts
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - userGuideInformation: %s", userGuideInformation)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - systemMessage: %s", systemMessage)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - userQuery: %s", userQuery)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - Unambiguous Method Found: %s", unambiguousMethodFound)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - Unambiguous Method Path: %s", unambiguousMethodPath)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - Query to API Reference Required: %s", queryToApiReferenceRequired)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - Ask User Question Required: %s", askUserQuestionRequired)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - Reasoning for Decision: %s", reasoningForDecision)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - Question to User: %s", questionToUser)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - Query to API Reference: %s", queryToApiReference)
+
+	if unambiguousMethodFound == "true" && unambiguousMethodPath != "" {
+		return unambiguousMethodPath, "", ""
+	} else if askUserQuestionRequired == "true" && questionToUser != "" {
+		return "", "", questionToUser
+	} else if queryToApiReferenceRequired == "true" && queryToApiReference != "" {
+		return "", queryToApiReference, ""
+	}
+
+	return "", "", ""
 }
 
 // countPlaceholders counts the number of %s placeholders in the input string
@@ -862,7 +916,70 @@ func getElementByName(nodeName string, nodeType string) []map[string]interface{}
 	escapedNodeName := strings.ReplaceAll(nodeName, `'`, `\'`)
 	escapedNodeType := strings.ReplaceAll(nodeType, `'`, `\'`)
 	query := fmt.Sprintf("MATCH (n:Element) WHERE n.name = '%s' AND n.type = '%s' RETURN n", escapedNodeName, escapedNodeType)
+	logging.Log.Infof(&logging.ContextMap{}, "Executing query to get element by name: %s", query)
 
 	result := GeneralGraphDbQuery(query, aali_graphdb.ParameterMap{})
 	return result
+}
+
+func searchExamplesForMethod(collectionName string, ansysProduct string, historyMessage []sharedtypes.HistoricMessage, methodNames string, maxExamples int) string {
+	startTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod STARTED - methodName: %s, collectionName: %s, maxExamples: %d", methodNames, collectionName, maxExamples)
+	defer func() {
+		duration := time.Since(startTime)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod COMPLETED - duration: %v", duration)
+	}()
+	var outputBuilder strings.Builder
+	// split ; sperated methodName into parts
+	parts := strings.Split(methodNames, ";")
+	for _, methodName := range parts {
+		// Time the method lookup
+		methodDbStartTime := time.Now()
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (method lookup) STARTED for: %s", methodName)
+		nresult := getElementByName(methodName, "Method")
+		methodDbDuration := time.Since(methodDbStartTime)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (method lookup) COMPLETED - duration: %v, results count: %d", methodDbDuration, len(nresult))
+
+		if len(nresult) == 0 {
+			logging.Log.Warnf(&logging.ContextMap{}, "No method found with name: %s", methodName)
+			continue
+		}
+
+		result, ok := nresult[0]["n"].(map[string]interface{})
+		if !ok {
+			logging.Log.Error(&logging.ContextMap{}, "Failed to parse method result for: %s", methodName)
+			continue
+		}
+
+		apiExample := result["example"]
+		if apiExample == nil {
+			logging.Log.Warnf(&logging.ContextMap{}, "No API example found for method: %s", methodName)
+			continue
+		}
+
+		// Time the examples lookup
+		examplesDbStartTime := time.Now()
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (examples lookup) STARTED for method: %s", methodName)
+		examples := getExampleNodesFromElement("Method", methodName, collectionName)
+		examplesDbDuration := time.Since(examplesDbStartTime)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (examples lookup) COMPLETED - duration: %v, results count: %d", examplesDbDuration, len(examples))
+		outputBuilder.WriteString(methodName)
+		if apiExample != nil {
+			outputBuilder.WriteString(fmt.Sprintf("For the api method: %s the following examples were found:\n\n", methodName))
+			outputBuilder.WriteString(fmt.Sprintf("For the api method: %s the following examples were found:\n\n", apiExample))
+		} else {
+			outputBuilder.WriteString(fmt.Sprintf("For the api method: %s the following examples were found:\n\n", methodName))
+			for i, example := range examples {
+				if i >= maxExamples {
+					break // Limit the number of examples to maxExamples
+				}
+				outputBuilder.WriteString(fmt.Sprintf("Example: %s\n%s\n\n", example["name"], example["text"]))
+
+				exampleRefs, _ := getExampleReferences(example["name"].(string), "aali") //example_refs_info
+				outputBuilder.WriteString(fmt.Sprintf("%s-------------------\n\n", exampleRefs))
+			}
+		}
+	}
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - outputBuilder: %s", outputBuilder.String())
+	return outputBuilder.String()
 }

@@ -102,39 +102,7 @@ Service endpoints
 
    * - EXTERNALFUNCTIONS_GRPC_PORT
      - int
-     - Legacy port definition for gRPC server. Used with FLOWKIT_ADDRESS for backward compatibility.
-     - ``''``
-
-External service authentication
--------------------------------
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 15 55 15
-
-   * - Argument
-     - Type
-     - Description
-     - Default
-
-   * - ANSYS_AUTHORIZATION_URL
-     - string
-     - URL for Ansys authorization service and token usage tracking.
-     - ``''``
-
-   * - LLM_API_KEY
-     - string
-     - API key for LLM service authentication.
-     - ``''``
-
-   * - FLOWKIT_PYTHON_ENDPOINT
-     - string
-     - Endpoint for FlowKit Python splitter service.
-     - ``''``
-
-   * - FLOWKIT_PYTHON_API_KEY
-     - string
-     - API key for FlowKit Python service.
+     - **[LEGACY - Use FLOWKIT_ADDRESS instead]** Legacy port definition for gRPC server. Used with FLOWKIT_ADDRESS for backward compatibility.
      - ``''``
 
 Workflow configuration
@@ -151,8 +119,8 @@ Workflow configuration
 
    * - WORKFLOW_CONFIG_VARIABLES
      - map
-     - Key-value pairs for workflow-specific configuration. Used primarily by ansysmeshpilot functions for tool names, collection names, database queries, and prompt templates.
-     - ``{}``
+     - **[OPTIONAL]** Key-value pairs for workflow-specific configuration. Used primarily by ansysmeshpilot functions for tool names, collection names, database queries, and prompt templates. This section is commented out in the default config.
+     - ``{}`` (commented out by default)
 
 Logging settings
 ----------------
@@ -215,6 +183,38 @@ Logging settings
      - string
      - Datadog URL where metrics are sent.
      - ``''``
+
+Function-specific configuration
+-------------------------------
+
+Some FlowKit functions require additional parameters that are not part of the core FlowKit configuration. These are typically set as environment variables or passed directly to functions:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 15 55
+
+   * - Parameter
+     - Used By
+     - Description
+
+   * - ANSYS_AUTHORIZATION_URL
+     - ansysmeshpilot functions
+     - Authorization URL for Ansys services
+
+   * - LLM_API_KEY
+     - llmhandler functions
+     - API key for LLM service authentication
+
+   * - FLOWKIT_PYTHON_ENDPOINT
+     - specific functions
+     - Endpoint for Python service integration
+
+   * - FLOWKIT_PYTHON_API_KEY
+     - specific functions
+     - API key for Python service authentication
+
+.. note::
+   These parameters are **not** part of the main ``config.yaml`` file. They are used by specific functions and should be configured as environment variables or function parameters as needed.
 
 Azure Key Vault settings
 ------------------------
@@ -295,19 +295,18 @@ Create a ``config.yaml`` file in the ``configs`` directory with your settings.
    QDRANT_HOST: "qdrant"
    QDRANT_PORT: 6334
 
-   # External service authentication (optional)
-   ANSYS_AUTHORIZATION_URL: "https://auth.ansys.com"
-   LLM_API_KEY: "your-llm-api-key"
-   FLOWKIT_PYTHON_ENDPOINT: "http://flowkit-python:8000"
-   FLOWKIT_PYTHON_API_KEY: "python-service-key"
+   # Note: Function-specific parameters like ANSYS_AUTHORIZATION_URL,
+   # LLM_API_KEY, etc. are used by individual functions and are not
+   # part of the core FlowKit configuration. These should be set as
+   # environment variables or passed directly to functions that need them.
 
    # SSL settings
    USE_SSL: true
    SSL_CERT_PUBLIC_KEY_FILE: "/certs/flowkit.crt"
    SSL_CERT_PRIVATE_KEY_FILE: "/certs/flowkit.key"
 
-   # Workflow configuration (optional)
-   WORKFLOW_CONFIG_VARIABLES:
-     MESHPILOT_DB_ENDPOINT: "http://meshpilot-db:8080"
-     APP_TOOL_1_NAME: "MeshGenerator"
-     COLLECTION_1_NAME: "mesh_collection"
+   # Workflow configuration (example - uncomment if needed)
+   # WORKFLOW_CONFIG_VARIABLES:
+   #   MESHPILOT_DB_ENDPOINT: "http://meshpilot-db:8080"
+   #   APP_TOOL_1_NAME: "MeshGenerator"
+   #   COLLECTION_1_NAME: "mesh_collection"

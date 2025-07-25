@@ -1,6 +1,5 @@
 User Guide
 ==========
-
 This section describes how to interact with FlowKit and which output can be expected.
 
 .. grid:: 2

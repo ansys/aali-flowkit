@@ -3,9 +3,7 @@
 Error codes
 ===========
 
-In the event of an error occurring during the processing of a request, the response includes an ``error`` field within the ``ExecuteFunctionResponse``.
-
-The ``error`` object contains:
+Errors are returned as standard gRPC status errors, not embedded in the response message. When a function execution fails, the gRPC call returns an error with:
 
    - ``code`` *(int32)*: gRPC status code.
    - ``message`` *(string)*: Human-readable error message.

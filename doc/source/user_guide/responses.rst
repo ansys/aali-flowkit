@@ -8,43 +8,48 @@ In this section the responses a client can expect to receive via gRPC after exec
 Response Format
 ~~~~~~~~~~~~~~~
 
-The system produces responses as a stream of ``ExecuteFunctionResponse`` messages:
+The system returns ``FunctionOutputs`` for successful function execution:
 
-**ExecuteFunctionResponse**
+**FunctionOutputs**
 
-   - ``outputs`` *(map<string, Value>)*: Function output values as key-value pairs.
-   - ``error`` *(Error)*, *optional*: Error information if execution failed.
-   - ``metadata`` *(map<string, string>)*, *optional*: Additional metadata about the execution.
-   - ``is_final`` *(bool)*: Indicates if this is the final response message.
+   - ``name`` *(string)*: The name of the executed function.
+   - ``outputs`` *(array<FunctionOutput>)*: Array of output values from the function.
 
-**Value Type**
+**FunctionOutput Type**
 
-Values in FlowKit use a flexible type system:
+Each output value in the array contains:
 
-   - ``string_value`` *(string)*: String representation.
-   - ``number_value`` *(double)*: Numeric value.
-   - ``bool_value`` *(bool)*: Boolean value.
-   - ``struct_value`` *(google.protobuf.Struct)*: Complex structured data.
-   - ``list_value`` *(google.protobuf.ListValue)*: Array of values.
+   - ``Name`` *(string)*: The name of the output parameter.
+   - ``Value`` *(string)*: The output value as a string.
+   - ``GoType`` *(string)*: The Go type of the output value.
 
 Here is an example successful response:
 
 .. code-block:: json
 
    {
-       "outputs": {
-           "uuid": {
-               "string_value": "550e8400-e29b-41d4-a716-446655440000"
+       "name": "GenerateUUID",
+       "outputs": [
+           {
+               "Name": "uuid",
+               "Value": "550e8400e29b41d4a716446655440000",
+               "GoType": "string"
            }
-       },
-       "is_final": true
+       ]
    }
 
 Streaming Responses
 ~~~~~~~~~~~~~~~~~~~
 
-Functions that support streaming send multiple response messages:
+Functions that support streaming return ``StreamOutput`` messages:
 
-   - Initial messages contain partial results with ``is_final: false``
-   - Final message contains complete results with ``is_final: true``
+**StreamOutput**
+
+   - ``MessageCounter`` *(int)*: Counter for the message in the stream.
+   - ``IsLast`` *(bool)*: Indicates if this is the final message.
+   - ``Value`` *(string)*: The streamed output value.
+
+Stream characteristics:
+   - Initial messages contain partial results with ``IsLast: false``
+   - Final message has ``IsLast: true``
    - Errors end the stream immediately

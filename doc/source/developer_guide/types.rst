@@ -5,87 +5,146 @@ Adding Custom Types
 
 Custom types enable complex data structures in function parameters and return values.
 
-Type Definition
----------------
+Type Definition Examples
+-------------------------
 
-Define types in ``pkg/externalfunctions/types.go``:
+Define types in ``pkg/externalfunctions/types.go``. Here are real examples from the codebase:
+
+Database Response Type
+~~~~~~~~~~~~~~~~~~~~~~
+
+FlowKit uses the external ``sharedtypes.DbResponse`` struct from the shared types package:
 
 .. code-block:: go
 
-   type CustomData struct {
-       Name    string `json:"name"`
-       Value   int    `json:"value"`
-       Active  bool   `json:"active"`
+   import "github.com/ansys/aali-sharedtypes"
+   
+   // DbResponse is imported from sharedtypes and includes fields like:
+   // - DocumentId, DocumentName, Summary, Guid
+   // Used in similarity search results and vector operations
+   func ProcessSearchResults() []sharedtypes.DbResponse {
+       // Function implementation
    }
 
-Type Registration
------------------
+Complex Input Type with JSON Tags
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Types must be registered in multiple locations:
+.. code-block:: go
 
-1. **aali-sharedtypes Repository**
+   // similaritySearchInput represents the input for the similarity search function.
+   type similaritySearchInput struct {
+       CollectionName    string    `json:"collection_name" description:"Name of the collection to search in. Required." required:"true"`
+       EmbeddedVector    []float32 `json:"embedded_vector" description:"Embedded vector used for searching. Required for retrieval." required:"true"`
+       MaxRetrievalCount int       `json:"max_retrieval_count" description:"Maximum number of results to retrieve. Optional." required:"false"`
+       MinScore          float64   `json:"min_score" description:"Minimum similarity score for results. Optional." required:"false"`
+       Keywords          []string  `json:"keywords" description:"Keywords to filter results. Optional." required:"false"`
+       UseKeywords       bool      `json:"use_keywords" description:"Whether to use keyword filtering. Optional." required:"false"`
+   }
 
-   Add type to appropriate package:
+Internal Type Example
+~~~~~~~~~~~~~~~~~~~~~
 
-   .. code-block:: go
+.. code-block:: go
 
-      // In aali-sharedtypes/pkg/sharedtypes/
-      type CustomData struct {
-          Name    string `json:"name"`
-          Value   int    `json:"value"`
-          Active  bool   `json:"active"`
-      }
+   // Variables struct used in function processing
+   type variables struct {
+       variableName string
+       metadata     map[string]interface{}
+   }
 
-2. **Type Converters**
+Type Registration and Usage
+---------------------------
 
-   Update ``aali-sharedtypes/pkg/typeconverters/typeconverters.go``:
+Custom types are automatically available once defined in ``types.go``. They can be used in function parameters and return values:
 
-   .. code-block:: go
+.. code-block:: go
 
-      // In ConvertStringToGivenType
-      case "CustomData":
-          output := sharedtypes.CustomData{}
-          err := json.Unmarshal([]byte(value), &output)
-          if err != nil {
-              return nil, err
-          }
-          return output, nil
+   // Function using custom types
+   func ProcessSearchResults(input similaritySearchInput) ([]DbResponse, error) {
+       // Function implementation
+   }
 
-      // In ConvertGivenTypeToString
-      case "CustomData":
-          output, err := json.Marshal(value.(sharedtypes.CustomData))
-          if err != nil {
-              return "", err
-          }
-          return string(output), nil
+Type Conversion Functions
+-------------------------
 
-3. **UI Configuration**
+The ``cast.go`` file contains type conversion functions. Example:
 
-   Update ``aali-agent-configurator/src/app/constants/constants.ts``:
+.. code-block:: go
 
-   .. code-block:: typescript
+   // CastAnyToString casts data of type any to string
+   //
+   // Tags:
+   //   - @displayName: Cast Any to String
+   //
+   // Parameters:
+   //   - data (any)
+   //
+   // Returns:
+   //   - string
+   func CastAnyToString(data any) string {
+       return data.(string)
+   }
 
-      export const goTypes: string[] = [
-          // Existing types...
-          "CustomData",
-          "[]CustomData",
-      ]
+   // CastStringToAny casts a string to any type
+   //
+   // Tags:
+   //   - @displayName: Cast String to Any
+   //
+   // Parameters:
+   //   - data (string)
+   //
+   // Returns:
+   //   - any
+   func CastStringToAny(data string) any {
+       return data
+   }
+
+   // CastAnyToInt casts data of type any to int
+   //
+   // Tags:
+   //   - @displayName: Cast Any to Int
+   //
+   // Parameters:
+   //   - data (any)
+   //
+   // Returns:
+   //   - int
+   func CastAnyToInt(data any) int {
+       return data.(int)
+   }
 
 Array Types
 -----------
 
-Array types are automatically supported:
-
-- Single type: ``CustomData``
-- Array type: ``[]CustomData``
-
-Both must be added to the UI configuration.
-
-Usage in Functions
-------------------
+Array types are automatically supported. Both single types and array types (prefixed with ``[]``) can be used:
 
 .. code-block:: go
 
-   func ProcessCustomData(data CustomData) (result string) {
-       return fmt.Sprintf("Processing %s with value %d", data.Name, data.Value)
+   // Function accepting array parameters
+   func ProcessMultipleItems(items []string, scores []float64) []DbResponse {
+       // Implementation
    }
+
+Best Practices for Type Definitions
+-----------------------------------
+
+1. **Use JSON tags** for proper serialization:
+   
+   .. code-block:: go
+   
+      type MyType struct {
+          Field1 string `json:"field1"`
+          Field2 int    `json:"field2"`
+      }
+
+2. **Include descriptions** for complex types:
+   
+   .. code-block:: go
+   
+      type ComplexType struct {
+          Field string `json:"field" description:"Description of the field" required:"true"`
+      }
+
+3. **Use proper Go naming conventions** - exported types start with capital letters.
+
+4. **Include error handling** in cast functions using ``logPanic``.

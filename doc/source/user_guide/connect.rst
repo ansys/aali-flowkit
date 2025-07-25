@@ -1,9 +1,9 @@
 .. _connect:
 
-Interact with the App
+Interact with the Application
 =============================
 
-Once the app is running, it launches a gRPC server which is waiting for new connections on the port specified in the config. The server implements the ``ExternalFunctions`` service defined in the proto file.
+Once the application is running, it launches a gRPC server which is waiting for new connections on the port specified in the config. The server implements the ``ExternalFunctions`` service defined in the proto file.
 
 Connection Examples
 -------------------

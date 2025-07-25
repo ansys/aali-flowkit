@@ -19,7 +19,6 @@ import (
 	"github.com/ansys/aali-sharedtypes/pkg/aali_graphdb"
 	"github.com/ansys/aali-sharedtypes/pkg/logging"
 	"github.com/ansys/aali-sharedtypes/pkg/sharedtypes"
-	"github.com/qdrant/go-client/qdrant"
 )
 
 // RewriteQueryWithHistory Rewrite the query based on the Histroy
@@ -395,120 +394,59 @@ func SearchDocumentation(collectionName string, exampleCollectionName string, ma
 		return ""
 	}
 
-	// Pre-allocate string builder with estimated capacity
 	var guideSectionsBuilder strings.Builder
-	guideSectionsBuilder.Grow(len(uniqueSection) * 1000) // Estimate 1KB per section
 
-	// Optimization 1: Limit processing to top 3 sections for faster response
-	maxSectionsToProcess := 3
-	sectionsProcessed := 0
-
-	// Optimization 2: Collect all section names for batch queries
-	var sectionNames []string
-	var validSections []map[string]interface{}
-	
 	for _, item := range uniqueSection {
-		if sectionsProcessed >= maxSectionsToProcess {
-			break
-		}
-		
-		// Validate all required fields upfront
 		sectionName, sectionOk := item["section_name"].(string)
-		_, subChapterOk := item["sub_chapter_name"].(string)
-		_, indexOk := item["index"].(string)
-		_, refOk := item["get_references"].(bool)
+		subChapterName, subChapterOk := item["sub_chapter_name"].(string)
+		index, indexOk := item["index"].(string)
+		getReferences, refOk := item["get_references"].(bool)
 
 		if !sectionOk || !subChapterOk || !indexOk || !refOk {
 			logging.Log.Warn(&logging.ContextMap{}, "Skipping section with invalid fields")
 			continue
 		}
-		
-		sectionNames = append(sectionNames, sectionName)
-		validSections = append(validSections, item)
-		sectionsProcessed++
-	}
 
-	if len(validSections) == 0 {
-		logging.Log.Warn(&logging.ContextMap{}, "No valid sections to process")
-		return ""
-	}
-
-	// Optimization 3: Batch query for all sections at once
-	batchQueryStart := time.Now()
-	sectionDataMap := make(map[string][]*qdrant.ScoredPoint)
-	
-	for _, sectionName := range sectionNames {
-		// Reduce query limit from 5/3 to 2 for faster response
-		scoredPoints := queryUserGuideName(sectionName, uint64(2), collectionName)
-		if len(scoredPoints) > 0 {
-			sectionDataMap[sectionName] = scoredPoints
-		}
-	}
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation - Batch queries COMPLETED - duration: %v", time.Since(batchQueryStart))
-
-	// Process sections with cached data
-	for i, item := range validSections {
-		sectionName := item["section_name"].(string)
-		subChapterName := item["sub_chapter_name"].(string)
-		index := item["index"].(string)
-		getReferences := item["get_references"].(bool)
-
-		// Write section header
 		guideSectionsBuilder.WriteString(fmt.Sprintf("Index: %s, Title: %s, Section Name: %s\n", index, subChapterName, sectionName))
 
 		var userResponse strings.Builder
-		userResponse.Grow(500) // Pre-allocate for efficiency
 
-		scoredPoints, exists := sectionDataMap[sectionName]
-		if !exists || len(scoredPoints) == 0 {
-			logging.Log.Warnf(&logging.ContextMap{}, "No data found for section: %s", sectionName)
-			continue
+		scoredPoints := queryUserGuideName(sectionName, uint64(5), collectionName)
+		for j, scoredPoint := range scoredPoints {
+			if j >= 3 {
+				break
+			}
+			payload := scoredPoint.Payload
+			userResponse.WriteString(fmt.Sprintf("With section texts %d: ", j+1))
+			userResponse.WriteString(payload["text"].GetStringValue())
+			userResponse.WriteString("\n")
 		}
 
-		// Get main section content - use .Payload like existing code
-		payload := scoredPoints[0].Payload
-		userResponse.WriteString("With section texts: ")
-		userResponse.WriteString(payload["text"].GetStringValue())
-		userResponse.WriteString("\n")
-		
-		// Optimization 4: Skip reference processing for faster response (can be made conditional)
-		if getReferences && i < 2 { // Only get references for first 2 sections
-			realSectionName := payload["section_name"].GetStringValue()
-			
-			// Simplified reference query with timeout protection
-			refQueryStart := time.Now()
+		if getReferences && len(scoredPoints) > 0 {
+			realSectionName := scoredPoints[0].Payload["section_name"].GetStringValue()
 			escapedSectionName := strings.ReplaceAll(realSectionName, `\`, `\\`)
 			escapedSectionName = strings.ReplaceAll(escapedSectionName, `"`, `\"`)
-			query := fmt.Sprintf("MATCH (n:UserGuide {name: \"%s\"})-[:References]->(reference) RETURN reference.name AS section_name LIMIT 2", escapedSectionName)
+			query := fmt.Sprintf("MATCH (n:UserGuide {name: \"%s\"})-[:References]->(reference) RETURN reference.name AS section_name LIMIT 5", escapedSectionName)
 			parameters := aali_graphdb.ParameterMap{}
 			result := GeneralGraphDbQuery(query, parameters)
-			
-			// Only process if query was fast (< 2 seconds)
-			if time.Since(refQueryStart) < 2*time.Second && len(result) > 0 {
-				// Process only first reference to save time
-				if len(result) > 0 {
-					referenceName := result[0]["section_name"].(string)
-					userResponse.WriteString("With references: ")
-					userResponse.WriteString(referenceName)
-					userResponse.WriteString("\n")
-					
-					// Get reference content with minimal data
-					refSections := queryUserGuideName(referenceName, uint64(1), collectionName)
-					if len(refSections) > 0 {
-						if text := refSections[0].Payload["text"].GetStringValue(); text != "" {
-							// Truncate reference text to first 500 chars for performance
-							if len(text) > 500 {
-								text = text[:500] + "..."
-							}
-							userResponse.WriteString("With reference section texts: ")
-							userResponse.WriteString(text)
-							userResponse.WriteString("\n")
-						}
+
+			for refIdx, reference := range result {
+				if refIdx >= 3 {
+					break
+				}
+				referenceName := reference["section_name"].(string)
+				userResponse.WriteString(fmt.Sprintf("With references %d: ", refIdx+1))
+				userResponse.WriteString(referenceName)
+				userResponse.WriteString("\n")
+
+				refSections := queryUserGuideName(referenceName, uint64(3), collectionName)
+				if len(refSections) > 0 {
+					if text := refSections[0].Payload["text"].GetStringValue(); text != "" {
+						userResponse.WriteString(fmt.Sprintf("With reference section texts %d: ", refIdx+1))
+						userResponse.WriteString(text)
+						userResponse.WriteString("\n")
 					}
 				}
-				logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation - Reference processing for '%s' took %v", realSectionName, time.Since(refQueryStart))
-			} else {
-				logging.Log.Warnf(&logging.ContextMap{}, "Skipping references for '%s' - query too slow or no results", realSectionName)
 			}
 		}
 

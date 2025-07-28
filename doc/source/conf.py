@@ -91,3 +91,15 @@ source_suffix = {
 
 # The master toctree document.
 master_doc = "index"
+
+# MyST parser configuration
+myst_enable_extensions = [
+    "replacements",
+    "smartquotes",
+]
+
+# Enable heading anchors for proper fragment link resolution
+myst_heading_anchors = 3
+
+# Suppress cross-reference warnings for fragment links
+suppress_warnings = ["myst.xref_missing"]

@@ -1,7 +1,7 @@
 Developer Guide
 ===============
 
-This comprehensive guide describes how to extend FlowKit with custom functions, types, and categories. Learn from real code examples taken directly from the FlowKit codebase with 183 production functions across 12+ categories.
+This comprehensive guide describes how to extend FlowKit with custom functions, types, and categories. Learn from real code examples taken directly from the FlowKit codebase with over 180 production functions across multiple categories.
 
 .. grid:: 2
    :gutter: 3 3 4 4

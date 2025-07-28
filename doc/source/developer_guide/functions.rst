@@ -171,6 +171,38 @@ Complex Function with Custom Types
        return convertToDbResponse(response.Results)
    }
 
+MCP Function Example
+~~~~~~~~~~~~~~~~~~~~
+
+Here's an example of an MCP integration function:
+
+.. code-block:: go
+
+   // ListTools lists all available tools from an MCP server.
+   //
+   // Tags:
+   //   - @displayName: List MCP Tools
+   //
+   // Parameters:
+   //   - serverURL: the URL of the MCP server
+   //
+   // Returns:
+   //   - tools: list of available MCP tools
+   //   - error: any error that occurred
+   func ListTools(serverURL string) ([]mcptypes.MCPTool, error) {
+       client, err := mcpclient.GetClient(serverURL)
+       if err != nil {
+           panic(fmt.Sprintf("Failed to get MCP client: %v", err))
+       }
+       
+       tools, err := client.ListTools()
+       if err != nil {
+           panic(fmt.Sprintf("Failed to list tools: %v", err))
+       }
+       
+       return tools, nil
+   }
+
 Error Handling Pattern
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -237,7 +269,7 @@ Functions are organized in category files within ``pkg/externalfunctions/``:
 - ``ansysmeshpilot.go`` - Ansys Mesh Pilot functions
 - ``ansysmaterials.go`` - Ansys Materials functions
 - ``qdrant.go`` - Qdrant vector database functions
-- ``mcp.go`` - Model Control Protocol functions
+- ``mcp.go`` - Model Context Protocol functions
 - ``rhsc.go`` - RHSC specific functions
 
 Private functions are organized in ``pkg/privatefunctions/`` subdirectories:

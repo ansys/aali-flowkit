@@ -10,7 +10,7 @@ Creating a Category
 
 1. **Create Category File**
 
-   Create a new file in ``pkg/externalfunctions/`` with your category name (e.g., ``mycategory.go``).
+   Create a new file in ``pkg/externalfunctions/`` with your category name (for example, ``mycategory.go``).
 
 2. **Add Embed Directive**
 
@@ -39,7 +39,7 @@ Creating a Category
    .. code-block:: go
 
       var ExternalFunctionsMap = map[string]interface{}{
-          "MyFunction": MyFunction,
+          "MyNewFunction": MyNewFunction,
           // ... other functions
       }
 
@@ -62,7 +62,6 @@ General purpose utility functions:
 .. code-block:: go
 
    // Example functions in this category:
-   "AssignStringToString":  AssignStringToString,
    "SendRestAPICall":       SendRestAPICall,
    "GenerateUUID":          GenerateUUID,
    "StringConcat":          StringConcat,
@@ -79,8 +78,7 @@ LLM integration and AI functions:
    "PerformVectorEmbeddingRequest":    PerformVectorEmbeddingRequest,
    "PerformGeneralRequest":            PerformGeneralRequest,
    "BuildLibraryContext":              BuildLibraryContext,
-   "CreateEmbeddings":                 CreateEmbeddings,
-   "FinalizeMessage":                  FinalizeMessage,
+   "AppendMessageHistory":             AppendMessageHistory,
 
 Knowledge Database Functions (``knowledgedb.go``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -94,7 +92,7 @@ Database operations and vector search:
    "GetListCollections":       GetListCollections,
    "GeneralGraphDbQuery":      GeneralGraphDbQuery,
    "SimilaritySearch":         SimilaritySearch,
-   "CreateDbFilter":           CreateDbFilter,
+   "AddDataRequest":           AddDataRequest,
 
 Data Extraction Functions (``dataextraction.go``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -104,11 +102,27 @@ File processing and content extraction:
 .. code-block:: go
 
    // Example functions in this category:
-   "GetGithubFilesToExtract":   GetGithubFilesToExtract,
    "GetLocalFilesToExtract":    GetLocalFilesToExtract,
+   "GetLocalFileContent":       GetLocalFileContent,
+   "LangchainSplitter":         LangchainSplitter,
    "AddDataRequest":            AddDataRequest,
-   "CreateCollectionRequest":   CreateCollectionRequest,
-   "GetDocumentType":           GetDocumentType,
+   "GenerateDocumentTree":      GenerateDocumentTree,
+
+MCP Functions (``mcp.go``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Model Context Protocol integration:
+
+.. code-block:: go
+
+   // Example functions in this category:
+   "ListTools":         ListTools,
+   "ListResources":     ListResources,
+   "ListPrompts":       ListPrompts,
+   "CallTool":          CallTool,
+   "ReadResource":      ReadResource,
+   "GetPrompt":         GetPrompt,
+   "MCPClient":         MCPClient,
 
 Cast Functions (``cast.go``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

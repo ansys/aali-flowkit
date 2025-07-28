@@ -6,6 +6,8 @@
 import "github.com/ansys/aali-flowkit/pkg/externalfunctions"
 ```
 
+Package externalfunctions provides MCP \(Model Context Protocol\) client functions for FlowKit to communicate with MCP\-compliant servers.
+
 ## Index
 
 - [Variables](<#variables>)
@@ -37,6 +39,7 @@ import "github.com/ansys/aali-flowkit/pkg/externalfunctions"
 - [func BuildFinalQueryForCodeLLMRequest\(request string, knowledgedbResponse \[\]sharedtypes.DbResponse\) \(finalQuery string\)](<#BuildFinalQueryForCodeLLMRequest>)
 - [func BuildFinalQueryForGeneralLLMRequest\(request string, knowledgedbResponse \[\]sharedtypes.DbResponse\) \(finalQuery string\)](<#BuildFinalQueryForGeneralLLMRequest>)
 - [func BuildLibraryContext\(message string, libraryContext string\) \(messageWithContext string\)](<#BuildLibraryContext>)
+- [func CallTool\(serverURL string, toolName string, arguments map\[string\]interface\{\}\) \(mcptypes.MCPToolResult, error\)](<#CallTool>)
 - [func CastAnyToBool\(data any\) bool](<#CastAnyToBool>)
 - [func CastAnyToByte\(data any\) byte](<#CastAnyToByte>)
 - [func CastAnyToComplex128\(data any\) complex128](<#CastAnyToComplex128>)
@@ -93,7 +96,6 @@ import "github.com/ansys/aali-flowkit/pkg/externalfunctions"
 - [func DenyCustomerAccessAndSendWarningMongoDbUserId\(userId string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string\) \(sendWarning bool\)](<#DenyCustomerAccessAndSendWarningMongoDbUserId>)
 - [func DownloadGithubFileContent\(githubRepoName string, githubRepoOwner string, githubRepoBranch string, gihubFilePath string, githubAccessToken string\) \(checksum string, content \[\]byte\)](<#DownloadGithubFileContent>)
 - [func DownloadGithubFilesContent\(githubRepoName string, githubRepoOwner string, githubRepoBranch string, gihubFilePaths \[\]string, githubAccessToken string\) \(filesMap map\[string\]\[\]byte\)](<#DownloadGithubFilesContent>)
-- [func ExecuteTool\(serverURL, toolName string, args map\[string\]interface\{\}\) \(map\[string\]interface\{\}, error\)](<#ExecuteTool>)
 - [func ExtractCriteriaSuggestions\(llmResponse string\) \(criteriaSuggestions \[\]sharedtypes.MaterialLlmCriterion\)](<#ExtractCriteriaSuggestions>)
 - [func ExtractJSONStringField\(jsonStr string, keyPath string\) string](<#ExtractJSONStringField>)
 - [func ExtractJson\(text string\) \(json string\)](<#ExtractJson>)
@@ -121,13 +123,14 @@ import "github.com/ansys/aali-flowkit/pkg/externalfunctions"
 - [func GetLocalFileContent\(localFilePath string\) \(checksum string, content \[\]byte\)](<#GetLocalFileContent>)
 - [func GetLocalFilesContent\(localFilePaths \[\]string\) \(filesMap map\[string\]\[\]byte\)](<#GetLocalFilesContent>)
 - [func GetLocalFilesToExtract\(localPath string, localFileExtensions \[\]string, localFilteredDirectories \[\]string, localExcludedDirectories \[\]string\) \(localFilesToExtract \[\]string\)](<#GetLocalFilesToExtract>)
-- [func GetResource\(serverURL, resourceName string\) \(map\[string\]interface\{\}, error\)](<#GetResource>)
+- [func GetPrompt\(serverURL string, promptName string, arguments map\[string\]interface\{\}\) \(mcptypes.MCPPromptResult, error\)](<#GetPrompt>)
 - [func GetSelectedSolution\(arguments string\) \(solution string\)](<#GetSelectedSolution>)
 - [func GetSolutionsToFixProblem\(db\_name, fmFailureCode, primeMeshFailureCode string\) \(solutions string\)](<#GetSolutionsToFixProblem>)
-- [func GetSystemPrompt\(serverURL, promptName string\) \(string, error\)](<#GetSystemPrompt>)
 - [func JsonPath\(pat string, data any, oneResult bool\) any](<#JsonPath>)
 - [func LangchainSplitter\(bytesContent \[\]byte, documentType string, chunkSize int, chunkOverlap int\) \(output \[\]string\)](<#LangchainSplitter>)
-- [func ListAll\(serverURL string\) \(map\[string\]\[\]string, error\)](<#ListAll>)
+- [func ListPrompts\(serverURL string\) \(\[\]mcptypes.MCPPrompt, error\)](<#ListPrompts>)
+- [func ListResources\(serverURL string\) \(\[\]mcptypes.MCPResource, error\)](<#ListResources>)
+- [func ListTools\(serverURL string\) \(\[\]mcptypes.MCPTool, error\)](<#ListTools>)
 - [func LoadAndCheckExampleDependencies\(dependenciesContent \[\]byte, elements \[\]sharedtypes.CodeGenerationElement, instancesReplacementDict map\[string\]string, InstancesReplacementPriorityList \[\]string\) \(checkedDependenciesMap map\[string\]\[\]string, equivalencesMap map\[string\]map\[string\]string\)](<#LoadAndCheckExampleDependencies>)
 - [func LoadCodeGenerationElements\(content \[\]byte, elementsFilePath string\) \(elements \[\]sharedtypes.CodeGenerationElement\)](<#LoadCodeGenerationElements>)
 - [func LoadCodeGenerationExamples\(source string, examplesToExtract \[\]string, githubRepoName string, githubRepoOwner string, githubRepoBranch string, githubAccessToken string, dependencies map\[string\]\[\]string, equivalencesMap map\[string\]map\[string\]string, chunkSize int, chunkOverlap int\) \(examples \[\]sharedtypes.CodeGenerationExample\)](<#LoadCodeGenerationExamples>)
@@ -135,6 +138,7 @@ import "github.com/ansys/aali-flowkit/pkg/externalfunctions"
 - [func LogRequestFailed\(\)](<#LogRequestFailed>)
 - [func LogRequestFailedDebugWithMessage\(msg1, msg2 string\)](<#LogRequestFailedDebugWithMessage>)
 - [func LogRequestSuccess\(\)](<#LogRequestSuccess>)
+- [func MCPClient\(command string, serverURL string, arguments map\[string\]interface\{\}\) \(interface\{\}, error\)](<#MCPClient>)
 - [func MarkdownToHTML\(markdown string\) \(html string\)](<#MarkdownToHTML>)
 - [func ParseHistory\(historyJson string\) \(history \[\]map\[string\]string\)](<#ParseHistory>)
 - [func ParseHistoryToHistoricMessages\(historyJson string\) \(history \[\]sharedtypes.HistoricMessage\)](<#ParseHistoryToHistoricMessages>)
@@ -162,6 +166,7 @@ import "github.com/ansys/aali-flowkit/pkg/externalfunctions"
 - [func QdrantCreateCollection\(collectionName string, vectorSize uint64, vectorDistance string\)](<#QdrantCreateCollection>)
 - [func QdrantCreateIndex\(collectionName string, fieldName string, fieldType string, wait bool\)](<#QdrantCreateIndex>)
 - [func QdrantInsertData\(collectionName string, data \[\]interface\{\}, idFieldName string, vectorFieldName string\)](<#QdrantInsertData>)
+- [func ReadResource\(serverURL string, resourceURI string\) \(mcptypes.MCPResourceContent, error\)](<#ReadResource>)
 - [func RetrieveDependencies\(relationshipName string, relationshipDirection string, sourceDocumentId string, nodeTypesFilter sharedtypes.DbArrayFilter, maxHopsNumber int\) \(dependenciesIds \[\]string\)](<#RetrieveDependencies>)
 - [func SelectedSolution\(selectedSolution string\) \(solution string\)](<#SelectedSolution>)
 - [func SendLogicAppNotificationEmail\(logicAppEndpoint string, email string, subject string, content string\)](<#SendLogicAppNotificationEmail>)
@@ -349,10 +354,14 @@ var ExternalFunctionsMap = map[string]interface{}{
     "SendLogicAppNotificationEmail":                 SendLogicAppNotificationEmail,
     "CreateMessageWithVariable":                     CreateMessageWithVariable,
 
-    "ListAll":         ListAll,
-    "ExecuteTool":     ExecuteTool,
-    "GetResource":     GetResource,
-    "GetSystemPrompt": GetSystemPrompt,
+    "MCPClient": MCPClient,
+
+    "ListTools":     ListTools,
+    "ListResources": ListResources,
+    "ListPrompts":   ListPrompts,
+    "CallTool":      CallTool,
+    "ReadResource":  ReadResource,
+    "GetPrompt":     GetPrompt,
 
     "SerializeResponse":                SerializeResponse,
     "AddGuidsToAttributes":             AddGuidsToAttributes,
@@ -1015,6 +1024,30 @@ Parameters:
 Returns:
 
 - messageWithContext: the message with context
+
+<a name="CallTool"></a>
+## func [CallTool](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L174>)
+
+```go
+func CallTool(serverURL string, toolName string, arguments map[string]interface{}) (mcptypes.MCPToolResult, error)
+```
+
+CallTool executes a specific tool on the MCP server. This follows the MCP standard tools/call method.
+
+Tags:
+
+- @displayName: Call MCP Tool
+
+Parameters:
+
+- serverURL: the WebSocket URL of the MCP server
+- toolName: the name of the tool to execute
+- arguments: arguments to pass to the tool
+
+Returns:
+
+- result: the tool execution result
+- error: any error that occurred during execution
 
 <a name="CastAnyToBool"></a>
 ## func [CastAnyToBool](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L55>)
@@ -2263,30 +2296,6 @@ Returns:
 
 - filesMap: map of file paths to file content.
 
-<a name="ExecuteTool"></a>
-## func [ExecuteTool](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L90>)
-
-```go
-func ExecuteTool(serverURL, toolName string, args map[string]interface{}) (map[string]interface{}, error)
-```
-
-ExecuteTool executes a specific tool via the MCP server with provided arguments.
-
-Tags:
-
-- @displayName: Execute MCP Tool
-
-Parameters:
-
-- serverURL: the WebSocket URL of the MCP server
-- toolName: the name of the tool to execute
-- args: a map of arguments to pass to the tool
-
-Returns:
-
-- result: the response from the tool execution
-- error: any error that occurred during execution
-
 <a name="ExtractCriteriaSuggestions"></a>
 ## func [ExtractCriteriaSuggestions](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L169>)
 
@@ -2878,27 +2887,28 @@ Returns:
 
 - localFilesToExtract: local files to extract.
 
-<a name="GetResource"></a>
-## func [GetResource](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L119>)
+<a name="GetPrompt"></a>
+## func [GetPrompt](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L287>)
 
 ```go
-func GetResource(serverURL, resourceName string) (map[string]interface{}, error)
+func GetPrompt(serverURL string, promptName string, arguments map[string]interface{}) (mcptypes.MCPPromptResult, error)
 ```
 
-GetResource retrieves a named resource from the MCP server.
+GetPrompt retrieves a specific prompt from the MCP server. This follows the MCP standard prompts/get method.
 
 Tags:
 
-- @displayName: Get MCP Resource
+- @displayName: Get MCP Prompt
 
 Parameters:
 
 - serverURL: the WebSocket URL of the MCP server
-- resourceName: the name of the resource to retrieve
+- promptName: the name of the prompt to retrieve
+- arguments: arguments for the prompt
 
 Returns:
 
-- result: the retrieved resource as a map
+- result: the prompt with generated messages
 - error: any error that occurred during the request
 
 <a name="GetSelectedSolution"></a>
@@ -2943,29 +2953,6 @@ Parameters:
 Returns:
 
 - solutions: the list of solutions in json
-
-<a name="GetSystemPrompt"></a>
-## func [GetSystemPrompt](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L147>)
-
-```go
-func GetSystemPrompt(serverURL, promptName string) (string, error)
-```
-
-GetSystemPrompt retrieves a system prompt by name from the MCP server.
-
-Tags:
-
-- @displayName: Get MCP Prompt
-
-Parameters:
-
-- serverURL: the WebSocket URL of the MCP server
-- promptName: the name of the system prompt to retrieve
-
-Returns:
-
-- promptStr: the text of the retrieved prompt
-- error: any error that occurred during the request
 
 <a name="JsonPath"></a>
 ## func [JsonPath](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/generic.go#L210>)
@@ -3014,18 +3001,18 @@ Returns:
 
 - output: chunks as an slice of strings.
 
-<a name="ListAll"></a>
-## func [ListAll](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L43>)
+<a name="ListPrompts"></a>
+## func [ListPrompts](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L124>)
 
 ```go
-func ListAll(serverURL string) (map[string][]string, error)
+func ListPrompts(serverURL string) ([]mcptypes.MCPPrompt, error)
 ```
 
-ListAll retrieves all tools, resources, and prompts from the MCP server.
+ListPrompts retrieves all available prompts from the MCP server. This follows the MCP standard prompts/list method.
 
 Tags:
 
-- @displayName: List MCP Items
+- @displayName: List MCP Prompts
 
 Parameters:
 
@@ -3033,8 +3020,52 @@ Parameters:
 
 Returns:
 
-- result: a map with lists of tool/resource/prompt names categorized by type
-- error: any error that occurred during the process
+- prompts: list of available prompts
+- error: any error that occurred during the request
+
+<a name="ListResources"></a>
+## func [ListResources](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L85>)
+
+```go
+func ListResources(serverURL string) ([]mcptypes.MCPResource, error)
+```
+
+ListResources retrieves all available resources from the MCP server. This follows the MCP standard resources/list method.
+
+Tags:
+
+- @displayName: List MCP Resources
+
+Parameters:
+
+- serverURL: the WebSocket URL of the MCP server
+
+Returns:
+
+- resources: list of available resources
+- error: any error that occurred during the request
+
+<a name="ListTools"></a>
+## func [ListTools](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L47>)
+
+```go
+func ListTools(serverURL string) ([]mcptypes.MCPTool, error)
+```
+
+ListTools retrieves all available tools from the MCP server. This follows the MCP standard tools/list method.
+
+Tags:
+
+- @displayName: List MCP Tools
+
+Parameters:
+
+- serverURL: the WebSocket URL of the MCP server
+
+Returns:
+
+- tools: list of available tools
+- error: any error that occurred during the request
 
 <a name="LoadAndCheckExampleDependencies"></a>
 ## func [LoadAndCheckExampleDependencies](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L938-L943>)
@@ -3202,6 +3233,30 @@ Parameters:
 Returns:
 
 - none
+
+<a name="MCPClient"></a>
+## func [MCPClient](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L338>)
+
+```go
+func MCPClient(command string, serverURL string, arguments map[string]interface{}) (interface{}, error)
+```
+
+MCPClient is a unified function for all MCP operations. It provides a single entry point for MCP functionality.
+
+Tags:
+
+- @displayName: MCP Client
+
+Parameters:
+
+- command: the MCP command to execute \(list\_tools, call\_tool, list\_resources, read\_resource, list\_prompts, get\_prompt\)
+- serverURL: the WebSocket URL of the MCP server
+- arguments: command\-specific arguments
+
+Returns:
+
+- result: the command result
+- error: any error that occurred
 
 <a name="MarkdownToHTML"></a>
 ## func [MarkdownToHTML](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1905>)
@@ -3826,6 +3881,29 @@ Params:
 - data \(\[\]interface\{\}\): The data points to insert \(func will fail if elements are not \`map\[string\]any\`\)
 - idFieldName \(string\): The name of the field to use as the ID
 - vectorFieldName \(string\): The name of the field to use as the vector
+
+<a name="ReadResource"></a>
+## func [ReadResource](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L235>)
+
+```go
+func ReadResource(serverURL string, resourceURI string) (mcptypes.MCPResourceContent, error)
+```
+
+ReadResource reads a specific resource from the MCP server. This follows the MCP standard resources/read method.
+
+Tags:
+
+- @displayName: Read MCP Resource
+
+Parameters:
+
+- serverURL: the WebSocket URL of the MCP server
+- resourceURI: the URI of the resource to read
+
+Returns:
+
+- content: the resource content
+- error: any error that occurred during the request
 
 <a name="RetrieveDependencies"></a>
 ## func [RetrieveDependencies](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/knowledgedb.go#L159-L164>)

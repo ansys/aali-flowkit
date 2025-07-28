@@ -19,7 +19,7 @@ Complete reference for FlowKit packages and functions, automatically generated f
       :link: externalfunctions/index
       :link-type: doc
 
-      All 174 functions across 12 categories available
+      Over 180 functions across multiple categories available
       through the gRPC interface.
 
    .. grid-item-card:: Function Definitions

@@ -63,19 +63,19 @@ This method accepts the same ``FunctionInputs`` as ``RunFunction`` but returns a
 Available Functions
 ~~~~~~~~~~~~~~~~~~~
 
-FlowKit includes **185 functions** organized by category. Here are some key functions from each category:
+FlowKit includes **over 180 functions** organized by category and continuously adds new functionality. Key categories include:
 
-   - ``generic`` (8 functions): SendRestAPICall, GenerateUUID, ExtractJSONStringField, StringConcat
-   - ``cast`` (multiple functions): CastAnyToString, CastAnyToFloat64, CastAnyToInt, CastStringToAny
-   - ``data_extraction`` (10 functions): GetLocalFilesToExtract, GetLocalFileContent, LangchainSplitter, AddDataRequest
-   - ``llm_handler`` (22 functions): PerformVectorEmbeddingRequest, PerformGeneralRequest, BuildLibraryContext, AppendMessageHistory
-   - ``qdrant`` (2 functions): QdrantCreateCollection, QdrantInsertData
-   - ``knowledge_db`` (11 functions): SimilaritySearch, SendVectorsToKnowledgeDB, GetListCollections, GeneralGraphDbQuery
-   - ``auth`` (11 functions): CheckApiKeyAuthMongoDb, UpdateTotalTokenCountForCustomerMongoDb, SendLogicAppNotificationEmail
-   - ``ansys_gpt`` (20 functions): AnsysGPTPerformLLMRequest, AnsysGPTCheckProhibitedWords, AnsysGPTReturnIndexList
-   - ``ansys_mesh_pilot`` (25 functions): SimilartitySearchOnPathDescriptions, FetchPropertiesFromPathDescription, SynthesizeActions
-   - ``ansys_materials`` (12 functions): ExtractCriteriaSuggestions, SerializeResponse, FilterOutDuplicateAttributes
-   - ``mcp`` (4 functions): ListAll, ExecuteTool, GetResource, GetSystemPrompt
-   - ``rhsc`` (1 function): SetCopilotGenerateRequestJsonBody
+   - ``generic``: General purpose utility functions (REST API calls, UUID generation, JSON operations)
+   - ``cast``: Type conversion functions for all Go primitive types
+   - ``data_extraction``: File processing and content extraction
+   - ``llm_handler``: LLM integration and AI operations
+   - ``qdrant``: Vector database operations
+   - ``knowledge_db``: Knowledge database and similarity search
+   - ``auth``: Authentication and authorization
+   - ``ansys_gpt``: Ansys GPT specific functionality
+   - ``ansys_mesh_pilot``: Mesh generation and analysis tools
+   - ``ansys_materials``: Materials database integration
+   - ``mcp``: Model Context Protocol integration
+   - ``rhsc``: Red Hat Service Catalog integration
 
 Use the ``ListFunctions`` RPC method to get the complete list of available functions with their full signatures and documentation.

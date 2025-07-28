@@ -99,7 +99,7 @@ func CreateChildSpan(ctx *logging.ContextMap, traceID string, parentSpanID strin
 	ctx.Set(logging.ContextKey("dd.span_idVisible"), childSpanID)
 	ctx.Set(logging.ContextKey("dd.parent_idVisible"), parentSpanID)
 
-	// logging.Log.Infof(ctx, "Starting child span with trace ID: %s, span ID: %s, and parent span ID: %s", traceID, childSpanID, parentSpanID)
+	logging.Log.Infof(ctx, "Starting child span with trace ID: %s, span ID: %s, and parent span ID: %s", traceID, childSpanID, parentSpanID)
 
 	return childSpanID
 }
@@ -348,6 +348,7 @@ func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(inp
 	outputTokenCount, _ := getTokenCount(tokenCountModelName, combinedResponseText, traceID, childSpanID)
 
 	var totalTokenCount = (promptTokenCount+inputTokenCount)*n + outputTokenCount
+	logging.Log.Debugf(ctx, "Input token count: %d", totalTokenCount-outputTokenCount)
 	logging.Log.Debugf(ctx, "Output token count: %d", outputTokenCount)
 	logging.Log.Debugf(ctx, "Total token count: %d", totalTokenCount)
 
@@ -419,7 +420,6 @@ func getTokenCount(modelName, text string, traceID string, spanID string) (count
 		panic(errorMessage)
 	}
 
-	logging.Log.Debugf(ctx, "Token count: %d", tokenCount)
 	return tokenCount, childSpanID
 }
 

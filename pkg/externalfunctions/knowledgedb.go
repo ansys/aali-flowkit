@@ -37,19 +37,13 @@ import (
 	"github.com/qdrant/go-client/qdrant"
 )
 
-// SendVectorsToKnowledgeDB sends the given vector to the KnowledgeDB and
-// returns the most relevant data. The number of results is specified in the
-// config file. The keywords are used to filter the results. The min score
-// filter is also specified in the config file. If it is not specified, the
-// default value is used.
-//
-// The function returns the most relevant data.
+// SendVectorsToKnowledgeDB sends the given vector to the KnowledgeDB and returns the most relevant data
 //
 // Tags:
 //   - @displayName: Similarity Search
 //
 // Parameters:
-//   - vector: the vector to be sent to the KnowledgeDB
+//   - vector: the vector to be sent to the KnowledgeDB (dense vector for backward compatibility)
 //   - keywords: the keywords to be used to filter the results
 //   - keywordsSearch: the flag to enable the keywords search
 //   - collection: the collection name
@@ -58,14 +52,45 @@ import (
 //
 // Returns:
 //   - databaseResponse: an array of the most relevant data
-func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64) (databaseResponse []sharedtypes.DbResponse) {
+func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int,
+	similaritySearchMinScore float64) (databaseResponse []sharedtypes.DbResponse) {
+	// Call internal implementation with dense-only search
+	return sendVectorsToKnowledgeDBInternal(vector, nil, keywords, keywordsSearch, collection, similaritySearchResults, similaritySearchMinScore,
+		false)
+}
+
+// SendVectorsToKnowledgeDBHybrid - for hybrid search with explicit sparse vector input
+//
+// Tags:
+//   - @displayName: Hybrid Similarity Search
+//
+// Parameters:
+//   - denseVector: the dense vector for semantic search
+//   - sparseVector: the sparse vector for keyword/lexical search
+//   - keywords: the keywords to be used to filter the results
+//   - keywordsSearch: the flag to enable the keywords search
+//   - collection: the collection name
+//   - similaritySearchResults: the number of results to be returned
+//   - similaritySearchMinScore: the minimum score for the results
+//
+// Returns:
+//   - databaseResponse: an array of the most relevant data from hybrid search
+func SendVectorsToKnowledgeDBHybrid(denseVector []float32, sparseVector map[uint]float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64) (databaseResponse []sharedtypes.DbResponse) {
+	// Enable hybrid search when both vectors are provided
+	useHybrid := len(sparseVector) > 0
+	return sendVectorsToKnowledgeDBInternal(denseVector, sparseVector, keywords, keywordsSearch, collection, similaritySearchResults,
+		similaritySearchMinScore, useHybrid)
+}
+
+// sendVectorsToKnowledgeDBInternal is the unified implementation supporting both dense and hybrid search
+func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[uint]float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64, useHybridSearch bool) (databaseResponse []sharedtypes.DbResponse) {
 	logCtx := &logging.ContextMap{}
 	client, err := qdrant_utils.QdrantClient()
 	if err != nil {
 		logPanic(logCtx, "unable to create qdrant client: %q", err)
 	}
 
-	// perform the qdrant query
+	// Build filter (same logic)
 	filter := qdrant.Filter{
 		Must: []*qdrant.Condition{
 			qdrant.NewMatch("level", "leaf"),
@@ -73,30 +98,68 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	}
 	if keywordsSearch {
 		filter.Must = append(filter.Must, qdrant.NewMatchKeywords("keywords", keywords...))
-
 	}
+
 	limit := uint64(similaritySearchResults)
 	scoreThreshold := float32(similaritySearchMinScore)
-	query := qdrant.QueryPoints{
-		CollectionName: collection,
-		Query:          qdrant.NewQueryDense(vector),
-		Limit:          &limit,
-		ScoreThreshold: &scoreThreshold,
-		Filter:         &filter,
-		WithVectors:    qdrant.NewWithVectorsEnable(false),
-		WithPayload:    qdrant.NewWithPayloadInclude("guid", "document_id", "document_name", "summary", "keywords", "text"),
+
+	var query qdrant.QueryPoints
+
+	// Use fusion if both dense and sparse vectors are available
+	if useHybridSearch && sparseVector != nil && len(sparseVector) > 0 {
+		// Create prefetch queries for hybrid search using RRF (Reciprocal Rank Fusion)
+		prefetchQueries := []*qdrant.PrefetchQuery{
+			// Dense vector search prefetch
+			{
+				Query:  qdrant.NewQueryDense(denseVector),
+				Using:  qdrant.PtrOf("dense"), // Use default (dense) vector
+				Filter: &filter,
+				Limit:  &limit,
+			},
+			// Sparse vector search prefetch
+			{
+				Query:  createSparseQuery(sparseVector),
+				Using:  qdrant.PtrOf("sparse"), // Use sparse vector field
+				Filter: &filter,
+				Limit:  &limit,
+			},
+		}
+
+		query = qdrant.QueryPoints{
+			CollectionName: collection,
+			Query:          qdrant.NewQueryFusion(qdrant.Fusion_RRF), // Use Reciprocal Rank Fusion
+			Prefetch:       prefetchQueries,
+			Limit:          &limit,
+			ScoreThreshold: &scoreThreshold,
+			Filter:         &filter,
+			WithVectors:    qdrant.NewWithVectorsEnable(false),
+			WithPayload:    qdrant.NewWithPayloadInclude("guid", "document_id", "document_name", "summary", "keywords", "text"),
+		}
+	} else {
+		// DENSE-ONLY SEARCH: Use existing logic for backward compatibility
+		query = qdrant.QueryPoints{
+			CollectionName: collection,
+			Query:          qdrant.NewQueryDense(denseVector),
+			Limit:          &limit,
+			ScoreThreshold: &scoreThreshold,
+			Filter:         &filter,
+			WithVectors:    qdrant.NewWithVectorsEnable(false),
+			WithPayload:    qdrant.NewWithPayloadInclude("guid", "document_id", "document_name", "summary", "keywords", "text"),
+		}
 	}
+
+	// Execute query (unchanged from original)
 	scoredPoints, err := client.Query(context.TODO(), &query)
 	if err != nil {
 		logPanic(logCtx, "error in qdrant query: %q", err)
 	}
-	logging.Log.Debugf(logCtx, "Got %d points from qdrant query", len(scoredPoints))
+	// logging.Log.Debugf(logCtx, "Got %d points from qdrant query", len(scoredPoints))
 
-	// transform qdrant result into aali type
+	// Transform results (unchanged from original)
 	dbResponses := make([]sharedtypes.DbResponse, len(scoredPoints))
 	for i, scoredPoint := range scoredPoints {
-		logging.Log.Debugf(&logging.ContextMap{}, "Result #%d:", i)
-		logging.Log.Debugf(&logging.ContextMap{}, "Similarity score: %v", scoredPoint.Score)
+		// logging.Log.Debugf(&logging.ContextMap{}, "Result #%d:", i)
+		// logging.Log.Debugf(&logging.ContextMap{}, "Similarity score: %v", scoredPoint.Score)
 		dbResponse, err := qdrant_utils.QdrantPayloadToType[sharedtypes.DbResponse](scoredPoint.GetPayload())
 		if err != nil {
 			errMsg := fmt.Sprintf("error converting qdrant payload to dbResponse: %q", err)
@@ -104,14 +167,30 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 			panic(errMsg)
 		}
 
-		logging.Log.Debugf(&logging.ContextMap{}, "Similarity file id: %v", dbResponse.DocumentId)
-		logging.Log.Debugf(&logging.ContextMap{}, "Similarity file name: %v", dbResponse.DocumentName)
-		logging.Log.Debugf(&logging.ContextMap{}, "Similarity summary: %v", dbResponse.Summary)
+		// logging.Log.Debugf(&logging.ContextMap{}, "Similarity file id: %v", dbResponse.DocumentId)
+		// logging.Log.Debugf(&logging.ContextMap{}, "Similarity file name: %v", dbResponse.DocumentName)
+		// logging.Log.Debugf(&logging.ContextMap{}, "Similarity summary: %v", dbResponse.Summary)
 
-		// Add the result to the list
 		dbResponses[i] = dbResponse
 	}
 	return dbResponses
+}
+
+// Helper function to create sparse query from map[uint]float32
+func createSparseQuery(sparseVector map[uint]float32) *qdrant.Query {
+	if len(sparseVector) == 0 {
+		return nil
+	}
+
+	indices := make([]uint32, 0, len(sparseVector))
+	values := make([]float32, 0, len(sparseVector))
+
+	for idx, val := range sparseVector {
+		indices = append(indices, uint32(idx))
+		values = append(values, val)
+	}
+
+	return qdrant.NewQuerySparse(indices, values)
 }
 
 // GetListCollections retrieves the list of collections from the KnowledgeDB.

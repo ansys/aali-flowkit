@@ -25,6 +25,7 @@ package externalfunctions
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -43,51 +44,87 @@ import (
 //
 // Returns:
 //   - embeddedVector: the embedded vector in float32 format
-func PerformVectorEmbeddingRequest(input string) (embeddedVector []float32) {
-	// get the LLM handler endpoint
-	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
+ func PerformVectorEmbeddingRequest(input string) (embeddedVector []float32) {
+        // Ensures all existing code continues to work unchanged
+        return performVectorEmbeddingRequestInternal(input, false).Dense
+  }
 
-	// Set up WebSocket connection with LLM and send embeddings request
-	responseChannel := sendEmbeddingsRequest(input, llmHandlerEndpoint, false, nil)
-	defer close(responseChannel)
+// PerformVectorEmbeddingRequestHybrid - NEW FUNCTION for users who want hybrid embeddings
+//
+// Tags:
+//   - @displayName: Hybrid Embeddings  
+//
+// Parameters:
+//   - input: the input string
+//
+// Returns:
+//   - denseVector: the dense embedded vector in float32 format
+//   - sparseVector: the sparse embedded vector as term_id->weight map
+  func PerformVectorEmbeddingRequestHybrid(input string) (denseVector []float32, sparseVector map[uint]float32) {
+        result := performVectorEmbeddingRequestInternal(input, true)
+        return result.Dense, result.Sparse
+  }
 
-	// Process the first response and close the channel
-	var embedding32 []float32
-	var err error
-	for response := range responseChannel {
-		// Check if the response is an error
-		if response.Type == "error" {
-			panic(response.Error)
-		}
+  // performVectorEmbeddingRequestInternal is the internal implementation that can return both dense and sparse
+  // Allows for easy code reuse between legacy and hybrid functions
+  func performVectorEmbeddingRequestInternal(input string, includeSparse bool) (result embeddingResult) {
+        llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
-		// Log LLM response
-		logging.Log.Debugf(&logging.ContextMap{}, "Received embeddings response.")
+        // Use hybrid embeddings if requested, otherwise use existing dense-only logic  
+        responseChannel := sendEmbeddingsRequest(input, llmHandlerEndpoint, includeSparse, nil)
+        defer close(responseChannel)
 
-		// Get embedded vector array
-		interfaceArray, ok := response.EmbeddedData.([]interface{})
-		if !ok {
-			errMessage := "error converting embedded data to interface array"
-			logging.Log.Error(&logging.ContextMap{}, errMessage)
-			panic(errMessage)
-		}
-		embedding32, err = convertToFloat32Slice(interfaceArray)
-		if err != nil {
-			errMessage := fmt.Sprintf("error converting embedded data to float32 slice: %v", err)
-			logging.Log.Error(&logging.ContextMap{}, errMessage)
-			panic(errMessage)
-		}
+        var denseEmbedding []float32
+        var sparseEmbedding map[uint]float32
+        var err error
 
-		// Mark that the first response has been received
-		firstResponseReceived := true
+        for response := range responseChannel {
+                if response.Type == "error" {
+                        panic(response.Error)
+                }
 
-		// Exit the loop after processing the first response
-		if firstResponseReceived {
-			break
-		}
-	}
+                // logging.Log.Debugf(&logging.ContextMap{}, "Received embeddings response.")
 
-	return embedding32
-}
+                // Process dense embedding (same as before)
+                interfaceArray, ok := response.EmbeddedData.([]interface{})
+                if !ok {
+                        errMessage := "error converting embedded data to interface array"
+                        logging.Log.Error(&logging.ContextMap{}, errMessage)
+                        panic(errMessage)
+                }
+                denseEmbedding, err = convertToFloat32Slice(interfaceArray)
+                if err != nil {
+                        errMessage := fmt.Sprintf("error converting embedded data to float32 slice: %v", err)
+                        logging.Log.Error(&logging.ContextMap{}, errMessage)
+                        panic(errMessage)
+                }
+
+                // Process sparse embedding if available (NEW FUNCTIONALITY)
+                if includeSparse && response.LexicalWeights != nil {
+                        if sparseInterface, ok := response.LexicalWeights.(map[string]interface{}); ok {
+                                sparseEmbedding = make(map[uint]float32)
+                                for key, value := range sparseInterface {
+                                        if keyUint, err := strconv.ParseUint(key, 10, 32); err == nil {
+                                                if valueFloat, ok := value.(float64); ok {
+                                                        sparseEmbedding[uint(keyUint)] = float32(valueFloat)
+                                                }
+                                        }
+                                }
+                        }
+                }
+
+                // Exit after processing first response
+                break
+        }
+
+        return embeddingResult{Dense: denseEmbedding, Sparse: sparseEmbedding}
+  }
+
+// embeddingResult holds both dense and sparse embeddings
+type embeddingResult struct {
+        Dense  []float32
+        Sparse map[uint]float32
+  }
 
 // PerformVectorEmbeddingRequestWithTokenLimitCatch performs a vector embedding request to LLM
 // and catches the token limit error message

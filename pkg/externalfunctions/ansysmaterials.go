@@ -94,7 +94,7 @@ func CreateChildSpan(ctx *logging.ContextMap, traceID string, parentSpanID strin
 	ctx.Set(logging.ContextKey("dd.span_idVisible"), childSpanID)
 	ctx.Set(logging.ContextKey("dd.parent_idVisible"), parentSpanID)
 
-	// logging.Log.Infof(ctx, "Starting child span with trace ID: %s, span ID: %s, and parent span ID: %s", traceID, childSpanID, parentSpanID)
+	logging.Log.Infof(ctx, "Starting child span with trace ID: %s, span ID: %s, and parent span ID: %s", traceID, childSpanID, parentSpanID)
 
 	return childSpanID
 }

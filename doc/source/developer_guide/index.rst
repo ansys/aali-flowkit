@@ -9,7 +9,7 @@ This comprehensive guide describes how to extend FlowKit with custom functions, 
    .. grid-item-card:: Functions
       :text-align: center
 
-      Learn to add custom functions with real examples from 183 production functions including REST APIs, database operations, and LLM integration.
+      Learn to add custom functions with real example functions including REST APIs, database operations, and LLM integration.
 
       +++
       .. button-link:: functions.html

@@ -8,7 +8,7 @@ Common issues when developing FlowKit extensions and their solutions.
 Function Registration Issues
 ----------------------------
 
-**Problem**: Function not appearing in FlowKit UI
+**Problem**: function not appearing in FlowKit service
 
 **Solutions**:
 
@@ -28,7 +28,7 @@ Function Registration Issues
 
       //go:embed pkg/externalfunctions/generic.go
       var genericFile string
-      
+
       // And included in files map
       files := map[string]string{
           "generic": genericFile,
@@ -83,13 +83,13 @@ Type Conversion Errors
 
       func ProcessData(input string) {  // Expects string
           // If FlowKit passes int, use cast function:
-          // input = CastIntToString(inputInt)
+          // input = CastAnyToString(inputInt)
       }
 
 Error Handling Issues
 ---------------------
 
-**Problem**: Functions crashing FlowKit server
+**Problem**: functions crashing FlowKit server
 
 **Solutions**:
 
@@ -122,7 +122,7 @@ Error Handling Issues
           if url == "" {
               logPanic(nil, "URL cannot be empty")
           }
-          
+
           resp, err := http.Get(url)
           if err != nil {
               logPanic(nil, "failed to call API: %q", err)
@@ -158,7 +158,7 @@ Build and Compilation Issues
 Performance Issues
 ------------------
 
-**Problem**: Function execution is slow
+**Problem**: function execution is slow
 
 **Solutions**:
 
@@ -182,7 +182,7 @@ Performance Issues
           if result, exists := cache[input]; exists {
               return result
           }
-          
+
           result := doExpensiveWork(input)
           cache[input] = result
           return result
@@ -195,7 +195,7 @@ Performance Issues
       func LongRunningTask() {
           ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
           defer cancel()
-          
+
           // Use ctx in operations that support it
           result, err := client.Operation(ctx, params)
           if err != nil {
@@ -206,7 +206,7 @@ Performance Issues
 Memory Issues
 -------------
 
-**Problem**: High memory usage or memory leaks
+**Problem**: high memory usage or memory leaks
 
 **Solutions**:
 
@@ -220,7 +220,7 @@ Memory Issues
               logPanic(nil, "cannot open file: %q", err)
           }
           defer file.Close()  // Important: close resource
-          
+
           // Read file content...
       }
 
@@ -242,7 +242,7 @@ Memory Issues
 JSON Marshaling Issues
 ----------------------
 
-**Problem**: JSON serialization/deserialization errors
+**Problem** - JSON serialization/deserialization errors
 
 **Solutions**:
 
@@ -274,19 +274,11 @@ JSON Marshaling Issues
 Configuration Issues
 --------------------
 
-**Problem**: Function can't access configuration values
+**Problem**: function can't access configuration values
 
 **Solutions**:
 
-1. **Use Config Package**: Access configuration through proper channels:
-
-   .. code-block:: go
-
-      // Access configuration values properly
-      dbURL := config.GetDatabaseURL()
-      apiKey := config.GetAPIKey()
-
-2. **Environment Variables**: Use environment variables for sensitive data:
+1. **Environment Variables**: Use environment variables for sensitive data:
 
    .. code-block:: go
 
@@ -302,7 +294,7 @@ Debug Tips
 
    .. code-block:: go
 
-      log.Printf("Function called with params: %+v", params)
+      logging.Log.Debugf(&logging.ContextMap{}, "Function called with params: %+v", params)
 
 2. **Test Functions Independently**: Create test functions to verify behavior:
 

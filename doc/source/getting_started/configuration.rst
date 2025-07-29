@@ -5,7 +5,7 @@ Configuration
 
 This documentation provides a comprehensive guide to the configuration settings for **FlowKit** service.
 
-FlowKit uses a YAML configuration file located at ``configs/config.yaml``. All parameters are read at startup.
+FlowKit uses a YAML configuration file named ``config.yaml``. By default, FlowKit looks for this file in the project root directory, but it can also be placed in the ``configs/`` directory. All parameters are read at startup.
 
 General settings
 ----------------
@@ -68,6 +68,9 @@ General settings
      - ``False``
      - ``''``
 
+.. note::
+   **Legacy parameter**: ``EXTERNALFUNCTIONS_GRPC_PORT`` - This parameter was used in older versions to specify a separate port for the gRPC service. It is now deprecated, and the port should be included in the ``FLOWKIT_ADDRESS`` parameter (for example, ``localhost:50051``). If both are specified, FlowKit handles the legacy port definition for backward compatibility.
+
 Service endpoints
 -----------------
 
@@ -88,7 +91,7 @@ Service endpoints
    * - GRAPHDB_ADDRESS
      - string
      - Address of the aali-graphdb service.
-     - ``aali-graphdb:8080``
+     - ``http://aali-graphdb:8080``
 
    * - QDRANT_HOST
      - string
@@ -99,11 +102,6 @@ Service endpoints
      - int
      - Port of the Qdrant vector database.
      - ``6334``
-
-   * - EXTERNALFUNCTIONS_GRPC_PORT
-     - int
-     - **[LEGACY - Use FLOWKIT_ADDRESS instead]** Legacy port definition for gRPC server. Used with FLOWKIT_ADDRESS for backward compatibility.
-     - ``''``
 
 Workflow configuration
 ----------------------
@@ -136,7 +134,7 @@ Logging settings
 
    * - LOG_LEVEL
      - string
-     - Specifies the logging level. Valid values: "debug," "info," "warning," "error," "fatal."
+     - Specifies the logging level. Valid values: ``debug``, ``info``, ``warning``, ``error``, ``fatal``
      - ``info``
 
    * - ERROR_FILE_LOCATION
@@ -145,7 +143,7 @@ Logging settings
      - ``error.log``
 
    * - LOCAL_LOGS
-     - boolean
+     - bool
      - If true, a local log file is created.
      - ``true``
 
@@ -155,7 +153,7 @@ Logging settings
      - ``logs.log``
 
    * - DATADOG_LOGS
-     - boolean
+     - bool
      - If true, logs are sent to Datadog.
      - ``false``
 
@@ -175,7 +173,7 @@ Logging settings
      - ``nginx``
 
    * - DATADOG_METRICS
-     - boolean
+     - bool
      - If true, metrics are sent to Datadog.
      - ``false``
 
@@ -229,7 +227,7 @@ Azure Key Vault settings
      - Default
 
    * - EXTRACT_CONFIG_FROM_AZURE_KEY_VAULT
-     - boolean
+     - bool
      - If true, configuration is extracted from Azure Key Vault.
      - ``false``
 
@@ -246,18 +244,13 @@ Azure Key Vault settings
 Configuration examples
 ----------------------
 
-Create a ``config.yaml`` file in the ``configs`` directory with your settings.
+Create a ``config.yaml`` file with your settings. You can place it either in the project root directory or in the ``configs/`` directory.
 
 **Local development configuration**
 
 .. code-block:: yaml
 
-   # Logging settings
-   LOG_LEVEL: "debug"
-   ERROR_FILE_LOCATION: "error.log"
-   LOCAL_LOGS: true
-   LOCAL_LOGS_LOCATION: "logs.log"
-   DATADOG_LOGS: false
+   # General settings
    STAGE: "DEV"
    VERSION: "1.0.0"
    SERVICE_NAME: "aali"
@@ -268,19 +261,22 @@ Create a ``config.yaml`` file in the ``configs`` directory with your settings.
 
    # Service endpoints
    LLM_HANDLER_ENDPOINT: "ws://localhost:9003"
-   GRAPHDB_ADDRESS: "localhost:8080"
+   GRAPHDB_ADDRESS: "http://localhost:8080"
    QDRANT_HOST: "localhost"
    QDRANT_PORT: 6334
+
+   # Logging settings
+   LOG_LEVEL: "debug"
+   ERROR_FILE_LOCATION: "error.log"
+   LOCAL_LOGS: true
+   LOCAL_LOGS_LOCATION: "logs.log"
+   DATADOG_LOGS: false
 
 **Docker configuration**
 
 .. code-block:: yaml
 
-   # Logging settings
-   LOG_LEVEL: "info"
-   ERROR_FILE_LOCATION: "error.log"
-   LOCAL_LOGS: false
-   DATADOG_LOGS: false
+   # General settings
    STAGE: "PROD"
    VERSION: "1.0.0"
    SERVICE_NAME: "aali-flowkit"
@@ -291,22 +287,27 @@ Create a ``config.yaml`` file in the ``configs`` directory with your settings.
 
    # Service endpoints
    LLM_HANDLER_ENDPOINT: "ws://aali-llm:9003"
-   GRAPHDB_ADDRESS: "aali-graphdb:8080"
+   GRAPHDB_ADDRESS: "http://aali-graphdb:8080"
    QDRANT_HOST: "qdrant"
    QDRANT_PORT: 6334
-
-   # Note: Function-specific parameters like ANSYS_AUTHORIZATION_URL,
-   # LLM_API_KEY, etc. are used by individual functions and are not
-   # part of the core FlowKit configuration. These should be set as
-   # environment variables or passed directly to functions that need them.
 
    # SSL settings
    USE_SSL: true
    SSL_CERT_PUBLIC_KEY_FILE: "/certs/flowkit.crt"
    SSL_CERT_PRIVATE_KEY_FILE: "/certs/flowkit.key"
 
-   # Workflow configuration (example - uncomment if needed)
+   # Logging settings
+   LOG_LEVEL: "info"
+   ERROR_FILE_LOCATION: "error.log"
+   LOCAL_LOGS: false
+   DATADOG_LOGS: false
+
    # WORKFLOW_CONFIG_VARIABLES:
    #   MESHPILOT_DB_ENDPOINT: "http://meshpilot-db:8080"
    #   APP_TOOL_1_NAME: "MeshGenerator"
    #   COLLECTION_1_NAME: "mesh_collection"
+
+   # Note: Function-specific parameters like ANSYS_AUTHORIZATION_URL,
+   # LLM_API_KEY, etc. are used by individual functions and are not
+   # part of the core FlowKit configuration. These should be set as
+   # environment variables or passed directly to functions that need them.

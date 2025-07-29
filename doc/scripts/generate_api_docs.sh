@@ -32,6 +32,7 @@ echo "Generating documentation for core packages..."
 # gRPC Server
 mkdir -p "$API_REF_DIR/grpcserver"
 gomarkdoc --output "$API_REF_DIR/grpcserver/index.md" \
+          --format plain \
           --repository.url "https://github.com/ansys/aali-flowkit" \
           --repository.default-branch main \
           --repository.path "/" \
@@ -40,6 +41,7 @@ gomarkdoc --output "$API_REF_DIR/grpcserver/index.md" \
 # Function definitions (AST parsing)
 mkdir -p "$API_REF_DIR/functiondefinitions"
 gomarkdoc --output "$API_REF_DIR/functiondefinitions/index.md" \
+          --format plain \
           --repository.url "https://github.com/ansys/aali-flowkit" \
           --repository.default-branch main \
           --repository.path "/" \
@@ -48,15 +50,26 @@ gomarkdoc --output "$API_REF_DIR/functiondefinitions/index.md" \
 # Internal states
 mkdir -p "$API_REF_DIR/internalstates"
 gomarkdoc --output "$API_REF_DIR/internalstates/index.md" \
+          --format plain \
           --repository.url "https://github.com/ansys/aali-flowkit" \
           --repository.default-branch main \
           --repository.path "/" \
           ./pkg/internalstates
 
+# Function testing
+mkdir -p "$API_REF_DIR/functiontesting"
+gomarkdoc --output "$API_REF_DIR/functiontesting/index.md" \
+          --format plain \
+          --repository.url "https://github.com/ansys/aali-flowkit" \
+          --repository.default-branch main \
+          --repository.path "/" \
+          ./pkg/functiontesting
+
 # Generate consolidated docs for externalfunctions
 echo "Generating documentation for external functions..."
 mkdir -p "$API_REF_DIR/externalfunctions"
 gomarkdoc --output "$API_REF_DIR/externalfunctions/index.md" \
+          --format plain \
           --repository.url "https://github.com/ansys/aali-flowkit" \
           --repository.default-branch main \
           --repository.path "/" \
@@ -72,10 +85,30 @@ if [ -d "./pkg/privatefunctions" ]; then
             echo "  Processing privatefunctions/$subdir..."
             mkdir -p "$API_REF_DIR/privatefunctions/$subdir"
             gomarkdoc --output "$API_REF_DIR/privatefunctions/$subdir/index.md" \
+                      --format plain \
                       --repository.url "https://github.com/ansys/aali-flowkit" \
                       --repository.default-branch main \
                       --repository.path "/" \
                       ./pkg/privatefunctions/$subdir
+        fi
+    done
+fi
+
+# Generate docs for meshpilot subdirectories
+if [ -d "./pkg/meshpilot" ]; then
+    echo "Generating documentation for meshpilot packages..."
+
+    # Generate docs for each subdirectory
+    for subdir in ampgraphdb azure; do
+        if [ -d "./pkg/meshpilot/$subdir" ]; then
+            echo "  Processing meshpilot/$subdir..."
+            mkdir -p "$API_REF_DIR/meshpilot/$subdir"
+            gomarkdoc --output "$API_REF_DIR/meshpilot/$subdir/index.md" \
+                      --format plain \
+                      --repository.url "https://github.com/ansys/aali-flowkit" \
+                      --repository.default-branch main \
+                      --repository.path "/" \
+                      ./pkg/meshpilot/$subdir
         fi
     done
 fi

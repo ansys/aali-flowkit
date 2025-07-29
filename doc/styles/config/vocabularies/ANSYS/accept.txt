@@ -201,6 +201,11 @@ instancesReplacementDict
 InstancesReplacementPriorityList
 equivalencesMap
 logicAppEndpoint
+logPanic
+hardcoded
+llm
+llmhandler
+gpt
 userEmail
 userId
 sessionID

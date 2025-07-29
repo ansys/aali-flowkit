@@ -3,148 +3,77 @@
 Adding Custom Types
 ===================
 
-Custom types enable complex data structures in function parameters and return values.
+Define custom types for complex data structures in ``pkg/externalfunctions/types.go``.
 
-Type Definition Examples
--------------------------
-
-Define types in ``pkg/externalfunctions/types.go``. Here are real examples from the codebase:
-
-Database Response Type
-~~~~~~~~~~~~~~~~~~~~~~
-
-FlowKit uses the external ``sharedtypes.DbResponse`` struct from the shared types package:
+Basic Type Definition
+---------------------
 
 .. code-block:: go
 
-   import "github.com/ansys/aali-sharedtypes"
-   
-   // DbResponse is imported from sharedtypes and includes fields like:
-   // - DocumentId, DocumentName, Summary, Guid
-   // Used in similarity search results and vector operations
-   func ProcessSearchResults() []sharedtypes.DbResponse {
-       // Function implementation
+   type MyCustomType struct {
+       Name  string  `json:"name"`
+       Value float64 `json:"value"`
+       Items []string `json:"items"`
    }
 
-Complex Input Type with JSON Tags
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Using External Types
+--------------------
+
+Import types from shared packages:
 
 .. code-block:: go
 
-   // similaritySearchInput represents the input for the similarity search function.
+   import "github.com/ansys/aali-sharedtypes/pkg/sharedtypes"
+
+   // Example usage in types.go:
+   type similarityElement struct {
+       Score float64                `json:"distance"`
+       Data  sharedtypes.DbResponse `json:"data"`
+   }
+
+JSON Tags
+---------
+
+Add JSON tags for proper serialization. FlowKit supports extended tags:
+
+.. code-block:: go
+
+   // Example from types.go:
    type similaritySearchInput struct {
-       CollectionName    string    `json:"collection_name" description:"Name of the collection to search in. Required." required:"true"`
-       EmbeddedVector    []float32 `json:"embedded_vector" description:"Embedded vector used for searching. Required for retrieval." required:"true"`
-       MaxRetrievalCount int       `json:"max_retrieval_count" description:"Maximum number of results to retrieve. Optional." required:"false"`
-       MinScore          float64   `json:"min_score" description:"Minimum similarity score for results. Optional." required:"false"`
-       Keywords          []string  `json:"keywords" description:"Keywords to filter results. Optional." required:"false"`
-       UseKeywords       bool      `json:"use_keywords" description:"Whether to use keyword filtering. Optional." required:"false"`
+       CollectionName string   `json:"collection_name" description:"Name of the collection" required:"true"`
+       MaxRetrievalCount int   `json:"max_retrieval_count" description:"Max results" required:"false"`
+       OutputFields []string  `json:"output_fields" description:"Fields to include"`
    }
 
-Internal Type Example
-~~~~~~~~~~~~~~~~~~~~~
+Type Usage
+----------
+
+Once defined, use your custom types in functions:
 
 .. code-block:: go
 
-   // Variables struct used in function processing
-   type variables struct {
-       variableName string
-       metadata     map[string]interface{}
-   }
-
-Type Registration and Usage
----------------------------
-
-Custom types are automatically available once defined in ``types.go``. They can be used in function parameters and return values:
-
-.. code-block:: go
-
-   // Function using custom types
-   func ProcessSearchResults(input similaritySearchInput) ([]DbResponse, error) {
-       // Function implementation
-   }
-
-Type Conversion Functions
--------------------------
-
-The ``cast.go`` file contains type conversion functions. Example:
-
-.. code-block:: go
-
-   // CastAnyToString casts data of type any to string
-   //
-   // Tags:
-   //   - @displayName: Cast Any to String
-   //
-   // Parameters:
-   //   - data (any)
-   //
-   // Returns:
-   //   - string
-   func CastAnyToString(data any) string {
-       return data.(string)
-   }
-
-   // CastStringToAny casts a string to any type
-   //
-   // Tags:
-   //   - @displayName: Cast String to Any
-   //
-   // Parameters:
-   //   - data (string)
-   //
-   // Returns:
-   //   - any
-   func CastStringToAny(data string) any {
-       return data
-   }
-
-   // CastAnyToInt casts data of type any to int
-   //
-   // Tags:
-   //   - @displayName: Cast Any to Int
-   //
-   // Parameters:
-   //   - data (any)
-   //
-   // Returns:
-   //   - int
-   func CastAnyToInt(data any) int {
-       return data.(int)
-   }
-
-Array Types
------------
-
-Array types are automatically supported. Both single types and array types (prefixed with ``[]``) can be used:
-
-.. code-block:: go
-
-   // Function accepting array parameters
-   func ProcessMultipleItems(items []string, scores []float64) []DbResponse {
+   func MyFunction(input MyCustomType) string {
        // Implementation
+       if err != nil {
+           panic(fmt.Sprintf("Operation failed: %v", err))
+       }
+       return result
    }
 
-Best Practices for Type Definitions
------------------------------------
+Registering Functions with Custom Types
+---------------------------------------
 
-1. **Use JSON tags** for proper serialization:
-   
-   .. code-block:: go
-   
-      type MyType struct {
-          Field1 string `json:"field1"`
-          Field2 int    `json:"field2"`
-      }
+Don't forget to register functions that use custom types in ``ExternalFunctionsMap``:
 
-2. **Include descriptions** for complex types:
-   
-   .. code-block:: go
-   
-      type ComplexType struct {
-          Field string `json:"field" description:"Description of the field" required:"true"`
-      }
+.. code-block:: go
 
-3. **Use proper Go naming conventions** - exported types start with capital letters.
+   var ExternalFunctionsMap = map[string]interface{}{
+       "MyFunction": MyFunction,
+       // ... other functions
+   }
 
-4. **Include error handling** in cast functions using ``logPanic``.
+That's it. Types are automatically available after definition, but functions using them must still be registered.
+
+.. seealso::
+   - :ref:`functions_dev` for adding custom functions
+   - :ref:`categories_dev` for organizing functions into categories

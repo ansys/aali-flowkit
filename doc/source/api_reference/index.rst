@@ -51,6 +51,7 @@ Complete reference for FlowKit packages and functions, automatically generated f
    :caption: Function Packages
 
    externalfunctions/index
+   functiontesting/index
 
 .. toctree::
    :maxdepth: 2
@@ -61,3 +62,11 @@ Complete reference for FlowKit packages and functions, automatically generated f
    privatefunctions/generic/index
    privatefunctions/graphdb/index
    privatefunctions/qdrant/index
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+   :caption: MeshPilot
+
+   meshpilot/ampgraphdb/index
+   meshpilot/azure/index

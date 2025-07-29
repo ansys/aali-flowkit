@@ -1,101 +1,47 @@
 User Guide
 ==========
-This section describes how to interact with FlowKit and which output can be expected.
+
+Learn how to use FlowKit for dynamic function execution in AALI workflows.
 
 .. grid:: 2
+   :gutter: 3 3 4 4
 
-   .. grid-item-card:: Connect
-      :link: connect
+   .. grid-item-card:: Quick Start
+      :link: quickstart
       :link-type: doc
 
-      Shows you how to connect via gRPC to the FlowKit server once the app is running.
+      Get FlowKit running.
 
    .. grid-item-card:: Functions
       :link: functions
       :link-type: doc
 
-      Learn how to discover and execute functions through the gRPC interface.
+      Discover and execute functions dynamically through the gRPC interface.
 
-.. grid:: 2
-
-   .. grid-item-card:: Responses
-      :link: responses
+   .. grid-item-card:: Connect to FlowKit
+      :link: connect
       :link-type: doc
 
-      Learn how to interpret the responses from function executions.
+      Comprehensive examples for connecting to FlowKit with various programming languages and authentication methods.
 
-Integrations
-------------
-
-.. grid:: 2
-
-   .. grid-item-card:: LLM Integration
-      :link: llm_integration
+   .. grid-item-card:: Integration
+      :link: integration
       :link-type: doc
 
-      Core AI engine for text generation, embeddings, and intelligent processing.
-
-   .. grid-item-card:: Ansys GPT
-      :link: ansys_gpt
-      :link-type: doc
-
-      Domain-specific AI for engineering queries with Azure Cognitive Search.
-
-.. grid:: 2
-
-   .. grid-item-card:: Ansys Mesh Pilot
-      :link: mesh_pilot
-      :link-type: doc
-
-      Intelligent mesh generation assistant with AI-driven guidance.
-
-   .. grid-item-card:: Data Extraction
-      :link: data_extraction
-      :link-type: doc
-
-      Extract and process content from various sources for knowledge bases.
-
-.. grid:: 2
-
-   .. grid-item-card:: Knowledge Database
-      :link: knowledge_db
-      :link-type: doc
-
-      Vector and graph database integration for semantic search and RAG.
-
-   .. grid-item-card:: Authentication
-      :link: authentication
-      :link-type: doc
-
-      API authentication, access control, and usage tracking.
-
-.. grid:: 2
-
-   .. grid-item-card:: Materials Intelligence
-      :link: materials
-      :link-type: doc
-
-      AI-powered materials property extraction and selection.
-
-   .. grid-item-card:: MCP Integration
-      :link: mcp
-      :link-type: doc
-
-      Model Context Protocol integration for external tool access.
-
+      Learn how FlowKit integrates with AALI services for centralized function execution.
 
 .. toctree::
     :hidden:
 
-    connect
+    quickstart
     functions
-    responses
-    llm_integration
+    connect
+    integration
+    authentication
     ansys_gpt
-    mesh_pilot
     data_extraction
     knowledge_db
-    authentication
+    llm_integration
     materials
     mcp
-   
+    mesh_pilot

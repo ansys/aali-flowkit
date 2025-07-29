@@ -1,8 +1,10 @@
 Prerequisites
 =============
 
-1. Install GO
+1. Install Go
 -------------
+
+FlowKit requires Go version 1.21 or higher.
 
 .. tab-set::
 
@@ -18,13 +20,27 @@ Prerequisites
         brew update
         brew install go
 
+    3. Verify the installation by running:
+
+     .. code:: bash
+
+        go version
+
    .. tab-item:: Ubuntu
+
+      Follow these steps to install Go on Ubuntu:
 
       .. code:: bash
 
          sudo apt update
          sudo apt install snapd
          sudo snap install go --classic
+
+      Verify the installation by running:
+
+      .. code:: bash
+
+         go version
 
    .. tab-item:: Windows
 
@@ -41,13 +57,15 @@ Prerequisites
 2. Install Git
 --------------
 
+Git is required to clone the FlowKit repository from GitHub.
+
 .. tab-set::
 
    .. tab-item:: macOS
 
       .. code:: bash
 
-        brew install git
+         brew install git
 
    .. tab-item:: Ubuntu
 

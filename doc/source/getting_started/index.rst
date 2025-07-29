@@ -15,11 +15,11 @@ In the AALI context, FlowKit executes registered Go functions for LLM integratio
             Install prerequisites by following our system-specific instructions.
 
 
-   .. grid-item-card:: Installing AALI FlowKit from GitHub
-            :link: github
+   .. grid-item-card:: Installation
+            :link: installation
             :link-type: doc
 
-            Clone the AALI FlowKit repository from GitHub and configure your setup.
+            Install FlowKit from source or Docker and configure your setup.
 
    .. grid-item-card:: Configuration
             :link: configuration
@@ -33,5 +33,5 @@ In the AALI context, FlowKit executes registered Go functions for LLM integratio
     :hidden:
 
     prerequisites
-    github
+    installation
     configuration

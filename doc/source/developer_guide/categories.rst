@@ -1,7 +1,7 @@
 .. _categories_dev:
 
-Adding Function Categories
-==========================
+Function Categories
+===================
 
 Categories organize related functions. Each category corresponds to a Go file in ``pkg/externalfunctions/``.
 
@@ -62,6 +62,7 @@ General purpose utility functions:
 .. code-block:: go
 
    // Example functions in this category:
+   "AssignStringToString":  AssignStringToString,
    "SendRestAPICall":       SendRestAPICall,
    "GenerateUUID":          GenerateUUID,
    "StringConcat":          StringConcat,
@@ -78,7 +79,8 @@ LLM integration and AI functions:
    "PerformVectorEmbeddingRequest":    PerformVectorEmbeddingRequest,
    "PerformGeneralRequest":            PerformGeneralRequest,
    "BuildLibraryContext":              BuildLibraryContext,
-   "AppendMessageHistory":             AppendMessageHistory,
+   "CreateEmbeddings":                 CreateEmbeddings,
+   "FinalizeMessage":                  FinalizeMessage,
 
 Knowledge Database Functions (``knowledgedb.go``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -92,7 +94,7 @@ Database operations and vector search:
    "GetListCollections":       GetListCollections,
    "GeneralGraphDbQuery":      GeneralGraphDbQuery,
    "SimilaritySearch":         SimilaritySearch,
-   "AddDataRequest":           AddDataRequest,
+   "CreateDbFilter":           CreateDbFilter,
 
 Data Extraction Functions (``dataextraction.go``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -102,27 +104,11 @@ File processing and content extraction:
 .. code-block:: go
 
    // Example functions in this category:
+   "GetGithubFilesToExtract":   GetGithubFilesToExtract,
    "GetLocalFilesToExtract":    GetLocalFilesToExtract,
-   "GetLocalFileContent":       GetLocalFileContent,
-   "LangchainSplitter":         LangchainSplitter,
    "AddDataRequest":            AddDataRequest,
-   "GenerateDocumentTree":      GenerateDocumentTree,
-
-MCP Functions (``mcp.go``)
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Model Context Protocol integration:
-
-.. code-block:: go
-
-   // Example functions in this category:
-   "ListTools":         ListTools,
-   "ListResources":     ListResources,
-   "ListPrompts":       ListPrompts,
-   "CallTool":          CallTool,
-   "ReadResource":      ReadResource,
-   "GetPrompt":         GetPrompt,
-   "MCPClient":         MCPClient,
+   "CreateCollectionRequest":   CreateCollectionRequest,
+   "GetDocumentType":           GetDocumentType,
 
 Cast Functions (``cast.go``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -278,12 +264,12 @@ Here's the complete process for the ``generic`` category:
        "GenerateUUID":           GenerateUUID,
        "StringConcat":           StringConcat,
        "ExtractJSONStringField": ExtractJSONStringField,
-       
+
        // LLM handler functions
        "PerformVectorEmbeddingRequest": PerformVectorEmbeddingRequest,
        "PerformGeneralRequest":         PerformGeneralRequest,
        "BuildLibraryContext":           BuildLibraryContext,
-       
+
        // ... 180+ total functions across all categories
    }
 

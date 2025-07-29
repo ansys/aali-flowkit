@@ -23,6 +23,11 @@
 package externalfunctions
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -58,7 +63,7 @@ type LlmCriteria struct {
 // Returns:
 //   - traceID: a 128-bit trace ID in decimal format
 //   - spanID: a 64-bit span ID in decimal format
-func StartTrace() (traceID string, spanID string) {
+func StartTrace(kvdbEndpoint, encryptedApiKey string) (traceID string, spanID string) {
 	traceID = generateTraceID()
 	spanID = generateSpanID()
 	ctx := &logging.ContextMap{}
@@ -66,7 +71,8 @@ func StartTrace() (traceID string, spanID string) {
 	ctx.Set(logging.ContextKey("dd.span_id"), spanID)
 	ctx.Set(logging.ContextKey("dd.trace_idVisible"), traceID)
 	ctx.Set(logging.ContextKey("dd.span_idVisible"), spanID)
-	logging.Log.Infof(ctx, "Starting new trace with trace ID: %s and span ID: %s", traceID, spanID)
+
+	logging.Log.Infof(ctx, "Starting new trace with trace ID: %s and span ID %s:", traceID, spanID)
 
 	return traceID, spanID
 }
@@ -99,7 +105,7 @@ func CreateChildSpan(ctx *logging.ContextMap, traceID string, parentSpanID strin
 	ctx.Set(logging.ContextKey("dd.span_idVisible"), childSpanID)
 	ctx.Set(logging.ContextKey("dd.parent_idVisible"), parentSpanID)
 
-	logging.Log.Infof(ctx, "Starting child span with trace ID: %s, span ID: %s, and parent span ID: %s", traceID, childSpanID, parentSpanID)
+	logging.Log.Infof(ctx, " Starting child span with trace ID: %s, span ID: %s, and parent span ID: %s", traceID, childSpanID, parentSpanID)
 
 	return childSpanID
 }
@@ -503,20 +509,27 @@ func LogRequestFailedDebugWithMessage(msg1, msg2 string, traceID string, spanID 
 //
 // Parameters:
 //   - kvdbEndpoint: the KVDB endpoint
-//   - apiKey: The API key to check
+//   - apiKeyEncrypted: The API key to check
 //   - traceID: the trace ID in decimal format
 //   - spanID: the span ID in decimal format
 //
 // Returns:
 //   - isAuthenticated: true if the API key is authenticated, false otherwise
 //   - childSpanID: the child span ID created for this operation
-func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spanID string) (isAuthenticated bool, childSpanID string) {
+func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKeyEncrypted string, traceID string, spanID string) (isAuthenticated bool, childSpanID string) {
 	ctx := &logging.ContextMap{}
 	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	// Check if the API key is empty
-	if apiKey == "" {
+	if apiKeyEncrypted == "" {
 		logging.Log.Warnf(ctx, "API key is empty")
+		return false, childSpanID
+	}
+
+	// Decrypt the API key using the private key from KVDB
+	apiKey, err := decryptApiKey(kvdbEndpoint, apiKeyEncrypted, ctx)
+	if err != nil {
+		logging.Log.Errorf(ctx, "Failed to decrypt API key: %v", err)
 		return false, childSpanID
 	}
 
@@ -555,7 +568,7 @@ func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spa
 //
 // Parameters:
 //   - kvdbEndpoint: the KVDB endpoint
-//   - apiKey: The API key of the customer
+//   - apiKeyEncrypted: The API key of the customer
 //   - additionalTokenCount: The number of tokens to add to the customer's total token count
 //   - traceID: the trace ID in decimal format
 //   - spanID: the span ID in decimal format
@@ -563,14 +576,21 @@ func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spa
 // Returns:
 //   - tokenLimitReached: true if the new total token count exceeds the customer's token limit, false otherwise
 //   - childSpanID: the child span ID created for this operation
-func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, additionalTokenCount int, traceID string, spanID string) (tokenLimitReached bool, childSpanID string) {
+func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKeyEncrypted string, additionalTokenCount int, traceID string, spanID string) (tokenLimitReached bool, childSpanID string) {
 	ctx := &logging.ContextMap{}
 	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
-	// Check if the API key is empty
-	if apiKey == "" {
-		logging.Log.Errorf(ctx, "API key is empty")
-		panic("API key is empty")
+	// Check if the encrypted API key is empty
+	if apiKeyEncrypted == "" {
+		logging.Log.Errorf(ctx, "Encrypted API key is empty")
+		panic("Encrypted API key is empty")
+	}
+
+	// Decrypt the API key using the private key from KVDB
+	apiKey, err := decryptApiKey(kvdbEndpoint, apiKeyEncrypted, ctx)
+	if err != nil {
+		logging.Log.Errorf(ctx, "Failed to decrypt API key: %v", err)
+		panic(fmt.Sprintf("Failed to decrypt API key: %v", err))
 	}
 
 	// Get the current token count for the customer
@@ -624,7 +644,7 @@ func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, ad
 //
 // Parameters:
 //   - kvdbEndpoint: the KVDB endpoint
-//   - apiKey: The API key of the customer
+//   - apiKeyEncrypted: The API key of the customer
 //   - traceID: the trace ID in decimal format
 //   - spanID: the span ID in decimal format
 //
@@ -632,14 +652,21 @@ func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, ad
 //   - customerName: The name of the customer
 //   - sendWarning: true if a warning was sent, false if it was already sent
 //   - childSpanID: the child span ID created for this operation
-func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string, traceID string, spanID string) (customerName string, sendWarning bool, childSpanID string) {
+func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKeyEncrypted string, traceID string, spanID string) (customerName string, sendWarning bool, childSpanID string) {
 	ctx := &logging.ContextMap{}
 	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
-	// Check if the API key is empty
-	if apiKey == "" {
-		logging.Log.Errorf(ctx, "API key is empty")
-		panic("API key is empty")
+	// Check if the encrypted API key is empty
+	if apiKeyEncrypted == "" {
+		logging.Log.Errorf(ctx, "Encrypted API key is empty")
+		panic("Encrypted API key is empty")
+	}
+
+	// Decrypt the API key using the private key from KVDB
+	apiKey, err := decryptApiKey(kvdbEndpoint, apiKeyEncrypted, ctx)
+	if err != nil {
+		logging.Log.Errorf(ctx, "Failed to decrypt API key: %v", err)
+		panic(fmt.Sprintf("Failed to decrypt API key: %v", err))
 	}
 
 	// Get the current customer object from KVDB
@@ -768,4 +795,59 @@ func AddAvailableAttributesToSystemPrompt(userDesignRequirements string, systemP
 
 	logging.Log.Debugf(ctx, "Successfully created system prompt with %d attributes", len(filteredAttributes))
 	return fullSystemPrompt, childSpanID
+}
+
+// decryptApiKey decrypts the API key using the private key from KVDB
+func decryptApiKey(kvdbEndpoint, encryptedApiKey string, ctx *logging.ContextMap) (string, error) {
+
+	// Get private key from KVDB using key "000000"
+	privateKeyJsonString, exists, err := kvdbGetEntry(kvdbEndpoint, "000000")
+	var privateKeyBase64 string
+
+	if err != nil {
+		logging.Log.Errorf(ctx, "Error getting private key from KVDB: %v", err)
+		return "", fmt.Errorf("failed to retrieve private key from KVDB: %v", err)
+	} else if !exists {
+		logging.Log.Errorf(ctx, "Private key not found in KVDB (key: 000000)")
+		return "", fmt.Errorf("private key not found in KVDB with key '000000'")
+	} else {
+		// For convenience, we store the private key as a customer object in KVDB
+		var customer materialsCustomerObject
+		err = json.Unmarshal([]byte(privateKeyJsonString), &customer)
+		if err != nil {
+			logging.Log.Errorf(ctx, "Error unmarshalling JSON string: %v", err)
+			panic(err)
+		}
+
+		privateKeyBase64 = customer.ApiKey
+		logging.Log.Debugf(ctx, "Using private key: %s", privateKeyBase64)
+	}
+
+	// Decode private key
+	privateKeyBytes, err := base64.StdEncoding.DecodeString(privateKeyBase64)
+	if err != nil {
+		return "", fmt.Errorf("error decoding private key: %v", err)
+	}
+
+	// Parse private key
+	privateKey, err := x509.ParsePKCS1PrivateKey(privateKeyBytes)
+	if err != nil {
+		return "", fmt.Errorf("error parsing private key: %v", err)
+	}
+
+	// Decode encrypted API key
+	encryptedBytes, err := base64.StdEncoding.DecodeString(encryptedApiKey)
+	if err != nil {
+		return "", fmt.Errorf("error decoding encrypted API key: %v", err)
+	}
+
+	// Decrypt API key
+	decryptedBytes, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, privateKey, encryptedBytes, nil)
+	if err != nil {
+		return "", fmt.Errorf("error decrypting API key: %v", err)
+	}
+
+	apiKey := string(decryptedBytes)
+	logging.Log.Debugf(ctx, "Successfully decrypted api key %s", apiKey)
+	return apiKey, nil
 }

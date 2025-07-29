@@ -62,8 +62,6 @@ func StartTrace() (traceID string, spanID string) {
 	traceID = generateTraceID()
 	spanID = generateSpanID()
 	ctx := &logging.ContextMap{}
-	ctx.Set(logging.ContextKey("dd.trace_id"), traceID)
-	ctx.Set(logging.ContextKey("dd.span_id"), spanID)
 	ctx.Set(logging.ContextKey("dd.trace_idVisible"), traceID)
 	ctx.Set(logging.ContextKey("dd.span_idVisible"), spanID)
 	logging.Log.Infof(ctx, "Starting new trace with trace ID: %s and span ID: %s", traceID, spanID)
@@ -92,9 +90,6 @@ func CreateChildSpan(ctx *logging.ContextMap, traceID string, parentSpanID strin
 	childSpanID = generateSpanID()
 
 	// Update the context with trace and span information
-	ctx.Set(logging.ContextKey("dd.trace_id"), traceID)
-	ctx.Set(logging.ContextKey("dd.span_id"), childSpanID)
-	ctx.Set(logging.ContextKey("dd.parent_id"), parentSpanID)
 	ctx.Set(logging.ContextKey("dd.trace_idVisible"), traceID)
 	ctx.Set(logging.ContextKey("dd.span_idVisible"), childSpanID)
 	ctx.Set(logging.ContextKey("dd.parent_idVisible"), parentSpanID)

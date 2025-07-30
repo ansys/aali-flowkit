@@ -124,6 +124,7 @@ func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGu
 		panic("Failed to serialize suggested criteria into json")
 	}
 
+	logging.Log.Debugf(ctx, "Serializing response with %d criteria. Response: %s", len(criteriaSuggestions), response)
 	return string(responseJson), childSpanID
 }
 
@@ -201,6 +202,9 @@ func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialCr
 			logging.Log.Debugf(ctx, "Filtered out non existing attribute: %s", suggestion.AttributeName)
 		}
 	}
+
+	logging.Log.Debugf(ctx, "Filtered out %d non-existing attributes from %d suggestions", len(criteriaSuggestions)-len(filteredCriteria), len(criteriaSuggestions))
+	logging.Log.Debugf(ctx, "Remaining %d criteria suggestions: %s", len(filteredCriteria), filteredCriteria)
 
 	return filteredCriteria, childSpanID
 }

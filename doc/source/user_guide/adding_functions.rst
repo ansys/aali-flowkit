@@ -86,10 +86,10 @@ Add to ``ExternalFunctionsMap`` in ``pkg/externalfunctions/externalfunctions.go`
 
    # Generate required files
    go generate ./pkg/externalfunctions
-   
+
    # Build
    go build ./...
-   
+
    # Run and test
    go run main.go
 
@@ -143,17 +143,17 @@ Use JSON strings to pass complex types:
 
 .. important::
    **Custom Types Registration**
-   
+
    If you need custom input or output structs, they must be registered in the ``aali-sharedtypes`` repository:
-   
+
    1. Add your type definition to ``aali-sharedtypes`` with proper JSON tags
    2. Implement type converters in ``aali-sharedtypes/pkg/typeconverters/typeconverters.go``:
-      
+
       - ``ConvertStringToGivenType`` - converts string to your custom type
       - ``ConvertGivenTypeToString`` - converts your custom type to string
-   
+
    3. Update the UI constants in ``aali-agent-configurator`` if the type should be available in the UI
-   
+
    Without proper registration in ``aali-sharedtypes``, your custom types will not work correctly with the FlowKit type conversion system.
 
 Tips

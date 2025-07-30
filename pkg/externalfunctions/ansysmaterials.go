@@ -63,16 +63,14 @@ type LlmCriteria struct {
 // Returns:
 //   - traceID: a 128-bit trace ID in decimal format
 //   - spanID: a 64-bit span ID in decimal format
-func StartTrace(kvdbEndpoint, encryptedApiKey string) (traceID string, spanID string) {
+func StartTrace() (traceID string, spanID string) {
 	traceID = generateTraceID()
 	spanID = generateSpanID()
 	ctx := &logging.ContextMap{}
-	ctx.Set(logging.ContextKey("dd.trace_id"), traceID)
-	ctx.Set(logging.ContextKey("dd.span_id"), spanID)
 	ctx.Set(logging.ContextKey("dd.trace_idVisible"), traceID)
 	ctx.Set(logging.ContextKey("dd.span_idVisible"), spanID)
 
-	logging.Log.Infof(ctx, "Starting new trace with trace ID: %s and span ID %s:", traceID, spanID)
+	logging.Log.Infof(ctx, "Starting new trace with trace ID: %s and span ID: %s", traceID, spanID)
 
 	return traceID, spanID
 }
@@ -105,7 +103,7 @@ func CreateChildSpan(ctx *logging.ContextMap, traceID string, parentSpanID strin
 	ctx.Set(logging.ContextKey("dd.span_idVisible"), childSpanID)
 	ctx.Set(logging.ContextKey("dd.parent_idVisible"), parentSpanID)
 
-	logging.Log.Infof(ctx, " Starting child span with trace ID: %s, span ID: %s, and parent span ID: %s", traceID, childSpanID, parentSpanID)
+	logging.Log.Infof(ctx, "Starting child span with trace ID: %s, span ID: %s, and parent span ID: %s", traceID, childSpanID, parentSpanID)
 
 	return childSpanID
 }
@@ -135,6 +133,7 @@ func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGu
 		panic("Failed to serialize suggested criteria into json")
 	}
 
+	logging.Log.Debugf(ctx, "Serializing response with %d criteria. Response: %+v", len(criteriaSuggestions), response)
 	return string(responseJson), childSpanID
 }
 
@@ -212,6 +211,9 @@ func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialCr
 			logging.Log.Debugf(ctx, "Filtered out non existing attribute: %s", suggestion.AttributeName)
 		}
 	}
+
+	logging.Log.Debugf(ctx, "Filtered out %d non-existing attributes from %d suggestions", len(criteriaSuggestions)-len(filteredCriteria), len(criteriaSuggestions))
+	logging.Log.Debugf(ctx, "Remaining %d criteria suggestions: %+v", len(filteredCriteria), filteredCriteria)
 
 	return filteredCriteria, childSpanID
 }
@@ -426,6 +428,7 @@ func getTokenCount(modelName, text string, traceID string, spanID string) (count
 		panic(errorMessage)
 	}
 
+	logging.Log.Debugf(ctx, "Token count: %d", tokenCount)
 	return tokenCount, childSpanID
 }
 

@@ -3,7 +3,9 @@
 API Reference
 =============
 
-Complete reference for FlowKit packages and functions, automatically generated from source code.
+Technical documentation for advanced users and developers extending FlowKit.
+
+This section contains detailed API documentation for FlowKit's internal packages and implementation details.
 
 .. grid:: 2
    :gutter: 3 3 4 4

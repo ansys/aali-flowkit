@@ -1,8 +1,14 @@
 Getting started
 ===============
-AALI FlowKit is a gRPC service in Go that executes functions dynamically via remote procedure calls.
 
-In the AALI context, FlowKit executes registered Go functions for LLM integration, but it can execute any exposed function.
+AALI FlowKit is an external function repository for AALI Agent, providing a comprehensive library of functions that enable workflows and integrations.
+
+With FlowKit you can:
+
+* Access hundreds of pre-built functions across multiple categories
+* Add your own custom functions to extend capabilities
+* Integrate with LLMs, databases, and external services
+* Build automation workflows
 
 
 .. grid:: 2
@@ -12,20 +18,20 @@ In the AALI context, FlowKit executes registered Go functions for LLM integratio
             :link: prerequisites
             :link-type: doc
 
-            Install prerequisites by following our system-specific instructions.
+            Minimal requirements to get started with FlowKit.
 
 
    .. grid-item-card:: Installation
             :link: installation
             :link-type: doc
 
-            Install FlowKit from source or Docker and configure your setup.
+            Quick steps to install and run FlowKit.
 
    .. grid-item-card:: Configuration
             :link: configuration
             :link-type: doc
 
-            Configuration parameters for the FlowKit service.
+            Essential settings to customize FlowKit.
 
 
 

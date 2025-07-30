@@ -3,311 +3,192 @@
 Configuration
 =============
 
-This documentation provides a comprehensive guide to the configuration settings for **FlowKit** service.
+FlowKit works out of the box with zero configuration. For most use cases, you only need to set a few parameters.
 
-FlowKit uses a YAML configuration file named ``config.yaml``. By default, FlowKit looks for this file in the project root directory, but it can also be placed in the ``configs/`` directory. All parameters are read at startup.
+Quick Start
+-----------
 
-General settings
-----------------
+**Minimal Configuration**
 
-.. list-table::
-   :header-rows: 1
-   :widths: 30 15 55 15 15
-
-   * - Argument
-     - Type
-     - Description
-     - Required
-     - Default
-
-   * - STAGE
-     - string
-     - Specifies the environment stage.
-     - ``False``
-     - ``DEV``
-
-   * - VERSION
-     - string
-     - Specifies the version of the service.
-     - ``False``
-     - ``1.0.0``
-
-   * - SERVICE_NAME
-     - string
-     - Defines the name of the service.
-     - ``False``
-     - ``aali``
-
-   * - FLOWKIT_ADDRESS
-     - string
-     - Address where FlowKit listens for incoming gRPC requests.
-     - ``True``
-     - ``''``
-
-   * - FLOWKIT_API_KEY
-     - string
-     - API key used to authenticate with FlowKit.
-     - ``True``
-     - ``''``
-
-   * - USE_SSL
-     - bool
-     - Whether to use SSL for securing the endpoints.
-     - ``False``
-     - ``false``
-
-   * - SSL_CERT_PUBLIC_KEY_FILE
-     - string
-     - Path to the public key file for SSL.
-     - ``False``
-     - ``''``
-
-   * - SSL_CERT_PRIVATE_KEY_FILE
-     - string
-     - Path to the private key file for SSL.
-     - ``False``
-     - ``''``
-
-.. note::
-   **Legacy parameter**: ``EXTERNALFUNCTIONS_GRPC_PORT`` - This parameter was used in older versions to specify a separate port for the gRPC service. It is now deprecated, and the port should be included in the ``FLOWKIT_ADDRESS`` parameter (for example, ``localhost:50051``). If both are specified, FlowKit handles the legacy port definition for backward compatibility.
-
-Service endpoints
------------------
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 15 55 15
-
-   * - Argument
-     - Type
-     - Description
-     - Default
-
-   * - LLM_HANDLER_ENDPOINT
-     - string
-     - Endpoint where FlowKit connects to aali-llm.
-     - ``ws://aali-llm:9003``
-
-   * - GRAPHDB_ADDRESS
-     - string
-     - Address of the aali-graphdb service.
-     - ``http://aali-graphdb:8080``
-
-   * - QDRANT_HOST
-     - string
-     - Hostname of the Qdrant vector database.
-     - ``qdrant``
-
-   * - QDRANT_PORT
-     - int
-     - Port of the Qdrant vector database.
-     - ``6334``
-
-Workflow configuration
-----------------------
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 15 55 15
-
-   * - Argument
-     - Type
-     - Description
-     - Default
-
-   * - WORKFLOW_CONFIG_VARIABLES
-     - map
-     - **[OPTIONAL]** Key-value pairs for workflow-specific configuration. Used primarily by ansysmeshpilot functions for tool names, collection names, database queries, and prompt templates. This section is commented out in the default config.
-     - ``{}`` (commented out by default)
-
-Logging settings
-----------------
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 15 55 15
-
-   * - Argument
-     - Type
-     - Description
-     - Default
-
-   * - LOG_LEVEL
-     - string
-     - Specifies the logging level. Valid values: ``debug``, ``info``, ``warning``, ``error``, ``fatal``
-     - ``info``
-
-   * - ERROR_FILE_LOCATION
-     - string
-     - Location where fatal errors are logged.
-     - ``error.log``
-
-   * - LOCAL_LOGS
-     - bool
-     - If true, a local log file is created.
-     - ``true``
-
-   * - LOCAL_LOGS_LOCATION
-     - string
-     - Location of the local log file.
-     - ``logs.log``
-
-   * - DATADOG_LOGS
-     - bool
-     - If true, logs are sent to Datadog.
-     - ``false``
-
-   * - LOGGING_URL
-     - string
-     - Datadog URL where logs are sent.
-     - ``https://http-intake.logs.datadoghq.eu/api/v2/logs``
-
-   * - LOGGING_API_KEY
-     - string
-     - Datadog API key for authentication.
-     - ``''``
-
-   * - DATADOG_SOURCE
-     - string
-     - Datadog source identifier.
-     - ``nginx``
-
-   * - DATADOG_METRICS
-     - bool
-     - If true, metrics are sent to Datadog.
-     - ``false``
-
-   * - METRICS_URL
-     - string
-     - Datadog URL where metrics are sent.
-     - ``''``
-
-Function-specific configuration
--------------------------------
-
-Some FlowKit functions require additional parameters that are not part of the core FlowKit configuration. These are typically set as environment variables or passed directly to functions:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 15 55
-
-   * - Parameter
-     - Used By
-     - Description
-
-   * - ANSYS_AUTHORIZATION_URL
-     - ansysmeshpilot functions
-     - Authorization URL for Ansys services
-
-   * - LLM_API_KEY
-     - llmhandler functions
-     - API key for LLM service authentication
-
-   * - FLOWKIT_PYTHON_ENDPOINT
-     - specific functions
-     - Endpoint for Python service integration
-
-   * - FLOWKIT_PYTHON_API_KEY
-     - specific functions
-     - API key for Python service authentication
-
-.. note::
-   These parameters are **not** part of the main ``config.yaml`` file. They are used by specific functions and should be configured as environment variables or function parameters as needed.
-
-Azure Key Vault settings
-------------------------
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 15 55 15
-
-   * - Argument
-     - Type
-     - Description
-     - Default
-
-   * - EXTRACT_CONFIG_FROM_AZURE_KEY_VAULT
-     - bool
-     - If true, configuration is extracted from Azure Key Vault.
-     - ``false``
-
-   * - AZURE_KEY_VAULT_NAME
-     - string
-     - Name of the Azure Key Vault.
-     - ``''``
-
-   * - AZURE_MANAGED_IDENTITY_ID
-     - string
-     - Azure Managed Identity ID for authentication.
-     - ``''``
-
-Configuration examples
-----------------------
-
-Create a ``config.yaml`` file with your settings. You can place it either in the project root directory or in the ``configs/`` directory.
-
-**Local development configuration**
+FlowKit only needs one setting to run:
 
 .. code-block:: yaml
 
-   # General settings
-   STAGE: "DEV"
-   VERSION: "1.0.0"
-   SERVICE_NAME: "aali"
-
-   # FlowKit settings
+   # config.yaml
    FLOWKIT_ADDRESS: "localhost:50051"
-   FLOWKIT_API_KEY: "dev-api-key"
 
-   # Service endpoints
-   LLM_HANDLER_ENDPOINT: "ws://localhost:9003"
-   GRAPHDB_ADDRESS: "http://localhost:8080"
-   QDRANT_HOST: "localhost"
+FlowKit starts with sensible defaults for everything else.
+
+**With External Services**
+
+If you're using functions that need external services, add their endpoints:
+
+.. code-block:: yaml
+
+   # config.yaml
+   FLOWKIT_ADDRESS: "localhost:50051"
+   FLOWKIT_API_KEY: "your-secure-key"  # Optional authentication
+
+   # Add only what you need:
+   LLM_HANDLER_ENDPOINT: "ws://aali-llm:9003"      # For LLM functions
+   GRAPHDB_ADDRESS: "http://aali-graphdb:8080"     # For knowledge DB functions
+   QDRANT_HOST: "qdrant"                           # For vector search functions
    QDRANT_PORT: 6334
 
-   # Logging settings
-   LOG_LEVEL: "debug"
-   ERROR_FILE_LOCATION: "error.log"
-   LOCAL_LOGS: true
-   LOCAL_LOGS_LOCATION: "logs.log"
-   DATADOG_LOGS: false
+Configuration Examples
+----------------------
 
-**Docker configuration**
+**Local Development**
 
 .. code-block:: yaml
 
-   # General settings
-   STAGE: "PROD"
-   VERSION: "1.0.0"
-   SERVICE_NAME: "aali-flowkit"
+   # config.yaml for local development
+   FLOWKIT_ADDRESS: "localhost:50051"
+   LOG_LEVEL: "debug"  # Optional: see more logs during development
 
-   # FlowKit settings
-   FLOWKIT_ADDRESS: "0.0.0.0:50051"
-   FLOWKIT_API_KEY: "your-secure-api-key"
+**Docker Deployment**
 
-   # Service endpoints
+.. code-block:: yaml
+
+   # config.yaml for Docker
+   FLOWKIT_ADDRESS: "0.0.0.0:50051"  # Listen on all interfaces
+   FLOWKIT_API_KEY: "production-key"  # Secure your endpoint
+
+   # Service names from docker-compose:
    LLM_HANDLER_ENDPOINT: "ws://aali-llm:9003"
    GRAPHDB_ADDRESS: "http://aali-graphdb:8080"
    QDRANT_HOST: "qdrant"
-   QDRANT_PORT: 6334
 
-   # SSL settings
+
+.. important::
+   Some configuration options expect the **names of environment variables** that contain the actual values, not the values directly. For example:
+
+   .. code-block:: bash
+
+      # First, set the actual value in an environment variable
+      export MY_API_KEY="actual-api-key-value"
+
+      # Then reference that variable name in the config
+      export FLOWKIT_API_KEY="MY_API_KEY"
+
+Where to Place config.yaml
+--------------------------
+
+FlowKit looks for ``config.yaml`` in these locations (in order):
+
+1. Project root directory
+2. ``configs/`` directory
+3. Path specified by ``AALI_CONFIG_PATH`` environment variable
+
+.. code-block:: bash
+
+   # Example: Use custom config location
+   export AALI_CONFIG_PATH="/path/to/your/config.yaml"
+   go run main.go
+
+Advanced Configuration
+----------------------
+
+For specialized use cases, FlowKit supports additional configuration options.
+
+**Logging Configuration**
+
+.. code-block:: yaml
+
+   LOG_LEVEL: "info"              # debug, info, warning, error, fatal
+   LOCAL_LOGS: true               # Write logs to file
+   LOCAL_LOGS_LOCATION: "app.log" # Log file path
+   ERROR_FILE_LOCATION: "errors.log"
+
+**SSL/TLS Configuration**
+
+.. code-block:: yaml
+
    USE_SSL: true
-   SSL_CERT_PUBLIC_KEY_FILE: "/certs/flowkit.crt"
-   SSL_CERT_PRIVATE_KEY_FILE: "/certs/flowkit.key"
+   SSL_CERT_PUBLIC_KEY_FILE: "/path/to/cert.pem"
+   SSL_CERT_PRIVATE_KEY_FILE: "/path/to/key.pem"
 
-   # Logging settings
-   LOG_LEVEL: "info"
-   ERROR_FILE_LOCATION: "error.log"
-   LOCAL_LOGS: false
-   DATADOG_LOGS: false
+**Azure Key Vault Integration**
 
-   # WORKFLOW_CONFIG_VARIABLES:
-   #   MESHPILOT_DB_ENDPOINT: "http://meshpilot-db:8080"
-   #   APP_TOOL_1_NAME: "MeshGenerator"
-   #   COLLECTION_1_NAME: "mesh_collection"
+For enterprise deployments, configuration can be loaded from Azure Key Vault:
 
-   # Note: Function-specific parameters like ANSYS_AUTHORIZATION_URL,
-   # LLM_API_KEY, etc. are used by individual functions and are not
-   # part of the core FlowKit configuration. These should be set as
-   # environment variables or passed directly to functions that need them.
+.. code-block:: yaml
+
+   EXTRACT_CONFIG_FROM_AZURE_KEY_VAULT: true
+   AZURE_KEY_VAULT_NAME: "VAULT_NAME_ENV_VAR"
+   AZURE_MANAGED_IDENTITY_ID: "IDENTITY_ENV_VAR"
+
+.. note::
+   The Azure Key Vault settings follow the same pattern as other environment variables - they expect the **names** of environment variables that contain the actual values:
+
+   .. code-block:: bash
+
+      # Set the actual values in environment variables
+      export MY_VAULT_NAME="my-actual-keyvault"
+      export MY_IDENTITY="00000000-0000-0000-0000-000000000000"
+
+      # Then reference those variable names in the config
+      export AZURE_KEY_VAULT_NAME="MY_VAULT_NAME"
+      export AZURE_MANAGED_IDENTITY_ID="MY_IDENTITY"
+
+**All Configuration Options**
+
+For a complete list of all available configuration options, see the `Full Configuration Reference`_ below.
+
+.. note::
+   Most users don't need to configure anything beyond ``FLOWKIT_ADDRESS`` and the endpoints for services they actually use. FlowKit provides sensible defaults for everything else.
+
+Tips
+----
+
+- Start with minimal configuration and add settings only as needed
+- Use environment variables for sensitive values like API keys
+- In production, always set ``FLOWKIT_API_KEY`` to secure your endpoint
+- Service endpoints are only needed if you use those specific functions
+
+Full Configuration Reference
+----------------------------
+
+**General Settings**
+
+- ``FLOWKIT_ADDRESS`` (required): Where FlowKit listens (for example, ``localhost:50051``)
+- ``FLOWKIT_API_KEY``: API key for authentication
+- ``STAGE``: Environment stage (default: ``DEV``)
+- ``VERSION``: Service version (default: ``1.0.0``)
+- ``SERVICE_NAME``: Service name for logging (default: ``aali``)
+
+**Service Endpoints**
+
+- ``LLM_HANDLER_ENDPOINT``: AALI LLM service (default: ``ws://aali-llm:9003``)
+- ``GRAPHDB_ADDRESS``: Graph database (default: ``http://aali-graphdb:8080``)
+- ``QDRANT_HOST``: Qdrant hostname (default: ``qdrant``)
+- ``QDRANT_PORT``: Qdrant port (default: ``6334``)
+
+**Logging Settings**
+
+- ``LOG_LEVEL``: Logging level (default: ``info``)
+- ``LOCAL_LOGS``: Enable file logging (default: ``true``)
+- ``LOCAL_LOGS_LOCATION``: Log path (default: ``logs.log``)
+- ``ERROR_FILE_LOCATION``: Error log path (default: ``error.log``)
+- ``DATADOG_LOGS``: Enable Datadog logging (default: ``false``)
+- ``LOGGING_URL``: Datadog logs endpoint
+- ``LOGGING_API_KEY``: Datadog API key
+- ``DATADOG_SOURCE``: Datadog source tag
+- ``DATADOG_METRICS``: Enable Datadog metrics
+- ``METRICS_URL``: Datadog metrics endpoint
+
+**SSL/TLS Settings**
+
+- ``USE_SSL``: Enable SSL/TLS (default: ``false``)
+- ``SSL_CERT_PUBLIC_KEY_FILE``: Path to certificate
+- ``SSL_CERT_PRIVATE_KEY_FILE``: Path to private key
+
+**Azure Key Vault Settings**
+
+- ``EXTRACT_CONFIG_FROM_AZURE_KEY_VAULT``: Use Azure Key Vault (default: ``false``)
+- ``AZURE_KEY_VAULT_NAME``: Key Vault name
+- ``AZURE_MANAGED_IDENTITY_ID``: Managed Identity for auth
+
+**Legacy Settings**
+
+- ``EXTERNALFUNCTIONS_GRPC_PORT``: Deprecated, use port in ``FLOWKIT_ADDRESS``

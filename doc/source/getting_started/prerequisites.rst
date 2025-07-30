@@ -1,8 +1,22 @@
 Prerequisites
 =============
 
-1. Install Go
--------------
+Minimal requirements to get started with FlowKit.
+
+Docker (Recommended)
+--------------------
+
+For the quickest setup, you only need Docker:
+
+* Docker Desktop for Mac/Windows
+* Docker Engine for Linux
+
+For Development
+---------------
+
+If you want to develop or customize FlowKit, you'll need:
+
+**Go Language**
 
 FlowKit requires Go version 1.21 or higher.
 
@@ -46,7 +60,7 @@ FlowKit requires Go version 1.21 or higher.
 
       Follow these steps to install Go on Windows:
 
-      1. Download the Go installer from the official website: `Go Downloads <https://golang.org/dl/>`_.
+      1. Download the Go installer from the official website: `Go Downloads <https://go.dev/dl/>`_.
       2. Run the installer executable and follow the on-screen instructions.
       3. Once the installation is complete, open a new Command Prompt and verify the installation by running the command:
 
@@ -54,10 +68,9 @@ FlowKit requires Go version 1.21 or higher.
 
         go version
 
-2. Install Git
---------------
+**Git (Optional)**
 
-Git is required to clone the FlowKit repository from GitHub.
+Only needed if cloning the repository:
 
 .. tab-set::
 

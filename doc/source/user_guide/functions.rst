@@ -1,153 +1,79 @@
-Functions
-=========
+Functions Overview
+==================
 
-FlowKit provides dynamic function execution through a gRPC interface. Functions are organized by category and can be discovered at runtime.
+FlowKit is an external function repository for the AALI agent platform. It provides ready-to-use functions that can be dynamically discovered and executed through a gRPC interface.
 
-Function Discovery
-------------------
+.. warning::
+   FlowKit is **not meant to be used standalone**. It should be used through the AALI API client. The direct usage examples provided in this documentation are for testing and understanding purposes only.
 
-Use ``ListFunctions`` to discover available functions dynamically:
+.. note::
+   For installation instructions, see :doc:`../getting_started/installation`.
+
+Functions are organized into categories, each serving a specific purpose in building workflows. Categories include various utility functions, integrations, and domain-specific operations.
+
+.. important::
+   Use ``ListFunctions`` to discover all available functions and their categories. The exact categories and their contents may vary based on your FlowKit configuration.
+
+Discovering Functions
+---------------------
+
+Always use ``ListFunctions`` to discover available functions dynamically:
+
+**Python Example:**
+
+.. code-block:: python
+
+   import grpc
+   import flowkit_pb2
+   import flowkit_pb2_grpc
+
+   # Connect to FlowKit
+   channel = grpc.insecure_channel('localhost:50051')
+   stub = flowkit_pb2_grpc.FlowKitStub(channel)
+
+   # List all functions
+   response = stub.ListFunctions(flowkit_pb2.ListFunctionsRequest())
+
+   # Browse by category
+   for name, definition in response.functions.items():
+       print(f"{definition.category}: {name}")
+
+**Go Example:**
 
 .. code-block:: go
 
-   import (
-       "context"
-       "fmt"
-       "google.golang.org/grpc"
-       "google.golang.org/grpc/credentials/insecure"
-       "google.golang.org/grpc/metadata"
-       pb "github.com/ansys/aali-sharedtypes/pkg/aaliflowkitgrpc"
-   )
+   import pb "github.com/ansys/aali-sharedtypes/pkg/aaliflowkitgrpc"
 
-   // Connect to FlowKit
-   conn, _ := grpc.Dial("localhost:50051",
-       grpc.WithTransportCredentials(insecure.NewCredentials()))
-   client := pb.NewExternalFunctionsClient(conn)
+   // List all functions
+   response, err := client.ListFunctions(ctx, &pb.ListFunctionsRequest{})
 
-   // Add authentication
-   ctx := metadata.AppendToOutgoingContext(context.Background(), "x-api-key", "your-api-key")
-
-   // List all available functions
-   response, _ := client.ListFunctions(ctx, &pb.ListFunctionsRequest{})
-
-   // Print function names
-   for name, definition := range response.Functions {
-       fmt.Printf("Function: %s - %s\n", name, definition.Description)
+   // Browse functions
+   for name, def := range response.Functions {
+       fmt.Printf("%s: %s\n", def.Category, name)
    }
 
-This approach prevents hardcoded function lists and ensures you always have access to the latest available functions.
-
-Function Categories
+Basic Usage Example
 -------------------
 
-FlowKit organizes functions by their purpose:
+Here's how to call a simple function:
 
-**llm handler**
-   Execute language model requests and stream responses. Includes functions for embeddings, general chat, and code generation.
+.. code-block:: python
 
-**knowledge db**
-   Interact with vector and graph databases for similarity search, data retrieval, and dependency tracking.
+   # Call GenerateUUID function
+   response = stub.RunFunction(flowkit_pb2.RunFunctionRequest(
+       function_name="GenerateUUID",
+       inputs={}
+   ))
 
-**ansys gpt**
-   Specialized functions for ANSYS GPT integration including query processing, semantic search, and context building.
+   # Get the result
+   uuid = response.outputs["result"]
+   print(f"Generated UUID: {uuid}")
 
-**data extraction**
-   Process and extract data from various sources including GitHub repositories, local files, and documents.
+.. note::
+   All function inputs and outputs are strings. Complex data structures must be JSON-encoded.
 
-**generic**
-   Provide common operations like UUID generation, string manipulation, JSON processing, and REST API calls.
+Next Steps
+----------
 
-**code generation**
-   Support code generation workflows with element loading, example management, and user guide integration.
-
-**ansys mesh pilot**
-   Enable mesh-related operations including path descriptions, action synthesis, and problem-solving workflows.
-
-**qdrant**
-   Direct integration with Qdrant vector database for collection management and data insertion.
-
-**auth**
-   Handle authentication flows, API key validation, token management, and user access control.
-
-**MCP**
-   Enable Model Context Protocol features for dynamic tool discovery and AI agent integration.
-
-**materials**
-   Process material-related requests with attribute extraction and response serialization.
-
-**rhsc**
-   Support Red Hat Service Catalog operations with request body generation.
-
-Each category contains multiple specialized functions designed for specific workflows within AALI.
-
-Calling Functions
------------------
-
-Execute functions using ``RunFunction`` with the function name and inputs:
-
-.. code-block:: go
-
-   // Execute a simple function
-   response, err := client.RunFunction(ctx, &pb.FunctionInputs{
-       Name: "GenerateUUID",
-       Inputs: []*pb.FunctionInput{},
-   })
-   if err != nil {
-       log.Fatal(err)
-   }
-
-   // Print the UUID (without hyphens)
-   for _, output := range response.Outputs {
-       fmt.Printf("UUID: %s\n", output.Value)
-       // Output: 550e8400e29b41d4a716446655440000
-   }
-
-For functions requiring parameters:
-
-.. code-block:: go
-
-   // Execute function with inputs
-   response, err := client.RunFunction(ctx, &pb.FunctionInputs{
-       Name: "StringConcat",
-       Inputs: []*pb.FunctionInput{
-           {Name: "a", Value: "Hello"},
-           {Name: "b", Value: "World"},
-           {Name: "separator", Value: " "},
-       },
-   })
-
-   // Output: "Hello World"
-
-**Streaming Functions**
-
-For real-time responses, use ``StreamFunction``:
-
-.. code-block:: go
-
-   // Stream function for real-time responses
-   stream, err := client.StreamFunction(ctx, &pb.FunctionInputs{
-       Name: "PerformGeneralRequest",
-       Inputs: []*pb.FunctionInput{
-           {Name: "prompt", Value: "Explain quantum computing"},
-           {Name: "stream", Value: "true"},
-       },
-   })
-
-   // Handle streaming responses
-   for {
-       response, err := stream.Recv()
-       if err == io.EOF {
-           break
-       }
-       // Process each response chunk
-       fmt.Print(response.Outputs[0].Value)
-   }
-
-This is particularly useful for LLM responses and long-running operations.
-
-What's Next?
-------------
-
-- **Get started immediately** → :doc:`quickstart`
-- **Learn about FlowKit integration** → :doc:`integration`
-- **Detailed client examples** → :doc:`connect`
+- Add your own functions → :doc:`adding_functions`
+- Explore the API Reference for detailed function signatures

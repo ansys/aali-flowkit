@@ -205,6 +205,8 @@ type AnsysGPTRetrieverModuleRequest struct {
 	UserInput     string `json:"user_input"`
 	DataSource    string `json:"data_source"`
 	FilterPhysics string `json:"filter_physics"`
+	FilterVersion string `json:"filter_version,omitempty"`
+	FilterProduct string `json:"filter_product,omitempty"`
 	NumDocs       int    `json:"num_docs"`
 	Platform      string `json:"platform"`
 }

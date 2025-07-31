@@ -23,15 +23,19 @@
 package externalfunctions
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/ansys/aali-sharedtypes/pkg/config"
 	"github.com/ansys/aali-sharedtypes/pkg/logging"
 	"github.com/ansys/aali-sharedtypes/pkg/sharedtypes"
+	"github.com/google/uuid"
 )
 
 type Response struct {
@@ -43,27 +47,85 @@ type LlmCriteria struct {
 	Criteria []sharedtypes.MaterialLlmCriterion
 }
 
+// StartTrace generates a new trace ID and span ID for tracing
+//
+// Tags:
+//   - @displayName: Start new trace
+//
+// Parameters:
+//   - str: a string
+//
+// Returns:
+//   - traceID: a 128-bit trace ID in decimal format
+//   - spanID: a 64-bit span ID in decimal format
+func StartTrace() (traceID string, spanID string) {
+	traceID = generateTraceID()
+	spanID = generateSpanID()
+	ctx := &logging.ContextMap{}
+	ctx.Set(logging.ContextKey("dd.trace_idVisible"), traceID)
+	ctx.Set(logging.ContextKey("dd.span_idVisible"), spanID)
+	logging.Log.Infof(ctx, "Starting new trace with trace ID: %s and span ID: %s", traceID, spanID)
+
+	return traceID, spanID
+}
+
+// generateTraceID generates a 128-bit trace ID in decimal format
+func generateTraceID() string {
+	id := uuid.New()
+	traceID := new(big.Int).SetBytes(id[:])
+	return traceID.String()
+}
+
+// generateSpanID generates a 64-bit span ID in decimal format
+func generateSpanID() string {
+	id := uuid.New()
+
+	// Take first 64 bits
+	spanID := binary.BigEndian.Uint64(id[:8])
+	return strconv.FormatUint(spanID, 10)
+}
+
+func CreateChildSpan(ctx *logging.ContextMap, traceID string, parentSpanID string) (childSpanID string) {
+	// Generate a new span ID for the child
+	childSpanID = generateSpanID()
+
+	// Update the context with trace and span information
+	ctx.Set(logging.ContextKey("dd.trace_idVisible"), traceID)
+	ctx.Set(logging.ContextKey("dd.span_idVisible"), childSpanID)
+	ctx.Set(logging.ContextKey("dd.parent_idVisible"), parentSpanID)
+
+	logging.Log.Infof(ctx, "Starting child span with trace ID: %s, span ID: %s, and parent span ID: %s", traceID, childSpanID, parentSpanID)
+
+	return childSpanID
+}
+
 // SerializeResponse formats the criteria to a response suitable for the UI clients in string format
 //
 // Tags:
 //   - @displayName: Serialize response for clients
 //
 // Parameters:
-//   - criteriaSuggestions: the list of criteria with their identities
 //   - tokens: tokens consumed by the request
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
 //
 // Returns:
 //   - result: string representation of the response in JSON format
-func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, tokens int) (result string) {
+//   - childSpanID: the child span ID created for this operation
+func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, tokens int, traceID string, spanID string) (result string, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
 	response := Response{Criteria: criteriaSuggestions, Tokens: tokens}
 
 	responseJson, err := json.Marshal(response)
 	if err != nil {
-		logging.Log.Debugf(&logging.ContextMap{}, "Failed to serialize suggested criteria into json: %v", err)
+		logging.Log.Debugf(ctx, "Failed to serialize suggested criteria into json: %v", err)
 		panic("Failed to serialize suggested criteria into json")
 	}
 
-	return string(responseJson)
+	logging.Log.Debugf(ctx, "Serializing response with %d criteria. Response: %+v", len(criteriaSuggestions), response)
+	return string(responseJson), childSpanID
 }
 
 // AddGuidsToAttributes adds GUIDs to the attributes in the criteria
@@ -74,10 +136,16 @@ func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGu
 // Parameters:
 //   - criteriaSuggestions: the list of criteria without identities
 //   - availableAttributes: the list of available attributes with their identities
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
 //
 // Returns:
 //   - criteriaWithGuids: the list of criteria with their identities
-func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute) (criteriaWithGuids []sharedtypes.MaterialCriterionWithGuid) {
+//   - childSpanID: the child span ID created for this operation
+func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute, traceID string, spanID string) (criteriaWithGuids []sharedtypes.MaterialCriterionWithGuid, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
 	attributeMap := make(map[string]string)
 	for _, attr := range availableAttributes {
 		attributeMap[strings.ToLower(attr.Name)] = attr.Guid
@@ -88,8 +156,8 @@ func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion
 		guid, exists := attributeMap[lowerAttrName]
 
 		if !exists {
-			logging.Log.Debugf(&logging.ContextMap{}, "Could not find attribute to match: %s", lowerAttrName)
-			panic("Could not find attribute to match")
+			logging.Log.Debugf(ctx, "Could not find attribute to match: %s", lowerAttrName)
+			continue // This might have been an hallucinated attribute, skip it
 		}
 
 		criteriaWithGuids = append(criteriaWithGuids, sharedtypes.MaterialCriterionWithGuid{
@@ -100,36 +168,45 @@ func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion
 		})
 	}
 
-	return criteriaWithGuids
+	return criteriaWithGuids, childSpanID
 }
 
-// FilterOutNonExistingAttributes filters out criteria suggestions that do not match any of the available attributes based on their names
+// FilterOutNonExistingAttributes filters out criteria suggestions that do not match any of the available attributes based on their GUIDs
 //
 // Tags:
 //   - @displayName: Filter out non-existing attributes
 //
 // Parameters:
 //   - criteriaSuggestions: current list of criteria suggestions
-//   - availableAttributes: the list of available attributes
+//   - availableSearchCriteria: the list of available search criteria (GUIDs)
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
 //
 // Returns:
-//   - filtered: the list of criteria suggestions excluding those that do not match any of the available attributes
-func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute) (filtered []sharedtypes.MaterialLlmCriterion) {
-	attributeMap := make(map[string]bool)
-	for _, attr := range availableAttributes {
-		attributeMap[strings.ToLower(attr.Name)] = true
+//   - filtered: the list of criteria suggestions excluding those that do not match any of the available search criteria
+//   - childSpanID: the child span ID created for this operation
+func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, availableSearchCriteria []string, traceID string, spanID string) (filtered []sharedtypes.MaterialCriterionWithGuid, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
+	attributeGuidMap := make(map[string]bool)
+	for _, attr := range availableSearchCriteria {
+		attributeGuidMap[strings.ToLower(attr)] = true
 	}
 
-	var filteredCriteria []sharedtypes.MaterialLlmCriterion
+	var filteredCriteria []sharedtypes.MaterialCriterionWithGuid
 	for _, suggestion := range criteriaSuggestions {
-		if attributeMap[strings.ToLower(suggestion.AttributeName)] {
+		if attributeGuidMap[strings.ToLower(suggestion.AttributeGuid)] {
 			filteredCriteria = append(filteredCriteria, suggestion)
 		} else {
-			logging.Log.Debugf(&logging.ContextMap{}, "Filtered out non existing attribute: %s", suggestion.AttributeName)
+			logging.Log.Debugf(ctx, "Filtered out non existing attribute: %s", suggestion.AttributeName)
 		}
 	}
 
-	return filteredCriteria
+	logging.Log.Debugf(ctx, "Filtered out %d non-existing attributes from %d suggestions", len(criteriaSuggestions)-len(filteredCriteria), len(criteriaSuggestions))
+	logging.Log.Debugf(ctx, "Remaining %d criteria suggestions: %+v", len(filteredCriteria), filteredCriteria)
+
+	return filteredCriteria, childSpanID
 }
 
 // FilterOutDuplicateAttributes filters out duplicate attributes from the criteria suggestions based on their names
@@ -139,10 +216,16 @@ func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialLl
 //
 // Parameters:
 //   - criteriaSuggestions: current list of criteria suggestions
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
 //
 // Returns:
 //   - filtered: the list of criteria suggestions excluding duplicates based on attribute names
-func FilterOutDuplicateAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion) (filtered []sharedtypes.MaterialLlmCriterion) {
+//   - childSpanID: the child span ID created for this operation
+func FilterOutDuplicateAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, traceID string, spanID string) (filtered []sharedtypes.MaterialLlmCriterion, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
 	seen := make(map[string]bool)
 
 	for _, suggestion := range criteriaSuggestions {
@@ -153,7 +236,7 @@ func FilterOutDuplicateAttributes(criteriaSuggestions []sharedtypes.MaterialLlmC
 		}
 	}
 
-	return filtered
+	return filtered, childSpanID
 }
 
 // ExtractCriteriaSuggestions extracts criteria suggestions from the LLM response text
@@ -163,31 +246,37 @@ func FilterOutDuplicateAttributes(criteriaSuggestions []sharedtypes.MaterialLlmC
 //
 // Parameters:
 //   - llmResponse: the text response from the LLM containing JSON with criteria suggestions
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
 //
 // Returns:
 //   - criteriaSuggestions: the list of criteria suggestions extracted from the LLM response
-func ExtractCriteriaSuggestions(llmResponse string) (criteriaSuggestions []sharedtypes.MaterialLlmCriterion) {
-	criteriaText := ExtractJson(llmResponse)
+//   - childSpanID: the child span ID created for this operation
+func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID string) (criteriaSuggestions []sharedtypes.MaterialLlmCriterion, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
+	criteriaText, _ := ExtractJson(llmResponse, traceID, spanID)
 	if criteriaText == "" {
-		logging.Log.Debugf(&logging.ContextMap{}, "No valid JSON found in LLM response: %s", llmResponse)
-		return nil
+		logging.Log.Debugf(ctx, "No valid JSON found in LLM response: %s", llmResponse)
+		return nil, childSpanID
 	}
 
-	logging.Log.Debugf(&logging.ContextMap{}, "Attempting to parse JSON:\n%s", criteriaText)
+	logging.Log.Debugf(ctx, "Attempting to parse JSON:\n%s", criteriaText)
 
 	var criteria LlmCriteria
 	err := json.Unmarshal([]byte(criteriaText), &criteria)
 	if err != nil {
-		logging.Log.Debugf(&logging.ContextMap{}, "Failed to deserialize criteria JSON from LLM response: %v; Raw JSON: %s", err, criteriaText)
-		return nil
+		logging.Log.Debugf(ctx, "Failed to deserialize criteria JSON from LLM response: %v; Raw JSON: %s", err, criteriaText)
+		return nil, childSpanID
 	}
 
 	if len(criteria.Criteria) == 0 {
-		logging.Log.Debugf(&logging.ContextMap{}, "Deserialized JSON successfully but found 0 criteria. Object: %+v", criteria)
+		logging.Log.Debugf(ctx, "Deserialized JSON successfully but found 0 criteria. Object: %+v", criteria)
 	} else {
-		logging.Log.Debugf(&logging.ContextMap{}, "Successfully extracted %d criteria.", len(criteria.Criteria))
+		logging.Log.Debugf(ctx, "Successfully extracted %d criteria.", len(criteria.Criteria))
 	}
-	return criteria.Criteria
+	return criteria.Criteria, childSpanID
 }
 
 // PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput performs multiple general LLM requests
@@ -204,11 +293,17 @@ func ExtractCriteriaSuggestions(llmResponse string) (criteriaSuggestions []share
 //   - modelIds: the model IDs of the LLMs to query
 //   - tokenCountModelName: the model name used for token count calculation
 //   - n: number of parallel requests to perform
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
 //
 // Returns:
 //   - uniqueCriterion: a deduplicated list of extracted attributes (criteria) from all responses
 //   - tokenCount: the total token count (input tokens × n + combined output tokens)
-func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string, n int) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int) {
+//   - childSpanID: the child span ID created for this operation
+func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string, n int, traceID string, spanID string) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Helper function to send a request and get the response as string
@@ -229,44 +324,46 @@ func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(inp
 		return responseStr
 	}
 
-	logging.Log.Debugf(&logging.ContextMap{}, "System prompt: %s", systemPrompt)
+	logging.Log.Debugf(ctx, "System prompt: %s", systemPrompt)
 
-	// Collect all responses
-	allResponses := runRequestsInParallel(n, sendRequest)
+	// Collect all responses with child span for parallel execution
+	allResponses := runRequestsInParallel(n, sendRequest, traceID, childSpanID)
 
+	// Extract criteria from all responses with child span
 	var allCriteria []sharedtypes.MaterialLlmCriterion
 	for _, response := range allResponses {
-		criteria := ExtractCriteriaSuggestions(response)
+		criteria, _ := ExtractCriteriaSuggestions(response, traceID, childSpanID)
 		if criteria != nil {
 			allCriteria = append(allCriteria, criteria...)
 		}
 	}
 
 	// get input token count
-	inputTokenCount := getTokenCount(tokenCountModelName, input)
+	inputTokenCount, _ := getTokenCount(tokenCountModelName, input, traceID, childSpanID)
+	promptTokenCount, _ := getTokenCount(tokenCountModelName, systemPrompt, traceID, childSpanID)
 
 	// get the output token count
-	var combinedResponseText string
-	for _, response := range allResponses {
-		combinedResponseText += response
-	}
-	outputTokenCount := getTokenCount(tokenCountModelName, combinedResponseText)
+	combinedResponseText := strings.Join(allResponses, "\n")
+	outputTokenCount, _ := getTokenCount(tokenCountModelName, combinedResponseText, traceID, childSpanID)
 
-	var totalTokenCount = inputTokenCount*n + outputTokenCount
-	logging.Log.Debugf(&logging.ContextMap{}, "Total token count: %d", totalTokenCount)
+	var totalTokenCount = (promptTokenCount+inputTokenCount)*n + outputTokenCount
+	logging.Log.Debugf(ctx, "Output token count: %d", outputTokenCount)
+	logging.Log.Debugf(ctx, "Total token count: %d", totalTokenCount)
 
 	if len(allCriteria) == 0 {
-		logging.Log.Debugf(&logging.ContextMap{}, "No valid criteria found in any response")
-		return []sharedtypes.MaterialLlmCriterion{}, outputTokenCount
+		logging.Log.Debugf(ctx, "No valid criteria found in any response")
+		return []sharedtypes.MaterialLlmCriterion{}, outputTokenCount, childSpanID
 	}
 
 	// Only return unique duplicates
-	uniqueCriterion = FilterOutDuplicateAttributes(allCriteria)
+	uniqueCriterion, _ = FilterOutDuplicateAttributes(allCriteria, traceID, childSpanID)
 
-	return uniqueCriterion, totalTokenCount
+	return uniqueCriterion, totalTokenCount, childSpanID
 }
 
-func runRequestsInParallel(n int, sendRequest func() string) []string {
+func runRequestsInParallel(n int, sendRequest func() string, traceID string, spanID string) []string {
+	ctx := &logging.ContextMap{}
+	_ = CreateChildSpan(ctx, traceID, spanID)
 	responseChan := make(chan string, n)
 	var wg sync.WaitGroup
 
@@ -276,7 +373,7 @@ func runRequestsInParallel(n int, sendRequest func() string) []string {
 			defer wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
-					logging.Log.Errorf(&logging.ContextMap{}, "Recovered from panic in LLM request: %v", r)
+					logging.Log.Errorf(ctx, "Recovered from panic in LLM request: %v", r)
 				}
 			}()
 			response := sendRequest()
@@ -291,30 +388,52 @@ func runRequestsInParallel(n int, sendRequest func() string) []string {
 
 	var allResponses []string
 	for response := range responseChan {
-		logging.Log.Debugf(&logging.ContextMap{}, "Raw LLM response: %s", response)
+		logging.Log.Debugf(ctx, "Raw LLM response: %s", response)
 		allResponses = append(allResponses, response)
 	}
 	return allResponses
 }
 
-func getTokenCount(modelName, text string) int {
-	count, err := openAiTokenCount(modelName, text)
+// getTokenCount gets the token count for the given text using the specified model
+//
+// Parameters:
+//   - modelName: the model name used for token count calculation
+//   - text: the text to count tokens for
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
+//
+// Returns:
+//   - count: the token count
+//   - childSpanID: the child span ID created for this operation
+func getTokenCount(modelName, text string, traceID string, spanID string) (count int, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
+	logging.Log.Debugf(ctx, "Getting token count for model: %s", modelName)
+
+	tokenCount, err := openAiTokenCount(modelName, text)
 	if err != nil {
+		logging.Log.Errorf(ctx, "Error getting token count: %v", err)
 		errorMessage := fmt.Sprintf("Error getting output token count: %v", err)
 		panic(errorMessage)
 	}
-	return count
+
+	logging.Log.Debugf(ctx, "Token count: %d", tokenCount)
+	return tokenCount, childSpanID
 }
 
-func ExtractJson(text string) (json string) {
+func ExtractJson(text string, traceID string, spanID string) (json string, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
 	re := regexp.MustCompile("{[\\s\\S]*}")
 	matches := re.FindStringSubmatch(text)
 	if len(matches) >= 1 {
-		return strings.TrimSpace(matches[0])
+		return strings.TrimSpace(matches[0]), childSpanID
 	}
 
-	logging.Log.Debugf(&logging.ContextMap{}, "No valid JSON found in response %s", text)
-	return ""
+	logging.Log.Debugf(ctx, "No valid JSON found in response %s", text)
+	return "", childSpanID
 }
 
 // LogRequestSuccess writes a .Info log entry indicating that a request was completed successfully.
@@ -323,13 +442,17 @@ func ExtractJson(text string) (json string) {
 //   - @displayName: Log request success
 //
 // Parameters:
-//   - none
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
 //
 // Returns:
-//   - none
-func LogRequestSuccess() {
-	logging.Log.Infof(&logging.ContextMap{}, "Request successful")
-	return
+//   - childSpanID: the child span ID created for this operation
+func LogRequestSuccess(traceID string, spanID string) (childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
+	logging.Log.Infof(ctx, "Request successful")
+	return childSpanID
 }
 
 // LogRequestFailed writes a .Info log entry indicating that a request was not completed successfully.
@@ -338,13 +461,17 @@ func LogRequestSuccess() {
 //   - @displayName: Log request failed
 //
 // Parameters:
-//   - none
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
 //
 // Returns:
-//   - none
-func LogRequestFailed() {
-	logging.Log.Infof(&logging.ContextMap{}, "Request failed")
-	return
+//   - childSpanID: the child span ID created for this operation
+func LogRequestFailed(traceID string, spanID string) (childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
+	logging.Log.Infof(ctx, "Request failed")
+	return childSpanID
 }
 
 // LogRequestFailedDebugWithMessage writes a .Debug log entry indicating that a request was not completed successfully with additional message.
@@ -355,12 +482,17 @@ func LogRequestFailed() {
 // Parameters:
 //   - msg1: the first part of the debug message
 //   - msg2: the second part of the debug message
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
 //
 // Returns:
-//   - none
-func LogRequestFailedDebugWithMessage(msg1, msg2 string) {
-	logging.Log.Debugf(&logging.ContextMap{}, "Request failed:%s %s", msg1, msg2)
-	return
+//   - childSpanID: the child span ID created for this operation
+func LogRequestFailedDebugWithMessage(msg1, msg2 string, traceID string, spanID string) (childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
+	logging.Log.Debugf(ctx, "Request failed:%s %s", msg1, msg2)
+	return childSpanID
 }
 
 // CheckApiKeyAuthKvDb checks if the provided API key is authenticated against the KVDB.
@@ -369,44 +501,50 @@ func LogRequestFailedDebugWithMessage(msg1, msg2 string) {
 //   - @displayName: Verify API Key
 //
 // Parameters:
+//   - kvdbEndpoint: the KVDB endpoint
 //   - apiKey: The API key to check
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
 //
 // Returns:
 //   - isAuthenticated: true if the API key is authenticated, false otherwise
-func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string) (isAuthenticated bool) {
+//   - childSpanID: the child span ID created for this operation
+func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spanID string) (isAuthenticated bool, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	// Check if the API key is empty
 	if apiKey == "" {
-		logging.Log.Warnf(&logging.ContextMap{}, "API key is empty")
-		return false
+		logging.Log.Warnf(ctx, "API key is empty")
+		return false, childSpanID
 	}
 
 	// Check if the API key exists in the KVDB
 	jsonString, exists, err := kvdbGetEntry(kvdbEndpoint, apiKey)
 	if err != nil {
-		logging.Log.Errorf(&logging.ContextMap{}, "Error in getting API key from KVDB: %v", err)
+		logging.Log.Errorf(ctx, "Error in getting API key from KVDB: %v", err)
 		panic(err)
 	}
 	if !exists {
-		logging.Log.Warnf(&logging.ContextMap{}, "API key does not exist in KVDB: %s", apiKey)
-		return false
+		logging.Log.Warnf(ctx, "API key does not exist in KVDB: %s", apiKey)
+		return false, childSpanID
 	}
 
 	// Unmarshal the JSON string into materials customer object
 	var customer materialsCustomerObject
 	err = json.Unmarshal([]byte(jsonString), &customer)
 	if err != nil {
-		logging.Log.Errorf(&logging.ContextMap{}, "Error unmarshalling JSON string: %v", err)
+		logging.Log.Errorf(ctx, "Error unmarshalling JSON string: %v", err)
 		panic(err)
 	}
 
 	// Check if customer is denied access
 	if customer.AccessDenied {
-		logging.Log.Warnf(&logging.ContextMap{}, "Access denied for customer: %s", customer.CustomerName)
-		return false
+		logging.Log.Warnf(ctx, "Access denied for customer: %s", customer.CustomerName)
+		return false, childSpanID
 	}
 
-	return true
+	return true, childSpanID
 }
 
 // UpdateTotalTokenCountForCustomerKvDb updates the total token count for a customer in the KVDB
@@ -415,26 +553,33 @@ func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string) (isAuthenticated bo
 //   - @displayName: Update Customer Token Count
 //
 // Parameters:
+//   - kvdbEndpoint: the KVDB endpoint
 //   - apiKey: The API key of the customer
 //   - additionalTokenCount: The number of tokens to add to the customer's total token count
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
 //
 // Returns:
 //   - tokenLimitReached: true if the new total token count exceeds the customer's token limit, false otherwise
-func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, additionalTokenCount int) (tokenLimitReached bool) {
+//   - childSpanID: the child span ID created for this operation
+func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, additionalTokenCount int, traceID string, spanID string) (tokenLimitReached bool, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
 	// Check if the API key is empty
 	if apiKey == "" {
-		logging.Log.Errorf(&logging.ContextMap{}, "API key is empty")
+		logging.Log.Errorf(ctx, "API key is empty")
 		panic("API key is empty")
 	}
 
 	// Get the current token count for the customer
 	jsonString, exists, err := kvdbGetEntry(kvdbEndpoint, apiKey)
 	if err != nil {
-		logging.Log.Errorf(&logging.ContextMap{}, "Error getting customer object: %v", err)
+		logging.Log.Errorf(ctx, "Error getting customer object: %v", err)
 		panic(err)
 	}
 	if !exists {
-		logging.Log.Errorf(&logging.ContextMap{}, "API key does not exist in KVDB: %s", apiKey)
+		logging.Log.Errorf(ctx, "API key does not exist in KVDB: %s", apiKey)
 		panic("API key does not exist in KVDB")
 	}
 
@@ -442,7 +587,7 @@ func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, ad
 	var customer materialsCustomerObject
 	err = json.Unmarshal([]byte(jsonString), &customer)
 	if err != nil {
-		logging.Log.Errorf(&logging.ContextMap{}, "Error unmarshalling JSON string: %v", err)
+		logging.Log.Errorf(ctx, "Error unmarshalling JSON string: %v", err)
 		panic(err)
 	}
 
@@ -452,23 +597,23 @@ func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, ad
 	// create json string from customer object
 	newJsonString, err := json.Marshal(customer)
 	if err != nil {
-		logging.Log.Errorf(&logging.ContextMap{}, "Error marshalling updated customer object: %v", err)
+		logging.Log.Errorf(ctx, "Error marshalling updated customer object: %v", err)
 		panic(err)
 	}
 
 	// Update the KVDB with the new JSON string
 	err = kvdbSetEntry(kvdbEndpoint, apiKey, string(newJsonString))
 	if err != nil {
-		logging.Log.Errorf(&logging.ContextMap{}, "Error updating customer token count in KVDB: %v", err)
+		logging.Log.Errorf(ctx, "Error updating customer token count in KVDB: %v", err)
 		panic(err)
 	}
 
 	// Check if the new token count exceeds the limit
 	if customer.TotalTokenCount > customer.TokenLimit {
-		return true
+		return true, childSpanID
 	}
 
-	return false
+	return false, childSpanID
 }
 
 // DenyCustomerAccessAndSendWarningKvDb denies access to a customer and sends a warning if not already sent
@@ -477,26 +622,33 @@ func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, ad
 //   - @displayName: Deny Customer Access and Send Warning
 //
 // Parameters:
+//   - kvdbEndpoint: the KVDB endpoint
 //   - apiKey: The API key of the customer
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
 //
 // Returns:
 //   - customerName: The name of the customer
 //   - sendWarning: true if a warning was sent, false if it was already sent
-func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string) (customerName string, sendWarning bool) {
+//   - childSpanID: the child span ID created for this operation
+func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string, traceID string, spanID string) (customerName string, sendWarning bool, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
 	// Check if the API key is empty
 	if apiKey == "" {
-		logging.Log.Errorf(&logging.ContextMap{}, "API key is empty")
+		logging.Log.Errorf(ctx, "API key is empty")
 		panic("API key is empty")
 	}
 
 	// Get the current customer object from KVDB
 	jsonString, exists, err := kvdbGetEntry(kvdbEndpoint, apiKey)
 	if err != nil {
-		logging.Log.Errorf(&logging.ContextMap{}, "Error getting customer object: %v", err)
+		logging.Log.Errorf(ctx, "Error getting customer object: %v", err)
 		panic(err)
 	}
 	if !exists {
-		logging.Log.Errorf(&logging.ContextMap{}, "API key does not exist in KVDB: %s", apiKey)
+		logging.Log.Errorf(ctx, "API key does not exist in KVDB: %s", apiKey)
 		panic("API key does not exist in KVDB")
 	}
 
@@ -504,7 +656,7 @@ func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string) (c
 	var customer materialsCustomerObject
 	err = json.Unmarshal([]byte(jsonString), &customer)
 	if err != nil {
-		logging.Log.Errorf(&logging.ContextMap{}, "Error unmarshalling JSON string: %v", err)
+		logging.Log.Errorf(ctx, "Error unmarshalling JSON string: %v", err)
 		panic(err)
 	}
 
@@ -520,16 +672,99 @@ func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string) (c
 	// create json string from customer object
 	newJsonString, err := json.Marshal(customer)
 	if err != nil {
-		logging.Log.Errorf(&logging.ContextMap{}, "Error marshalling updated customer object: %v", err)
+		logging.Log.Errorf(ctx, "Error marshalling updated customer object: %v", err)
 		panic(err)
 	}
 
 	// Update the KVDB with the new JSON string
 	err = kvdbSetEntry(kvdbEndpoint, apiKey, string(newJsonString))
 	if err != nil {
-		logging.Log.Errorf(&logging.ContextMap{}, "Error updating customer access in KVDB: %v", err)
+		logging.Log.Errorf(ctx, "Error updating customer access in KVDB: %v", err)
 		panic(err)
 	}
 
-	return customer.CustomerName, sendWarning
+	return customer.CustomerName, sendWarning, childSpanID
+}
+
+// ExtractDesignRequirementsAndSearchCriteria parses the user input JSON and returns the design requirements string
+// and the list of available search criteria GUIDs.
+//
+// Tags:
+//   - @displayName: Extract Design Requirements and Search Criteria
+//
+// Parameters:
+//   - userInput: the user input JSON string
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
+//
+// Returns:
+//   - designRequirements: the extracted design requirements string
+//   - availableSearchCriteria: the extracted list of attribute GUIDs
+//   - childSpanID: the child span ID created for this operation
+func ExtractDesignRequirementsAndSearchCriteria(userInput string, traceID string, spanID string) (designRequirements string, availableSearchCriteria []string, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
+	type promptInput struct {
+		UserDesignRequirements  string   `json:"userDesignRequirements"`
+		AvailableSearchCriteria []string `json:"availableSearchCriteria"`
+	}
+
+	var input promptInput
+	if err := json.Unmarshal([]byte(userInput), &input); err != nil {
+		logging.Log.Debugf(ctx, "Failed to parse user input: %v", err)
+		panic("failed to parse user input: " + err.Error())
+	}
+
+	logging.Log.Debugf(ctx, "Successfully extracted design requirements and %d search criteria", len(input.AvailableSearchCriteria))
+	return input.UserDesignRequirements, input.AvailableSearchCriteria, childSpanID
+}
+
+// AddAvailableAttributesToSystemPrompt adds available attributes to the system prompt template.
+//
+// Tags:
+//   - @displayName: Add Available Attributes to System Prompt
+//
+// Parameters:
+//   - userDesignRequirements: design requirements provided by the user
+//   - systemPromptTemplate: the prompt template string to modify
+//   - allAvailableAttributes: the list of all available attributes
+//   - availableSearchCriteria: the list of available search criteria (GUIDs)
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
+//
+// Returns:
+//   - fullSystemPrompt: the full system prompt to send to the LLM, including available attributes
+//   - childSpanID: the child span ID created for this operation
+func AddAvailableAttributesToSystemPrompt(userDesignRequirements string, systemPromptTemplate string, allAvailableAttributes []sharedtypes.MaterialAttribute, availableSearchCriteria []string, traceID string, spanID string) (fullSystemPrompt string, childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
+	// 1) Filter allAvailableAttributes using availableSearchCriteria (GUIDs)
+	guidSet := make(map[string]struct{}, len(availableSearchCriteria))
+	for _, guid := range availableSearchCriteria {
+		guidSet[guid] = struct{}{}
+	}
+	var filteredAttributes []sharedtypes.MaterialAttribute
+	for _, attr := range allAvailableAttributes {
+		if _, ok := guidSet[attr.Guid]; ok {
+			filteredAttributes = append(filteredAttributes, attr)
+		}
+	}
+
+	logging.Log.Debugf(ctx, "Filtered %d attributes from %d total attributes using %d search criteria",
+		len(filteredAttributes), len(allAvailableAttributes), len(availableSearchCriteria))
+
+	// 2) Extract names and create newline-separated list
+	var attributeNames []string
+	for _, attr := range filteredAttributes {
+		attributeNames = append(attributeNames, attr.Name)
+	}
+	attributesList := strings.Join(attributeNames, "\n")
+
+	// 3) Replace ***ATTRIBUTES*** with this serialized attributes JSON
+	fullSystemPrompt = strings.Replace(systemPromptTemplate, "***ATTRIBUTES***", attributesList, 1)
+
+	logging.Log.Debugf(ctx, "Successfully created system prompt with %d attributes", len(filteredAttributes))
+	return fullSystemPrompt, childSpanID
 }

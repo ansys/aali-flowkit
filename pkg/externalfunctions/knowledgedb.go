@@ -185,7 +185,7 @@ func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[ui
 				}
 				// fmt.Printf("Result #%d (CodeGenerationElement) Summary: '%s' DocumentName: '%s' Text: '%s'\n", i, dbResponse.Summary, dbResponse.DocumentName, dbResponse.Text)
 			}
-		} 
+		}
 		// else {
 		// 	// Standard DbResponse conversion for document collections
 		// 	fmt.Printf("Result #%d (DbResponse) Summary: '%s' DocumentName: '%s' Text: '%s'\n", i, dbResponse.Summary, dbResponse.DocumentName, dbResponse.Text)

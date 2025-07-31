@@ -154,6 +154,15 @@ Use JSON strings to pass complex types:
 
    3. Update the UI constants in ``aali-agent-configurator`` if the type should be available in the UI
 
+   **After registering your custom types:**
+
+   1. Merge your changes to the main branch in both ``aali-sharedtypes`` and ``aali-agent`` repositories
+   2. Import the newest version of ``aali-sharedtypes`` in both FlowKit and the Agent
+   3. The AALI Agent handles all type conversion and keeps track of variable values throughout workflow execution
+   4. If a new variable type is not imported in the Agent, it cannot handle it properly
+
+   The type converters are actually called by the Agent (not FlowKit directly) to convert between string representations and actual Go types. This is why both FlowKit and the Agent must have the updated shared-types imported.
+
    Without proper registration in ``aali-sharedtypes``, your custom types will not work correctly with the FlowKit type conversion system.
 
 Tips

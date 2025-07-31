@@ -4,7 +4,7 @@ Functions Overview
 FlowKit is an external function repository for the AALI agent platform. It provides ready-to-use functions that can be dynamically discovered and executed through a gRPC interface.
 
 .. warning::
-   FlowKit is **not meant to be used standalone**. It should be used through the AALI API client. The direct usage examples provided in this documentation are for testing and understanding purposes only.
+   FlowKit is **not** designed to be a **standalone**. While you can interact with FlowKit's gRPC interface directly for testing and development, in production workflows the AALI Agent is the primary consumer that orchestrates function execution, handles type conversions, and manages workflow state.
 
 .. note::
    For installation instructions, see :doc:`../getting_started/installation`.

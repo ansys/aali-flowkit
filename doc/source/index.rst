@@ -21,7 +21,7 @@ External function repository for AALI Agent - providing a comprehensive library 
       Quick installation and setup guide.
 
       +++
-      .. button-link:: getting_started/index
+      .. button-link:: getting_started/index.html
          :color: secondary
          :expand:
          :outline:
@@ -37,7 +37,7 @@ External function repository for AALI Agent - providing a comprehensive library 
       Available functions and how to add your own.
 
       +++
-      .. button-link:: user_guide/index
+      .. button-link:: user_guide/index.html
          :color: secondary
          :expand:
          :outline:
@@ -52,7 +52,7 @@ External function repository for AALI Agent - providing a comprehensive library 
 
    .. grid-item::
 
-   .. grid-item-card:: API reference
+   .. grid-item-card:: API reference/index.html
       :text-align: center
 
       :material-regular:`code;48px`

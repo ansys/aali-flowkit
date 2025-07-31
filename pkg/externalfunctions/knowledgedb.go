@@ -100,7 +100,7 @@ func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[ui
 		}
 	} else {
 		filter = qdrant.Filter{
-			// No filter needed for elements collection - search all API definitions
+			// No filter needed for elements collection - search all definitions
 		}
 	}
 

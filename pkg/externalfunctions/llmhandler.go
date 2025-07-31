@@ -65,14 +65,9 @@ func PerformVectorEmbeddingRequestHybrid(input string) (denseVector []float32, s
 	return result.Dense, result.Sparse
 }
 
-type EmbeddingResult struct {
-	Dense  []float32
-	Sparse map[uint]float32
-}
-
 // performVectorEmbeddingRequestInternal is the internal implementation that can return both dense and sparse
 // Allows for easy code reuse between legacy and hybrid functions
-func performVectorEmbeddingRequestInternal(input string, includeSparse bool) (result EmbeddingResult) {
+func performVectorEmbeddingRequestInternal(input string, includeSparse bool) (result sharedtypes.EmbeddingResult) {
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Use hybrid embeddings if requested, otherwise use existing dense-only logic
@@ -123,7 +118,7 @@ func performVectorEmbeddingRequestInternal(input string, includeSparse bool) (re
 		break
 	}
 
-	return EmbeddingResult{Dense: denseEmbedding, Sparse: sparseEmbedding}
+	return sharedtypes.EmbeddingResult{Dense: denseEmbedding, Sparse: sparseEmbedding}
 }
 
 // PerformVectorEmbeddingRequestWithTokenLimitCatch performs a vector embedding request to LLM

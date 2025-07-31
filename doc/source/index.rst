@@ -57,7 +57,7 @@ External function repository for AALI Agent - providing a comprehensive library 
 
       :material-regular:`code;48px`
 
-      Technical details for advanced users.
+      Functions and technical details for advanced users.
 
       +++
       .. button-link:: api_reference/index

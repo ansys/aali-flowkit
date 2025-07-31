@@ -90,14 +90,18 @@ func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[ui
 		logPanic(logCtx, "unable to create qdrant client: %q", err)
 	}
 
-	// Build filter (same logic)
-	filter := qdrant.Filter{
-		Must: []*qdrant.Condition{
-			qdrant.NewMatch("level", "leaf"),
-		},
-	}
-	if keywordsSearch {
-		filter.Must = append(filter.Must, qdrant.NewMatchKeywords("keywords", keywords...))
+	var filter qdrant.Filter
+	if keywordsSearch && len(keywords) > 0 {
+		filter = qdrant.Filter{
+			Must: []*qdrant.Condition{
+				// qdrant.NewMatch("level", "leaf"), // Disabled - elements collection has no level field
+				qdrant.NewMatchKeywords("keywords", keywords...),
+			},
+		}
+	} else {
+		filter = qdrant.Filter{
+			// No filter needed for elements collection - search all API definitions
+		}
 	}
 
 	limit := uint64(similaritySearchResults)
@@ -112,14 +116,14 @@ func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[ui
 			// Dense vector search prefetch
 			{
 				Query:  qdrant.NewQueryDense(denseVector),
-				Using:  qdrant.PtrOf("dense"), // Use default (dense) vector
+				Using:  nil, // Use default (unnamed) vector
 				Filter: &filter,
 				Limit:  &limit,
 			},
 			// Sparse vector search prefetch
 			{
 				Query:  createSparseQuery(sparseVector),
-				Using:  qdrant.PtrOf("sparse"), // Use sparse vector field
+				Using:  qdrant.PtrOf("sparse_vector"), // Use sparse vector field
 				Filter: &filter,
 				Limit:  &limit,
 			},
@@ -133,7 +137,7 @@ func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[ui
 			ScoreThreshold: &scoreThreshold,
 			Filter:         &filter,
 			WithVectors:    qdrant.NewWithVectorsEnable(false),
-			WithPayload:    qdrant.NewWithPayloadInclude("guid", "document_id", "document_name", "summary", "keywords", "text"),
+			WithPayload:    qdrant.NewWithPayloadEnable(true),
 		}
 	} else {
 		// DENSE-ONLY SEARCH: Use existing logic for backward compatibility
@@ -144,7 +148,7 @@ func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[ui
 			ScoreThreshold: &scoreThreshold,
 			Filter:         &filter,
 			WithVectors:    qdrant.NewWithVectorsEnable(false),
-			WithPayload:    qdrant.NewWithPayloadInclude("guid", "document_id", "document_name", "summary", "keywords", "text"),
+			WithPayload:    qdrant.NewWithPayloadEnable(true),
 		}
 	}
 
@@ -153,24 +157,39 @@ func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[ui
 	if err != nil {
 		logPanic(logCtx, "error in qdrant query: %q", err)
 	}
-	// logging.Log.Debugf(logCtx, "Got %d points from qdrant query", len(scoredPoints))
+	// fmt.Printf("Got %d points from qdrant query", len(scoredPoints))
 
 	// Transform results (unchanged from original)
 	dbResponses := make([]sharedtypes.DbResponse, len(scoredPoints))
 	for i, scoredPoint := range scoredPoints {
-		// logging.Log.Debugf(&logging.ContextMap{}, "Result #%d:", i)
+		// fmt.Printf("Result #%d: Similarity Score %v", i, scoredPoint.Score)
 		// logging.Log.Debugf(&logging.ContextMap{}, "Similarity score: %v", scoredPoint.Score)
-		dbResponse, err := qdrant_utils.QdrantPayloadToType[sharedtypes.DbResponse](scoredPoint.GetPayload())
+		dbResponse, err := qdrant_utils.QdrantPayloadToType[sharedtypes.DbResponse](scoredPoint.Payload)
 		if err != nil {
 			errMsg := fmt.Sprintf("error converting qdrant payload to dbResponse: %q", err)
 			logging.Log.Errorf(logCtx, "%s", errMsg)
 			panic(errMsg)
 		}
 
-		// logging.Log.Debugf(&logging.ContextMap{}, "Similarity file id: %v", dbResponse.DocumentId)
-		// logging.Log.Debugf(&logging.ContextMap{}, "Similarity file name: %v", dbResponse.DocumentName)
-		// logging.Log.Debugf(&logging.ContextMap{}, "Similarity summary: %v", dbResponse.Summary)
-
+		// Handle different collection schemas - try CodeGenerationElement first for elements collection
+		if _, hasNamePseudocode := scoredPoint.Payload["name_pseudocode"]; hasNamePseudocode {
+			// This is a CodeGenerationElement (elements collection)
+			codeElement, err := qdrant_utils.QdrantPayloadToType[sharedtypes.CodeGenerationElement](scoredPoint.Payload)
+			if err == nil {
+				// Map CodeGenerationElement to DbResponse
+				dbResponse.DocumentName = codeElement.NameFormatted
+				dbResponse.Text = codeElement.Name
+				dbResponse.Summary = string(codeElement.Type)
+				if len(codeElement.Dependencies) > 0 {
+					dbResponse.Summary = fmt.Sprintf("%s in %s", dbResponse.Summary, strings.Join(codeElement.Dependencies, "."))
+				}
+				// fmt.Printf("Result #%d (CodeGenerationElement) Summary: '%s' DocumentName: '%s' Text: '%s'\n", i, dbResponse.Summary, dbResponse.DocumentName, dbResponse.Text)
+			}
+		} 
+		// else {
+		// 	// Standard DbResponse conversion for document collections
+		// 	fmt.Printf("Result #%d (DbResponse) Summary: '%s' DocumentName: '%s' Text: '%s'\n", i, dbResponse.Summary, dbResponse.DocumentName, dbResponse.Text)
+		// }
 		dbResponses[i] = dbResponse
 	}
 	return dbResponses

@@ -66,6 +66,7 @@ func RewriteQueryWithHistory(historyMessage []sharedtypes.HistoricMessage, userQ
 //   - generatedCode: the generated code as a string
 func SearchExamples(ansysProduct string, collectionName string, maxRetrievalCount int, denseWeight float64, sparseWeight float64, userQuery string) string {
 	startTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchExamples - started %v", time.Now())
 	defer func() {
 		duration := time.Since(startTime)
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamples COMPLETED - duration: %v", duration)
@@ -88,7 +89,9 @@ func SearchExamples(ansysProduct string, collectionName string, maxRetrievalCoun
 
 	// Time the database query
 	dbStartTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchExamples - preprocess ended %v", time.Now())
 	scoredPoints := doHybridQuery(collectionName, maxRetrievalCount, outputFields, userQuery, denseWeight, sparseWeight, "")
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchExamples - hybrid ended %v", time.Now())
 	dbDuration := time.Since(dbStartTime)
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamples - Database query COMPLETED - duration: %v, results count: %d", dbDuration, len(scoredPoints))
 
@@ -118,6 +121,7 @@ func SearchExamples(ansysProduct string, collectionName string, maxRetrievalCoun
 
 	// Convert string result to boolean using strconv.ParseBool
 	response, err := strconv.ParseBool(result)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchExamples - ended %v", time.Now())
 	if err != nil {
 		logging.Log.Error(&logging.ContextMap{}, "Error converting result to boolean: %v", err)
 		return ""
@@ -149,6 +153,7 @@ func SearchExamples(ansysProduct string, collectionName string, maxRetrievalCoun
 //   - examplesString: the formatted examples string containing the method examples and references
 func SearchMethods(tableOfContents string, ansysProduct string, collectionName string, maxRetrievalCount int, denseWeight float64, sparseWeight float64, userQuery string) string {
 	startTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchMethods - started %v", startTime)
 	defer func() {
 		duration := time.Since(startTime)
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchMethods COMPLETED - duration: %v", duration)
@@ -259,8 +264,10 @@ func SearchMethods(tableOfContents string, ansysProduct string, collectionName s
 
 	// Time the database query
 	dbStartTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchMethods - preprocess ended %v", time.Now())
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchMethods - Database query STARTED for best query: %s", bestQuery)
 	scoredPoints := doHybridQuery(collectionName, maxRetrievalCount, outputFields, bestQuery, denseWeight, sparseWeight, "")
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchMethods - hybridsearch ended %v", time.Now())
 	dbDuration := time.Since(dbStartTime)
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchMethods - Database query COMPLETED - duration: %v, results count: %d", dbDuration, len(scoredPoints))
 
@@ -276,6 +283,7 @@ func SearchMethods(tableOfContents string, ansysProduct string, collectionName s
 			exampleBuilder.WriteString(fmt.Sprintf("Example {%s} References: {%s}\n\n", entry["document_name"], exampleRefs))
 		}
 	}
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchMethods - postprocess ended %v", time.Now())
 	if exampleBuilder.Len() == 0 {
 		return ""
 	}
@@ -305,42 +313,41 @@ func SearchMethods(tableOfContents string, ansysProduct string, collectionName s
 //   - userResponse: the formatted user response string
 func SearchDocumentation(collectionName string, exampleCollectionName string, maxRetrievalCount int, userQuery string, denseWeight float64, sparseWeight float64, ansysProduct string, historyMessage []sharedtypes.HistoricMessage, tableOfContentsString string) string {
 	startTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - started %v", time.Now())
 	defer func() {
 		duration := time.Since(startTime)
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation COMPLETED - duration: %v", duration)
 	}()
 
-	userMessage := fmt.Sprintf(`In %s: You need to write a script that finds the most relevant chapter or subchapter in the Ansys User Guide to help answer the User Query.
-    Ansys User Guide: %s
-    User Query: %s
-	- Focus only on technical content; ignore Interface and Introduction sections.
-	- The section name doesn’t have to match perfectly—just find the best one to explore.
-	- Indicate whether the section needs more references by returning a boolean (true or false).
-	- Don’t repeat subchapters already used—pick new ones.
-	- List chapter details in order of relevance.
-	- Return only the JSON object in this format (no extra text, quotes, or formatting):
-	- section_name path should be in this format "api\api_contents.md"
+	userMessage := fmt.Sprintf(`In %s: """You need to write a script that finds the most relevant chapter or subchapter in the Ansys User Guide to help answer the User Query.
+
+		### Table of Contents:
+		%s
+
+		### User Query:
+		%s
+
+		### Instructions:
+		- Focus only on technical content; ignore Interface/Introduction.  
+		- The section name doesn’t have to match exactly; pick the closest relevant one.  
+		- Avoid repeating previously used chapters/subchapters.  
+		- Indicate if more references are needed: 'get_references: true/false'.  
+		- Return only the JSON array in this format:
+
+		json
 		[
-			{
-			"index": "<Index of the Chapter>.<Sub Chapter if applicable>.",
-			"sub_chapter_name": "<Chapter/Subchapter Name>",
-			"section_name": "<Full path in Table of Contents>",
-			"get_references": <true or false>
-			}
+		{
+			"index": "<Index of Chapter.Subchapter>",
+			"sub_chapter_name": "<Name>",
+			"section_name": "<Path like api\\api_contents.md>",
+			"get_references": true/false
+		}
 		]
-    - Example output:
-        [
-    			{
-    				"index": "18.5.1",
-    				"sub_chapter_name": "Structural Results",
-    				"section_name": "ds_using_select_results_structural_types.xml::Deformation",
-    				"get_references": true
-    			},
-       ]`, ansysProduct, tableOfContentsString, userQuery)
+		`, ansysProduct, tableOfContentsString, userQuery)
 
 	// Time the LLM request for chapter selection
 	llmStartTime := time.Now()
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation - LLM request (chapter selection) STARTED")
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation - LLM request (chapter selection) STARTED %s, %s", userMessage, historyMessage)
 	message, _ := PerformGeneralRequest(userMessage, historyMessage, false, "")
 	llmDuration := time.Since(llmStartTime)
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation - LLM request (chapter selection) COMPLETED - duration: %v", llmDuration)
@@ -411,7 +418,10 @@ func SearchDocumentation(collectionName string, exampleCollectionName string, ma
 
 		var userResponse strings.Builder
 
-		scoredPoints := queryUserGuideName(sectionName, uint64(5), collectionName)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - preprocess ended %v", time.Now())
+
+		scoredPoints := queryUserGuideName(sectionName, uint64(3), collectionName) // changed this to 3 from 5
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - db query ended %v", time.Now())
 		for j, scoredPoint := range scoredPoints {
 			if j >= 3 {
 				break
@@ -423,12 +433,14 @@ func SearchDocumentation(collectionName string, exampleCollectionName string, ma
 		}
 
 		if getReferences && len(scoredPoints) > 0 {
+			logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - references query started %v", time.Now())
 			realSectionName := scoredPoints[0].Payload["section_name"].GetStringValue()
 			escapedSectionName := strings.ReplaceAll(realSectionName, `\`, `\\`)
 			escapedSectionName = strings.ReplaceAll(escapedSectionName, `"`, `\"`)
 			query := fmt.Sprintf("MATCH (n:UserGuide {name: \"%s\"})-[:References]->(reference) RETURN reference.name AS section_name LIMIT 5", escapedSectionName)
 			parameters := aali_graphdb.ParameterMap{}
 			result := GeneralGraphDbQuery(query, parameters)
+			logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - references query ended %v", time.Now())
 
 			for refIdx, reference := range result {
 				if refIdx >= 3 {
@@ -448,6 +460,7 @@ func SearchDocumentation(collectionName string, exampleCollectionName string, ma
 					}
 				}
 			}
+			logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - references query ended %v", time.Now())
 		}
 
 		guideSectionsBuilder.WriteString(userResponse.String())
@@ -457,12 +470,17 @@ func SearchDocumentation(collectionName string, exampleCollectionName string, ma
 	userGuideInformation := "Retrieved information from user guide:\n\n\n" + guideSectionsBuilder.String()
 	unambiguousMethodPath, queryToApiReference, questionToUser := checkWhetherUserInformationFits(ansysProduct, userGuideInformation, historyMessage, userQuery)
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchDocumentation - Unambiguous method path: %s, query to API reference: %s, question to user: %s", unambiguousMethodPath, queryToApiReference, questionToUser)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - postprocess ended %v", time.Now())
 	if unambiguousMethodPath != "" {
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - ended %v", time.Now())
 		return unambiguousMethodPath
 	} else if queryToApiReference != "" {
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - example search started %v", time.Now())
 		methods := searchExamplesForMethod(exampleCollectionName, ansysProduct, historyMessage, queryToApiReference, maxRetrievalCount)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - example search ended %v", time.Now())
 		return methods
 	} else {
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - ended %v", time.Now())
 		return questionToUser
 	}
 
@@ -552,10 +570,10 @@ type StringReplacementArgs struct {
 // Example output:
 // 01.
 func QueryUserGuideAndFormat() string {
-	object := GeneralGraphDbQuery("MATCH (chapter:UserGuide {level:1}) WHERE chapter.parent = 'index.md' OPTIONAL MATCH (section:UserGuide {level:2}) WHERE section.parent = chapter.document_name OPTIONAL MATCH (subsection:UserGuide {level:3}) WHERE subsection.parent = section.document_name RETURN chapter.title AS chapter_title, chapter.document_name AS chapter_doc, section.title AS section_title, section.document_name AS section_doc, subsection.title AS subsection_title, subsection.document_name AS subsection_doc ORDER BY chapter.title, section.title, subsection.title", aali_graphdb.ParameterMap{})
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: QueryUserGuideAndFormat called")
 	startTime := time.Now()
+	object := GeneralGraphDbQuery("MATCH (chapter:UserGuide {level:1}) WHERE chapter.parent = 'index.md' OPTIONAL MATCH (section:UserGuide {level:2}) WHERE section.parent = chapter.document_name OPTIONAL MATCH (subsection:UserGuide {level:3}) WHERE subsection.parent = section.document_name RETURN chapter.title AS chapter_title, chapter.document_name AS chapter_doc, section.title AS section_title, section.document_name AS section_doc, subsection.title AS subsection_title, subsection.document_name AS subsection_doc ORDER BY chapter.title, section.title, subsection.title", aali_graphdb.ParameterMap{})
 
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: ConvertJSONToCustomize STARTED")
 	defer func() {
 		duration := time.Since(startTime)
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: ConvertJSONToCustomize COMPLETED - duration: %v", duration)

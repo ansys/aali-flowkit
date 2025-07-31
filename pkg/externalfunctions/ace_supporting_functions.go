@@ -44,34 +44,48 @@ func checkWhetherOneOfTheMethodsFits(collectionName string, historyMessage []sha
 // checkWhetherUserInformationFits evaluates the information retrieved from the User Guide
 func checkWhetherUserInformationFits(ansysProduct string, userGuideInformation string, historyMessage []sharedtypes.HistoricMessage, userQuery string) (string, string, string) {
 
-	systemMessage := fmt.Sprintf(`In %s:  You need to create a script to execute the instructions provided.
-        In this step, you must evaluate the information retrieved from the User Guide together with the user's response and decide whether you have enough information to unambiguously identify the correct Method. You have the following options:
-        1. Adapt query to API Reference Vector DB with a more specific query.
-        2. Ask the user for more information. Before asking for user input, ensure the user did not already provide the information in previous steps. Also, try to query the API Reference Vector DB for the information.
-        3. If you have enough information, return the full path of the Method with its signature (mandatory to include parametersif they exist). Example: Path.To.Method(param1, param2).
-        4. If the method full path looks like Path.To.Method, is **MANDATORY** not add any additional characters or information (such as "()").
-		Don't ask the user for information that is already provided in the query %s.
-		5. If there are multiple methods in api reference that match the query, return the full path of the Method with its signature (mandatory to include parameters if they exist). Example: Path.To.Method(param1, param2).
+	systemMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions below.  
 
-		Below mentioned options are mandatory to include in the response:
+### Task:
+Evaluate the **User Guide info** and **user query** to determine if you can unambiguously identify the correct Method.  
 
-			1. unambiguous_method_found: true/false
-			2. unambiguous_method_path: <full path of the Method, including signature>
-			3. query_to_api_reference_required": true/false,
-            4. ask_user_question_required": true/false,
-            5. reasoning_for_decision": "reasoning_for_decision",
-            6. question_to_user": "question_to_user",
-            7. query_to_api_reference": "Make this query as specific as possible"
+### Options:
+1. Adapt the query to API Reference Vector DB with a more specific query.  
+2. Ask the user for more information (only if not already provided in prior steps and after checking API Reference Vector DB).  
+3. If sufficient info is available, return the **full method path with signature (parameters included if they exist)**.  
+4. If the method path is like 'Path.To.Method', **do NOT append '()'** or extra characters.  
+5. If multiple API methods match, return the full path of the correct one with parameters.
 
-		Response format:
-		    <unambiguous_method_found>-----<unambiguous_method_path>-----<query_to_api_reference_required>-----<ask_user_question_required>-----<reasoning_for_decision>-----<question_to_user>-----<query_to_api_reference>
+---
+### Retrieved Info (from User Guide):
+**%s**
 
-		Example: 
-			true-----Path.To.Method(param1, param2)-----false-----true-----"I need more information about the parameters"-----"What is the value of param1?	"-----"Path.To.Method(param1, param2)"
+---
 
-			`, ansysProduct, userGuideInformation)
+### User Query:
+**%s**
 
-	result, _ := PerformGeneralRequest(userQuery, historyMessage, false, systemMessage)
+---
+
+### Response Requirements:
+Return the following fields separated by '-----':
+1. 'unambiguous_method_found': true/false  
+2. 'unambiguous_method_path': Full path including parameters if any  
+3. 'query_to_api_reference_required': true/false  
+4. 'ask_user_question_required': true/false  
+5. 'reasoning_for_decision': Reasoning behind the choice  
+6. 'question_to_user': If needed, the question to ask  
+7. 'query_to_api_reference': A specific query to API Reference (if required)
+
+---
+
+### Example Response:
+
+true-----ansys.fluent.core.launcher.launcher.launch_fluent(precision, dimension, additional_arguments)-----false-----false-----"User guide info clearly maps to launch_fluent() with 3D mode using dimension parameter"-----""-----""
+
+---`, ansysProduct, userGuideInformation, userQuery)
+
+	result, _ := PerformGeneralRequest(systemMessage, historyMessage, false, "")
 
 	// Split the result by the separator
 	parts := strings.Split(result, "-----")
@@ -383,7 +397,7 @@ func queryExample(exampleName string, collectionName string) []map[string]interf
 
 // queryUserGuideName queries for user guide sections by name
 func queryUserGuideName(name string, resultCount uint64, collectionName string) []*qdrant.ScoredPoint {
-
+	logging.Log.Infof(&logging.ContextMap{}, "Querying user guide sections for name: %s", name)
 	client, err := qdrant_utils.QdrantClient()
 	query := qdrant.QueryPoints{
 		CollectionName: collectionName,
@@ -412,6 +426,7 @@ func queryUserGuideName(name string, resultCount uint64, collectionName string) 
 	for _, scoredPoint := range scoredPoints {
 		results = append(results, scoredPoint)
 	}
+	logging.Log.Infof(&logging.ContextMap{}, "Found %d user guide sections for name: %s", len(results), name)
 	return results
 }
 

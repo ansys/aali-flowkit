@@ -167,6 +167,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"GetSystemPrompt": GetSystemPrompt,
 
 	// materials
+	"StartTrace":                       StartTrace,
 	"SerializeResponse":                SerializeResponse,
 	"AddGuidsToAttributes":             AddGuidsToAttributes,
 	"FilterOutNonExistingAttributes":   FilterOutNonExistingAttributes,
@@ -176,9 +177,11 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"LogRequestFailed":                 LogRequestFailed,
 	"LogRequestFailedDebugWithMessage": LogRequestFailedDebugWithMessage,
 	"PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput": PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput,
-	"CheckApiKeyAuthKvDb":                  CheckApiKeyAuthKvDb,
-	"UpdateTotalTokenCountForCustomerKvDb": UpdateTotalTokenCountForCustomerKvDb,
-	"DenyCustomerAccessAndSendWarningKvDb": DenyCustomerAccessAndSendWarningKvDb,
+	"CheckApiKeyAuthKvDb":                        CheckApiKeyAuthKvDb,
+	"UpdateTotalTokenCountForCustomerKvDb":       UpdateTotalTokenCountForCustomerKvDb,
+	"DenyCustomerAccessAndSendWarningKvDb":       DenyCustomerAccessAndSendWarningKvDb,
+	"AddAvailableAttributesToSystemPrompt":       AddAvailableAttributesToSystemPrompt,
+	"ExtractDesignRequirementsAndSearchCriteria": ExtractDesignRequirementsAndSearchCriteria,
 
 	// rhsc
 	"SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,

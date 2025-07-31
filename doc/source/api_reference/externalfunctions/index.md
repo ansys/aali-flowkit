@@ -7,9 +7,10 @@
 ## Index
 
 - Variables
+- [func AddAvailableAttributesToSystemPrompt\(userDesignRequirements string, systemPromptTemplate string, allAvailableAttributes \[\]sharedtypes.MaterialAttribute, availableSearchCriteria \[\]string, traceID string, spanID string\) \(fullSystemPrompt string, childSpanID string\)](<#AddAvailableAttributesToSystemPrompt>)
 - [func AddDataRequest\(collectionName string, documentData \[\]sharedtypes.DbData\)](<#AddDataRequest>)
 - [func AddGraphDbParameter\(parameters aali\_graphdb.ParameterMap, name string, value string, paramType string\) aali\_graphdb.ParameterMap](<#AddGraphDbParameter>)
-- [func AddGuidsToAttributes\(criteriaSuggestions \[\]sharedtypes.MaterialLlmCriterion, availableAttributes \[\]sharedtypes.MaterialAttribute\) \(criteriaWithGuids \[\]sharedtypes.MaterialCriterionWithGuid\)](<#AddGuidsToAttributes>)
+- [func AddGuidsToAttributes\(criteriaSuggestions \[\]sharedtypes.MaterialLlmCriterion, availableAttributes \[\]sharedtypes.MaterialAttribute, traceID string, spanID string\) \(criteriaWithGuids \[\]sharedtypes.MaterialCriterionWithGuid, childSpanID string\)](<#AddGuidsToAttributes>)
 - [func AecGetContextFromRetrieverModule\(retrieverModuleEndpoint string, userQuery string, dataSources \[\]string, physics \[\]string, topK int, plattform string, retrieverModuleKey string\) \(context \[\]sharedtypes.AnsysGPTRetrieverModuleChunk\)](<#AecGetContextFromRetrieverModule>)
 - [func AecPerformLLMFinalRequest\(systemTemplate string, userTemplate string, query string, history \[\]sharedtypes.HistoricMessage, context \[\]sharedtypes.AnsysGPTRetrieverModuleChunk, prohibitedWords \[\]string, errorList1 \[\]string, errorList2 \[\]string, tokenCountEndpoint string, previousInputTokenCount int, previousOutputTokenCount int, tokenCountModelName string, isStream bool, userEmail string, jwtToken string\) \(message string, stream \*chan string\)](<#AecPerformLLMFinalRequest>)
 - [func AisAcsSemanticHybridSearchs\(acsEndpoint string, acsApiKey string, acsApiVersion string, query string, embeddedQuery \[\]float32, indexList \[\]string, physics \[\]string, topK int\) \[\]sharedtypes.ACSSearchResponse](<#AisAcsSemanticHybridSearchs>)
@@ -74,10 +75,11 @@
 - [func CastUint64ToAny\(data uint64\) any](<#CastUint64ToAny>)
 - [func CastUint8ToAny\(data uint8\) any](<#CastUint8ToAny>)
 - [func CastUintToAny\(data uint\) any](<#CastUintToAny>)
-- [func CheckApiKeyAuthKvDb\(kvdbEndpoint string, apiKey string\) \(isAuthenticated bool\)](<#CheckApiKeyAuthKvDb>)
+- [func CheckApiKeyAuthKvDb\(kvdbEndpoint string, apiKey string, traceID string, spanID string\) \(isAuthenticated bool, childSpanID string\)](<#CheckApiKeyAuthKvDb>)
 - [func CheckApiKeyAuthMongoDb\(apiKey string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string\) \(isAuthenticated bool\)](<#CheckApiKeyAuthMongoDb>)
 - [func CheckCreateUserIdMongoDb\(userId string, temporaryTokenLimit int, hoursUntilTokenLimitReset int, modelId \[\]string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string\) \(existingUser bool\)](<#CheckCreateUserIdMongoDb>)
 - [func CheckTokenLimitReached\(query string, tokenLimit int, modelName string, tokenLimitMessage string\) \(tokenLimitReached bool, responseMessage string\)](<#CheckTokenLimitReached>)
+- [func CreateChildSpan\(ctx \*logging.ContextMap, traceID string, parentSpanID string\) \(childSpanID string\)](<#CreateChildSpan>)
 - [func CreateCollectionRequest\(collectionName string, vectorSize uint64, vectorDistance string\)](<#CreateCollectionRequest>)
 - [func CreateDbFilter\(guid \[\]string, documentId \[\]string, documentName \[\]string, level \[\]string, tags sharedtypes.DbArrayFilter, keywords sharedtypes.DbArrayFilter, metadata \[\]sharedtypes.DbJsonFilter\) \(databaseFilter sharedtypes.DbFilters\)](<#CreateDbFilter>)
 - [func CreateEmbeddings\(dense bool, sparse bool, colbert bool, isDocument bool, passages \[\]string\) \(dense\_vector \[\]\[\]float32, lexical\_weights \[\]map\[uint\]float32, colbert\_vecs \[\]\[\]\[\]float32, func\_error error\)](<#CreateEmbeddings>)
@@ -86,19 +88,20 @@
 - [func CreateMessageWithVariable\(message string, variable string\) \(updatedMessage string\)](<#CreateMessageWithVariable>)
 - [func CreateMetadataDbFilter\(fieldName string, fieldType string, filterData \[\]string, needAll bool\) \(databaseFilter sharedtypes.DbJsonFilter\)](<#CreateMetadataDbFilter>)
 - [func CreateTagsDbFilter\(tags \[\]string, needAll bool\) \(databaseFilter sharedtypes.DbArrayFilter\)](<#CreateTagsDbFilter>)
-- [func DenyCustomerAccessAndSendWarningKvDb\(kvdbEndpoint string, apiKey string\) \(customerName string, sendWarning bool\)](<#DenyCustomerAccessAndSendWarningKvDb>)
+- [func DenyCustomerAccessAndSendWarningKvDb\(kvdbEndpoint string, apiKey string, traceID string, spanID string\) \(customerName string, sendWarning bool, childSpanID string\)](<#DenyCustomerAccessAndSendWarningKvDb>)
 - [func DenyCustomerAccessAndSendWarningMongoDb\(apiKey string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string\) \(customerName string, sendWarning bool\)](<#DenyCustomerAccessAndSendWarningMongoDb>)
 - [func DenyCustomerAccessAndSendWarningMongoDbUserId\(userId string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string\) \(sendWarning bool\)](<#DenyCustomerAccessAndSendWarningMongoDbUserId>)
 - [func DownloadGithubFileContent\(githubRepoName string, githubRepoOwner string, githubRepoBranch string, gihubFilePath string, githubAccessToken string\) \(checksum string, content \[\]byte\)](<#DownloadGithubFileContent>)
 - [func DownloadGithubFilesContent\(githubRepoName string, githubRepoOwner string, githubRepoBranch string, gihubFilePaths \[\]string, githubAccessToken string\) \(filesMap map\[string\]\[\]byte\)](<#DownloadGithubFilesContent>)
-- [func ExtractCriteriaSuggestions\(llmResponse string\) \(criteriaSuggestions \[\]sharedtypes.MaterialLlmCriterion\)](<#ExtractCriteriaSuggestions>)
+- [func ExtractCriteriaSuggestions\(llmResponse string, traceID string, spanID string\) \(criteriaSuggestions \[\]sharedtypes.MaterialLlmCriterion, childSpanID string\)](<#ExtractCriteriaSuggestions>)
+- [func ExtractDesignRequirementsAndSearchCriteria\(userInput string, traceID string, spanID string\) \(designRequirements string, availableSearchCriteria \[\]string, childSpanID string\)](<#ExtractDesignRequirementsAndSearchCriteria>)
 - [func ExtractJSONStringField\(jsonStr string, keyPath string\) string](<#ExtractJSONStringField>)
-- [func ExtractJson\(text string\) \(json string\)](<#ExtractJson>)
+- [func ExtractJson\(text string, traceID string, spanID string\) \(json string, childSpanID string\)](<#ExtractJson>)
 - [func FetchActionsPathFromPathDescription\(db\_name, description, nodeLabel string\) \(actions \[\]map\[string\]string\)](<#FetchActionsPathFromPathDescription>)
 - [func FetchNodeDescriptionsFromPathDescription\(db\_name, description string\) \(actionDescriptions string\)](<#FetchNodeDescriptionsFromPathDescription>)
 - [func FetchPropertiesFromPathDescription\(db\_name, description string\) \(properties \[\]string\)](<#FetchPropertiesFromPathDescription>)
-- [func FilterOutDuplicateAttributes\(criteriaSuggestions \[\]sharedtypes.MaterialLlmCriterion\) \(filtered \[\]sharedtypes.MaterialLlmCriterion\)](<#FilterOutDuplicateAttributes>)
-- [func FilterOutNonExistingAttributes\(criteriaSuggestions \[\]sharedtypes.MaterialLlmCriterion, availableAttributes \[\]sharedtypes.MaterialAttribute\) \(filtered \[\]sharedtypes.MaterialLlmCriterion\)](<#FilterOutNonExistingAttributes>)
+- [func FilterOutDuplicateAttributes\(criteriaSuggestions \[\]sharedtypes.MaterialLlmCriterion, traceID string, spanID string\) \(filtered \[\]sharedtypes.MaterialLlmCriterion, childSpanID string\)](<#FilterOutDuplicateAttributes>)
+- [func FilterOutNonExistingAttributes\(criteriaSuggestions \[\]sharedtypes.MaterialCriterionWithGuid, availableSearchCriteria \[\]string, traceID string, spanID string\) \(filtered \[\]sharedtypes.MaterialCriterionWithGuid, childSpanID string\)](<#FilterOutNonExistingAttributes>)
 - [func FinalizeMessage\(message string\) \(result string\)](<#FinalizeMessage>)
 - [func FinalizeResult\(actions \[\]map\[string\]string, toolName string\) \(result string\)](<#FinalizeResult>)
 - [func FindRelevantPathDescription\(descriptions \[\]string, message string\) \(relevantDescription string\)](<#FindRelevantPathDescription>)
@@ -126,9 +129,9 @@
 - [func LoadCodeGenerationElements\(content \[\]byte, elementsFilePath string\) \(elements \[\]sharedtypes.CodeGenerationElement\)](<#LoadCodeGenerationElements>)
 - [func LoadCodeGenerationExamples\(source string, examplesToExtract \[\]string, githubRepoName string, githubRepoOwner string, githubRepoBranch string, githubAccessToken string, dependencies map\[string\]\[\]string, equivalencesMap map\[string\]map\[string\]string, chunkSize int, chunkOverlap int\) \(examples \[\]sharedtypes.CodeGenerationExample\)](<#LoadCodeGenerationExamples>)
 - [func LoadUserGuideSections\(source string, sectionFilePaths \[\]string, githubRepoName string, githubRepoOwner string, githubRepoBranch string, githubAccessToken string\) \(sections \[\]sharedtypes.CodeGenerationUserGuideSection\)](<#LoadUserGuideSections>)
-- [func LogRequestFailed\(\)](<#LogRequestFailed>)
-- [func LogRequestFailedDebugWithMessage\(msg1, msg2 string\)](<#LogRequestFailedDebugWithMessage>)
-- [func LogRequestSuccess\(\)](<#LogRequestSuccess>)
+- [func LogRequestFailed\(traceID string, spanID string\) \(childSpanID string\)](<#LogRequestFailed>)
+- [func LogRequestFailedDebugWithMessage\(msg1, msg2 string, traceID string, spanID string\) \(childSpanID string\)](<#LogRequestFailedDebugWithMessage>)
+- [func LogRequestSuccess\(traceID string, spanID string\) \(childSpanID string\)](<#LogRequestSuccess>)
 - [func MCPClient\(command string, serverURL string, arguments map\[string\]interface\{\}\) \(interface\{\}, error\)](<#MCPClient>)
 - [func MarkdownToHTML\(markdown string\) \(html string\)](<#MarkdownToHTML>)
 - [func ParseHistory\(historyJson string\) \(history \[\]map\[string\]string\)](<#ParseHistory>)
@@ -147,7 +150,7 @@
 - [func PerformGeneralRequestSpecificModelNoStreamWithOpenAiTokenOutput\(input string, history \[\]sharedtypes.HistoricMessage, systemPrompt string, modelIds \[\]string, tokenCountModelName string\) \(message string, tokenCount int\)](<#PerformGeneralRequestSpecificModelNoStreamWithOpenAiTokenOutput>)
 - [func PerformGeneralRequestWithImages\(input string, history \[\]sharedtypes.HistoricMessage, isStream bool, systemPrompt string, images \[\]string\) \(message string, stream \*chan string\)](<#PerformGeneralRequestWithImages>)
 - [func PerformKeywordExtractionRequest\(input string, maxKeywordsSearch uint32\) \(keywords \[\]string\)](<#PerformKeywordExtractionRequest>)
-- [func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput\(input string, history \[\]sharedtypes.HistoricMessage, systemPrompt string, modelIds \[\]string, tokenCountModelName string, n int\) \(uniqueCriterion \[\]sharedtypes.MaterialLlmCriterion, tokenCount int\)](<#PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput>)
+- [func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput\(input string, history \[\]sharedtypes.HistoricMessage, systemPrompt string, modelIds \[\]string, tokenCountModelName string, n int, traceID string, spanID string\) \(uniqueCriterion \[\]sharedtypes.MaterialLlmCriterion, tokenCount int, childSpanID string\)](<#PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput>)
 - [func PerformSummaryRequest\(input string\) \(summary string\)](<#PerformSummaryRequest>)
 - [func PerformVectorEmbeddingRequest\(input string\) \(embeddedVector \[\]float32\)](<#PerformVectorEmbeddingRequest>)
 - [func PerformVectorEmbeddingRequestWithTokenLimitCatch\(input string, tokenLimitMessage string\) \(embeddedVector \[\]float32, tokenLimitReached bool, responseMessage string\)](<#PerformVectorEmbeddingRequestWithTokenLimitCatch>)
@@ -162,12 +165,13 @@
 - [func SendLogicAppNotificationEmail\(logicAppEndpoint string, email string, subject string, content string\)](<#SendLogicAppNotificationEmail>)
 - [func SendRestAPICall\(requestType string, endpoint string, header map\[string\]string, query map\[string\]string, jsonBody string\) \(success bool, returnJsonBody string\)](<#SendRestAPICall>)
 - [func SendVectorsToKnowledgeDB\(vector \[\]float32, keywords \[\]string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64\) \(databaseResponse \[\]sharedtypes.DbResponse\)](<#SendVectorsToKnowledgeDB>)
-- [func SerializeResponse\(criteriaSuggestions \[\]sharedtypes.MaterialCriterionWithGuid, tokens int\) \(result string\)](<#SerializeResponse>)
+- [func SerializeResponse\(criteriaSuggestions \[\]sharedtypes.MaterialCriterionWithGuid, tokens int, traceID string, spanID string\) \(result string, childSpanID string\)](<#SerializeResponse>)
 - [func SetCopilotGenerateRequestJsonBody\(query string, sessionID string, mode string, timeout int, priority int, agentPreference string, saveIntermediate bool, similarityTopK int, noCritique bool, maxIterations int, forceAzure bool\) \(jsonBody string\)](<#SetCopilotGenerateRequestJsonBody>)
 - [func ShortenMessageHistory\(history \[\]sharedtypes.HistoricMessage, maxLength int\) \(updatedHistory \[\]sharedtypes.HistoricMessage\)](<#ShortenMessageHistory>)
 - [func SimilaritySearch\(collectionName string, embeddedVector \[\]float32, maxRetrievalCount int, filters sharedtypes.DbFilters, minScore float64, getLeafNodes bool, getSiblings bool, getParent bool, getChildren bool\) \(databaseResponse \[\]sharedtypes.DbResponse\)](<#SimilaritySearch>)
 - [func SimilartitySearchOnPathDescriptions\(instruction string, toolName string\) \(descriptions \[\]string\)](<#SimilartitySearchOnPathDescriptions>)
 - [func SimilartitySearchOnPathDescriptionsQdrant\(vector \[\]float32, collection string, similaritySearchResults int, similaritySearchMinScore float64\) \(descriptions \[\]string\)](<#SimilartitySearchOnPathDescriptionsQdrant>)
+- [func StartTrace\(\) \(traceID string, spanID string\)](<#StartTrace>)
 - [func StoreElementsInGraphDatabase\(elements \[\]sharedtypes.CodeGenerationElement\)](<#StoreElementsInGraphDatabase>)
 - [func StoreElementsInVectorDatabase\(elements \[\]sharedtypes.CodeGenerationElement, elementsCollectionName string, batchSize int, vectorDistance string\)](<#StoreElementsInVectorDatabase>)
 - [func StoreExamplesInGraphDatabase\(examples \[\]sharedtypes.CodeGenerationExample\)](<#StoreExamplesInGraphDatabase>)
@@ -181,7 +185,7 @@
 - [func SynthesizeActionsTool12\(content string\) \(result string\)](<#SynthesizeActionsTool12>)
 - [func SynthesizeActionsTool17\(content string\) \(result string\)](<#SynthesizeActionsTool17>)
 - [func SynthesizeActionsTool2\(message string, actions \[\]map\[string\]string\) \(updatedActions \[\]map\[string\]string\)](<#SynthesizeActionsTool2>)
-- [func UpdateTotalTokenCountForCustomerKvDb\(kvdbEndpoint string, apiKey string, additionalTokenCount int\) \(tokenLimitReached bool\)](<#UpdateTotalTokenCountForCustomerKvDb>)
+- [func UpdateTotalTokenCountForCustomerKvDb\(kvdbEndpoint string, apiKey string, additionalTokenCount int, traceID string, spanID string\) \(tokenLimitReached bool, childSpanID string\)](<#UpdateTotalTokenCountForCustomerKvDb>)
 - [func UpdateTotalTokenCountForCustomerMongoDb\(apiKey string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string, additionalTokenCount int\) \(tokenLimitReached bool\)](<#UpdateTotalTokenCountForCustomerMongoDb>)
 - [func UpdateTotalTokenCountForUserIdMongoDb\(userId string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string, additionalInputTokenCount int, additionalOutputTokenCount int, hoursUntilTokenLimitReset int\) \(tokenLimitReached bool\)](<#UpdateTotalTokenCountForUserIdMongoDb>)
 - [type ACSSearchRequest](<#ACSSearchRequest>)
@@ -367,6 +371,7 @@
 	    "ReadResource":  ReadResource,
 	    "GetPrompt":     GetPrompt,
 
+	    "StartTrace":                       StartTrace,
 	    "SerializeResponse":                SerializeResponse,
 	    "AddGuidsToAttributes":             AddGuidsToAttributes,
 	    "FilterOutNonExistingAttributes":   FilterOutNonExistingAttributes,
@@ -376,12 +381,39 @@
 	    "LogRequestFailed":                 LogRequestFailed,
 	    "LogRequestFailedDebugWithMessage": LogRequestFailedDebugWithMessage,
 	    "PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput": PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput,
-	    "CheckApiKeyAuthKvDb":                  CheckApiKeyAuthKvDb,
-	    "UpdateTotalTokenCountForCustomerKvDb": UpdateTotalTokenCountForCustomerKvDb,
-	    "DenyCustomerAccessAndSendWarningKvDb": DenyCustomerAccessAndSendWarningKvDb,
+	    "CheckApiKeyAuthKvDb":                        CheckApiKeyAuthKvDb,
+	    "UpdateTotalTokenCountForCustomerKvDb":       UpdateTotalTokenCountForCustomerKvDb,
+	    "DenyCustomerAccessAndSendWarningKvDb":       DenyCustomerAccessAndSendWarningKvDb,
+	    "AddAvailableAttributesToSystemPrompt":       AddAvailableAttributesToSystemPrompt,
+	    "ExtractDesignRequirementsAndSearchCriteria": ExtractDesignRequirementsAndSearchCriteria,
 
 	    "SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,
 	}
+
+<a name="AddAvailableAttributesToSystemPrompt"></a>
+## func AddAvailableAttributesToSystemPrompt
+
+	func AddAvailableAttributesToSystemPrompt(userDesignRequirements string, systemPromptTemplate string, allAvailableAttributes []sharedtypes.MaterialAttribute, availableSearchCriteria []string, traceID string, spanID string) (fullSystemPrompt string, childSpanID string)
+
+AddAvailableAttributesToSystemPrompt adds available attributes to the system prompt template.
+
+Tags:
+
+- @displayName: Add Available Attributes to System Prompt
+
+Parameters:
+
+- userDesignRequirements: design requirements provided by the user
+- systemPromptTemplate: the prompt template string to modify
+- allAvailableAttributes: the list of all available attributes
+- availableSearchCriteria: the list of available search criteria \(GUIDs\)
+- traceID: the trace ID in decimal format
+- spanID: the span ID in decimal format
+
+Returns:
+
+- fullSystemPrompt: the full system prompt to send to the LLM, including available attributes
+- childSpanID: the child span ID created for this operation
 
 <a name="AddDataRequest"></a>
 ## func AddDataRequest
@@ -424,7 +456,7 @@ Returns:
 <a name="AddGuidsToAttributes"></a>
 ## func AddGuidsToAttributes
 
-	func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute) (criteriaWithGuids []sharedtypes.MaterialCriterionWithGuid)
+	func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute, traceID string, spanID string) (criteriaWithGuids []sharedtypes.MaterialCriterionWithGuid, childSpanID string)
 
 AddGuidsToAttributes adds GUIDs to the attributes in the criteria
 
@@ -436,10 +468,13 @@ Parameters:
 
 - criteriaSuggestions: the list of criteria without identities
 - availableAttributes: the list of available attributes with their identities
+- traceID: the trace ID in decimal format
+- spanID: the span ID in decimal format
 
 Returns:
 
 - criteriaWithGuids: the list of criteria with their identities
+- childSpanID: the child span ID created for this operation
 
 <a name="AecGetContextFromRetrieverModule"></a>
 ## func AecGetContextFromRetrieverModule
@@ -1752,7 +1787,7 @@ Returns
 <a name="CheckApiKeyAuthKvDb"></a>
 ## func CheckApiKeyAuthKvDb
 
-	func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string) (isAuthenticated bool)
+	func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spanID string) (isAuthenticated bool, childSpanID string)
 
 CheckApiKeyAuthKvDb checks if the provided API key is authenticated against the KVDB.
 
@@ -1762,11 +1797,15 @@ Tags:
 
 Parameters:
 
+- kvdbEndpoint: the KVDB endpoint
 - apiKey: The API key to check
+- traceID: the trace ID in decimal format
+- spanID: the span ID in decimal format
 
 Returns:
 
 - isAuthenticated: true if the API key is authenticated, false otherwise
+- childSpanID: the child span ID created for this operation
 
 <a name="CheckApiKeyAuthMongoDb"></a>
 ## func CheckApiKeyAuthMongoDb
@@ -1833,6 +1872,13 @@ Parameters:
 Returns:
 
 - tokenLimitReached: true if the token limit is reached, false otherwise
+
+<a name="CreateChildSpan"></a>
+## func CreateChildSpan
+
+	func CreateChildSpan(ctx *logging.ContextMap, traceID string, parentSpanID string) (childSpanID string)
+
+
 
 <a name="CreateCollectionRequest"></a>
 ## func CreateCollectionRequest
@@ -1998,7 +2044,7 @@ Returns:
 <a name="DenyCustomerAccessAndSendWarningKvDb"></a>
 ## func DenyCustomerAccessAndSendWarningKvDb
 
-	func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string) (customerName string, sendWarning bool)
+	func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string, traceID string, spanID string) (customerName string, sendWarning bool, childSpanID string)
 
 DenyCustomerAccessAndSendWarningKvDb denies access to a customer and sends a warning if not already sent
 
@@ -2008,12 +2054,16 @@ Tags:
 
 Parameters:
 
+- kvdbEndpoint: the KVDB endpoint
 - apiKey: The API key of the customer
+- traceID: the trace ID in decimal format
+- spanID: the span ID in decimal format
 
 Returns:
 
 - customerName: The name of the customer
 - sendWarning: true if a warning was sent, false if it was already sent
+- childSpanID: the child span ID created for this operation
 
 <a name="DenyCustomerAccessAndSendWarningMongoDb"></a>
 ## func DenyCustomerAccessAndSendWarningMongoDb
@@ -2110,7 +2160,7 @@ Returns:
 <a name="ExtractCriteriaSuggestions"></a>
 ## func ExtractCriteriaSuggestions
 
-	func ExtractCriteriaSuggestions(llmResponse string) (criteriaSuggestions []sharedtypes.MaterialLlmCriterion)
+	func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID string) (criteriaSuggestions []sharedtypes.MaterialLlmCriterion, childSpanID string)
 
 ExtractCriteriaSuggestions extracts criteria suggestions from the LLM response text
 
@@ -2121,10 +2171,36 @@ Tags:
 Parameters:
 
 - llmResponse: the text response from the LLM containing JSON with criteria suggestions
+- traceID: the trace ID in decimal format
+- spanID: the span ID in decimal format
 
 Returns:
 
 - criteriaSuggestions: the list of criteria suggestions extracted from the LLM response
+- childSpanID: the child span ID created for this operation
+
+<a name="ExtractDesignRequirementsAndSearchCriteria"></a>
+## func ExtractDesignRequirementsAndSearchCriteria
+
+	func ExtractDesignRequirementsAndSearchCriteria(userInput string, traceID string, spanID string) (designRequirements string, availableSearchCriteria []string, childSpanID string)
+
+ExtractDesignRequirementsAndSearchCriteria parses the user input JSON and returns the design requirements string and the list of available search criteria GUIDs.
+
+Tags:
+
+- @displayName: Extract Design Requirements and Search Criteria
+
+Parameters:
+
+- userInput: the user input JSON string
+- traceID: the trace ID in decimal format
+- spanID: the span ID in decimal format
+
+Returns:
+
+- designRequirements: the extracted design requirements string
+- availableSearchCriteria: the extracted list of attribute GUIDs
+- childSpanID: the child span ID created for this operation
 
 <a name="ExtractJSONStringField"></a>
 ## func ExtractJSONStringField
@@ -2149,7 +2225,7 @@ Returns:
 <a name="ExtractJson"></a>
 ## func ExtractJson
 
-	func ExtractJson(text string) (json string)
+	func ExtractJson(text string, traceID string, spanID string) (json string, childSpanID string)
 
 
 
@@ -2214,7 +2290,7 @@ Returns:
 <a name="FilterOutDuplicateAttributes"></a>
 ## func FilterOutDuplicateAttributes
 
-	func FilterOutDuplicateAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion) (filtered []sharedtypes.MaterialLlmCriterion)
+	func FilterOutDuplicateAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, traceID string, spanID string) (filtered []sharedtypes.MaterialLlmCriterion, childSpanID string)
 
 FilterOutDuplicateAttributes filters out duplicate attributes from the criteria suggestions based on their names
 
@@ -2225,17 +2301,20 @@ Tags:
 Parameters:
 
 - criteriaSuggestions: current list of criteria suggestions
+- traceID: the trace ID in decimal format
+- spanID: the span ID in decimal format
 
 Returns:
 
 - filtered: the list of criteria suggestions excluding duplicates based on attribute names
+- childSpanID: the child span ID created for this operation
 
 <a name="FilterOutNonExistingAttributes"></a>
 ## func FilterOutNonExistingAttributes
 
-	func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute) (filtered []sharedtypes.MaterialLlmCriterion)
+	func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, availableSearchCriteria []string, traceID string, spanID string) (filtered []sharedtypes.MaterialCriterionWithGuid, childSpanID string)
 
-FilterOutNonExistingAttributes filters out criteria suggestions that do not match any of the available attributes based on their names
+FilterOutNonExistingAttributes filters out criteria suggestions that do not match any of the available attributes based on their GUIDs
 
 Tags:
 
@@ -2244,11 +2323,14 @@ Tags:
 Parameters:
 
 - criteriaSuggestions: current list of criteria suggestions
-- availableAttributes: the list of available attributes
+- availableSearchCriteria: the list of available search criteria \(GUIDs\)
+- traceID: the trace ID in decimal format
+- spanID: the span ID in decimal format
 
 Returns:
 
-- filtered: the list of criteria suggestions excluding those that do not match any of the available attributes
+- filtered: the list of criteria suggestions excluding those that do not match any of the available search criteria
+- childSpanID: the child span ID created for this operation
 
 <a name="FinalizeMessage"></a>
 ## func FinalizeMessage
@@ -2824,7 +2906,7 @@ Returns:
 <a name="LogRequestFailed"></a>
 ## func LogRequestFailed
 
-	func LogRequestFailed()
+	func LogRequestFailed(traceID string, spanID string) (childSpanID string)
 
 LogRequestFailed writes a .Info log entry indicating that a request was not completed successfully.
 
@@ -2834,16 +2916,17 @@ Tags:
 
 Parameters:
 
-- none
+- traceID: the trace ID in decimal format
+- spanID: the span ID in decimal format
 
 Returns:
 
-- none
+- childSpanID: the child span ID created for this operation
 
 <a name="LogRequestFailedDebugWithMessage"></a>
 ## func LogRequestFailedDebugWithMessage
 
-	func LogRequestFailedDebugWithMessage(msg1, msg2 string)
+	func LogRequestFailedDebugWithMessage(msg1, msg2 string, traceID string, spanID string) (childSpanID string)
 
 LogRequestFailedDebugWithMessage writes a .Debug log entry indicating that a request was not completed successfully with additional message.
 
@@ -2855,15 +2938,17 @@ Parameters:
 
 - msg1: the first part of the debug message
 - msg2: the second part of the debug message
+- traceID: the trace ID in decimal format
+- spanID: the span ID in decimal format
 
 Returns:
 
-- none
+- childSpanID: the child span ID created for this operation
 
 <a name="LogRequestSuccess"></a>
 ## func LogRequestSuccess
 
-	func LogRequestSuccess()
+	func LogRequestSuccess(traceID string, spanID string) (childSpanID string)
 
 LogRequestSuccess writes a .Info log entry indicating that a request was completed successfully.
 
@@ -2873,11 +2958,12 @@ Tags:
 
 Parameters:
 
-- none
+- traceID: the trace ID in decimal format
+- spanID: the span ID in decimal format
 
 Returns:
 
-- none
+- childSpanID: the child span ID created for this operation
 
 <a name="MCPClient"></a>
 ## func MCPClient
@@ -3284,7 +3370,7 @@ Returns:
 <a name="PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput"></a>
 ## func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput
 
-	func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string, n int) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int)
+	func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string, n int, traceID string, spanID string) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int, childSpanID string)
 
 PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput performs multiple general LLM requests using specific models, extracts structured attributes \(criteria\) from the responses, and returns the total token count using the specified OpenAI token counting model. This version does not stream responses.
 
@@ -3300,11 +3386,14 @@ Parameters:
 - modelIds: the model IDs of the LLMs to query
 - tokenCountModelName: the model name used for token count calculation
 - n: number of parallel requests to perform
+- traceID: the trace ID in decimal format
+- spanID: the span ID in decimal format
 
 Returns:
 
 - uniqueCriterion: a deduplicated list of extracted attributes \(criteria\) from all responses
 - tokenCount: the total token count \(input tokens × n \+ combined output tokens\)
+- childSpanID: the child span ID created for this operation
 
 <a name="PerformSummaryRequest"></a>
 ## func PerformSummaryRequest
@@ -3586,7 +3675,7 @@ Returns:
 <a name="SerializeResponse"></a>
 ## func SerializeResponse
 
-	func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, tokens int) (result string)
+	func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, tokens int, traceID string, spanID string) (result string, childSpanID string)
 
 SerializeResponse formats the criteria to a response suitable for the UI clients in string format
 
@@ -3596,12 +3685,14 @@ Tags:
 
 Parameters:
 
-- criteriaSuggestions: the list of criteria with their identities
 - tokens: tokens consumed by the request
+- traceID: the trace ID in decimal format
+- spanID: the span ID in decimal format
 
 Returns:
 
 - result: string representation of the response in JSON format
+- childSpanID: the child span ID created for this operation
 
 <a name="SetCopilotGenerateRequestJsonBody"></a>
 ## func SetCopilotGenerateRequestJsonBody
@@ -3717,6 +3808,26 @@ Parameters:
 Returns:
 
 - descriptions: the list of descriptions
+
+<a name="StartTrace"></a>
+## func StartTrace
+
+	func StartTrace() (traceID string, spanID string)
+
+StartTrace generates a new trace ID and span ID for tracing
+
+Tags:
+
+- @displayName: Start new trace
+
+Parameters:
+
+- str: a string
+
+Returns:
+
+- traceID: a 128\-bit trace ID in decimal format
+- spanID: a 64\-bit span ID in decimal format
 
 <a name="StoreElementsInGraphDatabase"></a>
 ## func StoreElementsInGraphDatabase
@@ -3956,7 +4067,7 @@ Returns:
 <a name="UpdateTotalTokenCountForCustomerKvDb"></a>
 ## func UpdateTotalTokenCountForCustomerKvDb
 
-	func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, additionalTokenCount int) (tokenLimitReached bool)
+	func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, additionalTokenCount int, traceID string, spanID string) (tokenLimitReached bool, childSpanID string)
 
 UpdateTotalTokenCountForCustomerKvDb updates the total token count for a customer in the KVDB
 
@@ -3966,12 +4077,16 @@ Tags:
 
 Parameters:
 
+- kvdbEndpoint: the KVDB endpoint
 - apiKey: The API key of the customer
 - additionalTokenCount: The number of tokens to add to the customer's total token count
+- traceID: the trace ID in decimal format
+- spanID: the span ID in decimal format
 
 Returns:
 
 - tokenLimitReached: true if the new total token count exceeds the customer's token limit, false otherwise
+- childSpanID: the child span ID created for this operation
 
 <a name="UpdateTotalTokenCountForCustomerMongoDb"></a>
 ## func UpdateTotalTokenCountForCustomerMongoDb

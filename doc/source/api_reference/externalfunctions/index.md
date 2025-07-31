@@ -229,7 +229,7 @@
 <a name="ExternalFunctionsMap"></a>
 
 	var ExternalFunctionsMap = map[string]interface{}{
-	
+
 	    "PerformVectorEmbeddingRequest":                                                             PerformVectorEmbeddingRequest,
 	    "PerformVectorEmbeddingRequestWithTokenLimitCatch":                                          PerformVectorEmbeddingRequestWithTokenLimitCatch,
 	    "PerformBatchEmbeddingRequest":                                                              PerformBatchEmbeddingRequest,
@@ -252,7 +252,7 @@
 	    "AppendMessageHistory":                                                                      AppendMessageHistory,
 	    "ShortenMessageHistory":                                                                     ShortenMessageHistory,
 	    "CheckTokenLimitReached":                                                                    CheckTokenLimitReached,
-	
+
 	    "SendVectorsToKnowledgeDB": SendVectorsToKnowledgeDB,
 	    "GetListCollections":       GetListCollections,
 	    "RetrieveDependencies":     RetrieveDependencies,
@@ -264,7 +264,7 @@
 	    "CreateTagsDbFilter":       CreateTagsDbFilter,
 	    "CreateMetadataDbFilter":   CreateMetadataDbFilter,
 	    "CreateDbFilter":           CreateDbFilter,
-	
+
 	    "AnsysGPTCheckProhibitedWords":                   AnsysGPTCheckProhibitedWords,
 	    "AnsysGPTExtractFieldsFromQuery":                 AnsysGPTExtractFieldsFromQuery,
 	    "AnsysGPTPerformLLMRephraseRequest":              AnsysGPTPerformLLMRephraseRequest,
@@ -282,7 +282,7 @@
 	    "AisChangeAcsResponsesByFactor":                  AisChangeAcsResponsesByFactor,
 	    "AecGetContextFromRetrieverModule":               AecGetContextFromRetrieverModule,
 	    "AecPerformLLMFinalRequest":                      AecPerformLLMFinalRequest,
-	
+
 	    "GetGithubFilesToExtract":                    GetGithubFilesToExtract,
 	    "GetLocalFilesToExtract":                     GetLocalFilesToExtract,
 	    "AppendStringSlices":                         AppendStringSlices,
@@ -294,7 +294,7 @@
 	    "AddDataRequest":                             AddDataRequest,
 	    "CreateCollectionRequest":                    CreateCollectionRequest,
 	    "CreateGeneralDataExtractionDocumentObjects": CreateGeneralDataExtractionDocumentObjects,
-	
+
 	    "AssignStringToString":   AssignStringToString,
 	    "SendRestAPICall":        SendRestAPICall,
 	    "PrintFeedback":          PrintFeedback,
@@ -303,19 +303,19 @@
 	    "JsonPath":               JsonPath,
 	    "StringConcat":           StringConcat,
 	    "StringFormat":           StringFormat,
-	
+
 	    "LoadCodeGenerationElements":      LoadCodeGenerationElements,
 	    "LoadCodeGenerationExamples":      LoadCodeGenerationExamples,
 	    "LoadAndCheckExampleDependencies": LoadAndCheckExampleDependencies,
 	    "LoadUserGuideSections":           LoadUserGuideSections,
-	
+
 	    "StoreElementsInVectorDatabase":          StoreElementsInVectorDatabase,
 	    "StoreElementsInGraphDatabase":           StoreElementsInGraphDatabase,
 	    "StoreExamplesInVectorDatabase":          StoreExamplesInVectorDatabase,
 	    "StoreExamplesInGraphDatabase":           StoreExamplesInGraphDatabase,
 	    "StoreUserGuideSectionsInVectorDatabase": StoreUserGuideSectionsInVectorDatabase,
 	    "StoreUserGuideSectionsInGraphDatabase":  StoreUserGuideSectionsInGraphDatabase,
-	
+
 	    "SimilartitySearchOnPathDescriptions":       SimilartitySearchOnPathDescriptions,
 	    "FindRelevantPathDescription":               FindRelevantPathDescription,
 	    "FetchPropertiesFromPathDescription":        FetchPropertiesFromPathDescription,
@@ -345,10 +345,10 @@
 	    "SelectedSolution":                          SelectedSolution,
 	    "ProcessMainAgentOutput":                    ProcessMainAgentOutput,
 	    "GenerateHelperSubWorkflowPrompt":           GenerateHelperSubWorkflowPrompt,
-	
+
 	    "QdrantCreateCollection": QdrantCreateCollection,
 	    "QdrantInsertData":       QdrantInsertData,
-	
+
 	    "CheckApiKeyAuthMongoDb":                        CheckApiKeyAuthMongoDb,
 	    "CheckCreateUserIdMongoDb":                      CheckCreateUserIdMongoDb,
 	    "UpdateTotalTokenCountForCustomerMongoDb":       UpdateTotalTokenCountForCustomerMongoDb,
@@ -357,16 +357,16 @@
 	    "DenyCustomerAccessAndSendWarningMongoDbUserId": DenyCustomerAccessAndSendWarningMongoDbUserId,
 	    "SendLogicAppNotificationEmail":                 SendLogicAppNotificationEmail,
 	    "CreateMessageWithVariable":                     CreateMessageWithVariable,
-	
+
 	    "MCPClient": MCPClient,
-	
+
 	    "ListTools":     ListTools,
 	    "ListResources": ListResources,
 	    "ListPrompts":   ListPrompts,
 	    "CallTool":      CallTool,
 	    "ReadResource":  ReadResource,
 	    "GetPrompt":     GetPrompt,
-	
+
 	    "SerializeResponse":                SerializeResponse,
 	    "AddGuidsToAttributes":             AddGuidsToAttributes,
 	    "FilterOutNonExistingAttributes":   FilterOutNonExistingAttributes,
@@ -379,7 +379,7 @@
 	    "CheckApiKeyAuthKvDb":                  CheckApiKeyAuthKvDb,
 	    "UpdateTotalTokenCountForCustomerKvDb": UpdateTotalTokenCountForCustomerKvDb,
 	    "DenyCustomerAccessAndSendWarningKvDb": DenyCustomerAccessAndSendWarningKvDb,
-	
+
 	    "SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,
 	}
 
@@ -4196,10 +4196,10 @@ DataExtractionLLMInputChannelItem represents the input channel item for the data
 	    Adapter             string
 	    ChatRequestType     string
 	    MaxNumberOfKeywords uint32
-	
+
 	    InstructionSequenceWaitGroup *sync.WaitGroup
 	    Lock                         *sync.Mutex
-	
+
 	    EmbeddingVector []float32
 	    Summary         string
 	    Keywords        []string

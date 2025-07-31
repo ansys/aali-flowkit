@@ -2,9 +2,7 @@
 
 # codegeneration
 
-```go
-import "github.com/ansys/aali-flowkit/pkg/privatefunctions/codegeneration"
-```
+	import "github.com/ansys/aali-flowkit/pkg/privatefunctions/codegeneration"
 
 ## Index
 
@@ -23,11 +21,9 @@ import "github.com/ansys/aali-flowkit/pkg/privatefunctions/codegeneration"
 
 
 <a name="CreateReturnList"></a>
-## func [CreateReturnList](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/codegeneration/codegeneration.go#L74>)
+## func CreateReturnList
 
-```go
-func CreateReturnList(returnString string) (returnElementList []string, err error)
-```
+	func CreateReturnList(returnString string) (returnElementList []string, err error)
 
 CreateReturnList creates a list of return elements from a string
 
@@ -41,11 +37,9 @@ Returns:
 - an error if the string is empty
 
 <a name="ProcessElementName"></a>
-## func [ProcessElementName](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/codegeneration/codegeneration.go#L142>)
+## func ProcessElementName
 
-```go
-func ProcessElementName(fullName string, dependencies []string) (namePseudocode string, nameFormatted string, err error)
-```
+	func ProcessElementName(fullName string, dependencies []string) (namePseudocode string, nameFormatted string, err error)
 
 ProcessElementName processes an element name
 
@@ -61,11 +55,9 @@ Returns:
 - an error if the name is empty
 
 <a name="RemoveEmptyLines"></a>
-## func [RemoveEmptyLines](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/codegeneration/codegeneration.go#L38>)
+## func RemoveEmptyLines
 
-```go
-func RemoveEmptyLines(input string) string
-```
+	func RemoveEmptyLines(input string) string
 
 RemoveEmptyLines removes empty lines from a string
 
@@ -78,11 +70,9 @@ Returns:
 - the string with empty lines removed
 
 <a name="SplitByCapitalLetters"></a>
-## func [SplitByCapitalLetters](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/codegeneration/codegeneration.go#L60>)
+## func SplitByCapitalLetters
 
-```go
-func SplitByCapitalLetters(s string) string
-```
+	func SplitByCapitalLetters(s string) string
 
 SplitByCapitalLetters splits a string by capital letters
 
@@ -95,137 +85,121 @@ Returns:
 - the string with spaces inserted before capital letters
 
 <a name="AssemblyMember"></a>
-## type [AssemblyMember](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/codegeneration/types.go#L43-L54>)
+## type AssemblyMember
 
 
 
-```go
-type AssemblyMember struct {
-    Name             string                       `xml:"name,attr" json:"name"`
-    Summary          string                       `xml:"summary" json:"summary"`
-    ReturnType       string                       `xml:"returnType" json:"return_type"`
-    Returns          string                       `xml:"returns,omitempty" json:"returns"`
-    Params           []sharedtypes.XMLMemberParam `xml:"param" json:"parameters"`          // Handles multiple <param> elements
-    Example          sharedtypes.XMLMemberExample `xml:"example,omitempty" json:"example"` // Optional <example> element
-    Remarks          string                       `xml:"remarks,omitempty" json:"remarks"` // Optional <remarks> element
-    EnumValues       string                       `xml:"enumValues,omitempty" json:"enum_values"`
-    VectorDBMetadata any                          `xml:"vectorDBMetadata,omitempty" json:"vector_db_metadata"` // Optional <vectorDBMetadata> element
-    GraphDBMetadata  any                          `xml:"graphDBMetadata,omitempty" json:"graph_db_metadata"`   // Optional <graphDBMetadata> element
-}
-```
+	type AssemblyMember struct {
+	    Name             string                       `xml:"name,attr" json:"name"`
+	    Summary          string                       `xml:"summary" json:"summary"`
+	    ReturnType       string                       `xml:"returnType" json:"return_type"`
+	    Returns          string                       `xml:"returns,omitempty" json:"returns"`
+	    Params           []sharedtypes.XMLMemberParam `xml:"param" json:"parameters"`          // Handles multiple <param> elements
+	    Example          sharedtypes.XMLMemberExample `xml:"example,omitempty" json:"example"` // Optional <example> element
+	    Remarks          string                       `xml:"remarks,omitempty" json:"remarks"` // Optional <remarks> element
+	    EnumValues       string                       `xml:"enumValues,omitempty" json:"enum_values"`
+	    VectorDBMetadata any                          `xml:"vectorDBMetadata,omitempty" json:"vector_db_metadata"` // Optional <vectorDBMetadata> element
+	    GraphDBMetadata  any                          `xml:"graphDBMetadata,omitempty" json:"graph_db_metadata"`   // Optional <graphDBMetadata> element
+	}
 
 <a name="CodeGenerationPseudocodeResponse"></a>
-## type [CodeGenerationPseudocodeResponse](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/codegeneration/types.go#L56-L59>)
+## type CodeGenerationPseudocodeResponse
 
 
 
-```go
-type CodeGenerationPseudocodeResponse struct {
-    Signature   string `json:"signature"`
-    Description string `json:"description"`
-}
-```
+	type CodeGenerationPseudocodeResponse struct {
+	    Signature   string `json:"signature"`
+	    Description string `json:"description"`
+	}
 
 <a name="GraphDatabaseElement"></a>
-## type [GraphDatabaseElement](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/codegeneration/types.go#L84-L95>)
+## type GraphDatabaseElement
 
 
 
-```go
-type GraphDatabaseElement struct {
-    Guid           uuid.UUID                    `json:"guid"`
-    Type           string                       `json:"type"`
-    NamePseudocode string                       `json:"name_pseudocode"`
-    Description    string                       `json:"description"`
-    Summary        string                       `json:"summary"`
-    Examples       string                       `json:"examples"`
-    Parameters     []sharedtypes.XMLMemberParam `json:"parameters"`
-    Dependencies   []string                     `json:"dependencies"`
-    ReturnType     string                       `json:"returnType"`
-    Remarks        string                       `json:"remarks"`
-}
-```
+	type GraphDatabaseElement struct {
+	    Guid           uuid.UUID                    `json:"guid"`
+	    Type           string                       `json:"type"`
+	    NamePseudocode string                       `json:"name_pseudocode"`
+	    Description    string                       `json:"description"`
+	    Summary        string                       `json:"summary"`
+	    Examples       string                       `json:"examples"`
+	    Parameters     []sharedtypes.XMLMemberParam `json:"parameters"`
+	    Dependencies   []string                     `json:"dependencies"`
+	    ReturnType     string                       `json:"returnType"`
+	    Remarks        string                       `json:"remarks"`
+	}
 
 <a name="VectorDatabaseElement"></a>
-## type [VectorDatabaseElement](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/codegeneration/types.go#L61-L70>)
+## type VectorDatabaseElement
 
 
 
-```go
-type VectorDatabaseElement struct {
-    Guid           uuid.UUID        `json:"guid"`
-    DenseVector    []float32        `json:"dense_vector"`
-    SparseVector   map[uint]float32 `json:"sparse_vector"`
-    Type           string           `json:"type"`
-    Name           string           `json:"name"`
-    NamePseudocode string           `json:"name_pseudocode"`
-    NameFormatted  string           `json:"name_formatted"`
-    ParentClass    string           `json:"parent_class"`
-}
-```
+	type VectorDatabaseElement struct {
+	    Guid           uuid.UUID        `json:"guid"`
+	    DenseVector    []float32        `json:"dense_vector"`
+	    SparseVector   map[uint]float32 `json:"sparse_vector"`
+	    Type           string           `json:"type"`
+	    Name           string           `json:"name"`
+	    NamePseudocode string           `json:"name_pseudocode"`
+	    NameFormatted  string           `json:"name_formatted"`
+	    ParentClass    string           `json:"parent_class"`
+	}
 
 <a name="VectorDatabaseExample"></a>
-## type [VectorDatabaseExample](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/codegeneration/types.go#L72-L82>)
+## type VectorDatabaseExample
 
 
 
-```go
-type VectorDatabaseExample struct {
-    Guid                   uuid.UUID         `json:"guid"`
-    DenseVector            []float32         `json:"dense_vector"`
-    SparseVector           map[uint]float32  `json:"sparse_vector"`
-    DocumentName           string            `json:"document_name"`
-    Dependencies           []string          `json:"dependencies"`
-    DependencyEquivalences map[string]string `json:"dependency_equivalences"`
-    Text                   string            `json:"text"`
-    PreviousChunk          *uuid.UUID        `json:"previous_chunk"`
-    NextChunk              *uuid.UUID        `json:"next_chunk"`
-}
-```
+	type VectorDatabaseExample struct {
+	    Guid                   uuid.UUID         `json:"guid"`
+	    DenseVector            []float32         `json:"dense_vector"`
+	    SparseVector           map[uint]float32  `json:"sparse_vector"`
+	    DocumentName           string            `json:"document_name"`
+	    Dependencies           []string          `json:"dependencies"`
+	    DependencyEquivalences map[string]string `json:"dependency_equivalences"`
+	    Text                   string            `json:"text"`
+	    PreviousChunk          *uuid.UUID        `json:"previous_chunk"`
+	    NextChunk              *uuid.UUID        `json:"next_chunk"`
+	}
 
 <a name="VectorDatabaseUserGuideSection"></a>
-## type [VectorDatabaseUserGuideSection](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/codegeneration/types.go#L97-L109>)
+## type VectorDatabaseUserGuideSection
 
 
 
-```go
-type VectorDatabaseUserGuideSection struct {
-    Guid              uuid.UUID `json:"guid"`
-    SectionName       string    `json:"section_name"`
-    DocumentName      string    `json:"document_name"`
-    Title             string
-    ParentSectionName string           `json:"parent_section_name"`
-    Text              string           `json:"text"`
-    Level             int              `json:"level"`
-    PreviousChunk     *uuid.UUID       `json:"previous_chunk"`
-    NextChunk         *uuid.UUID       `json:"next_chunk"`
-    DenseVector       []float32        `json:"dense_vector"`
-    SparseVector      map[uint]float32 `json:"sparse_vector"`
-}
-```
+	type VectorDatabaseUserGuideSection struct {
+	    Guid              uuid.UUID `json:"guid"`
+	    SectionName       string    `json:"section_name"`
+	    DocumentName      string    `json:"document_name"`
+	    Title             string
+	    ParentSectionName string           `json:"parent_section_name"`
+	    Text              string           `json:"text"`
+	    Level             int              `json:"level"`
+	    PreviousChunk     *uuid.UUID       `json:"previous_chunk"`
+	    NextChunk         *uuid.UUID       `json:"next_chunk"`
+	    DenseVector       []float32        `json:"dense_vector"`
+	    SparseVector      map[uint]float32 `json:"sparse_vector"`
+	}
 
 <a name="XMLAssembly"></a>
-## type [XMLAssembly](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/codegeneration/types.go#L39-L41>)
+## type XMLAssembly
 
 
 
-```go
-type XMLAssembly struct {
-    Name string `xml:"name"`
-}
-```
+	type XMLAssembly struct {
+	    Name string `xml:"name"`
+	}
 
 <a name="XMLObjectDefinitionDocument"></a>
-## type [XMLObjectDefinitionDocument](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/codegeneration/types.go#L33-L37>)
+## type XMLObjectDefinitionDocument
 
 Structs representing the XML structure
 
-```go
-type XMLObjectDefinitionDocument struct {
-    XMLName  xml.Name         `xml:"doc"`
-    Assembly XMLAssembly      `xml:"assembly"`
-    Members  []AssemblyMember `xml:"members>member"`
-}
-```
+	type XMLObjectDefinitionDocument struct {
+	    XMLName  xml.Name         `xml:"doc"`
+	    Assembly XMLAssembly      `xml:"assembly"`
+	    Members  []AssemblyMember `xml:"members>member"`
+	}
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

@@ -2,9 +2,7 @@
 
 # qdrant
 
-```go
-import "github.com/ansys/aali-flowkit/pkg/privatefunctions/qdrant"
-```
+	import "github.com/ansys/aali-flowkit/pkg/privatefunctions/qdrant"
 
 ## Index
 
@@ -23,56 +21,44 @@ import "github.com/ansys/aali-flowkit/pkg/privatefunctions/qdrant"
 
 
 <a name="CreateCollectionIfNotExists"></a>
-## func [CreateCollectionIfNotExists](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/qdrant/qdrant.go#L47>)
+## func CreateCollectionIfNotExists
 
-```go
-func CreateCollectionIfNotExists(ctx context.Context, client *qdrant.Client, collectionName string, vectorsConfig *qdrant.VectorsConfig, sparseVectorsConfig *qdrant.SparseVectorConfig) error
-```
+	func CreateCollectionIfNotExists(ctx context.Context, client *qdrant.Client, collectionName string, vectorsConfig *qdrant.VectorsConfig, sparseVectorsConfig *qdrant.SparseVectorConfig) error
 
 
 
 <a name="DbFiltersAsQdrant"></a>
-## func [DbFiltersAsQdrant](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/qdrant/qdrant.go#L86>)
+## func DbFiltersAsQdrant
 
-```go
-func DbFiltersAsQdrant(dbFilters sharedtypes.DbFilters) *qdrant.Filter
-```
+	func DbFiltersAsQdrant(dbFilters sharedtypes.DbFilters) *qdrant.Filter
 
 Transform \`sharedtypes.DbFilters\` into a qdrant filter.
 
 <a name="QdrantClient"></a>
-## func [QdrantClient](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/qdrant/qdrant.go#L39>)
+## func QdrantClient
 
-```go
-func QdrantClient() (*qdrant.Client, error)
-```
+	func QdrantClient() (*qdrant.Client, error)
 
 Create a new qdrant client from your config.
 
 <a name="QdrantPayloadToMap"></a>
-## func [QdrantPayloadToMap](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/qdrant/qdrant.go#L453>)
+## func QdrantPayloadToMap
 
-```go
-func QdrantPayloadToMap(payload map[string]*qdrant.Value) map[string]any
-```
+	func QdrantPayloadToMap(payload map[string]*qdrant.Value) map[string]any
 
 
 
 <a name="QdrantPayloadToType"></a>
-## func [QdrantPayloadToType](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/qdrant/qdrant.go#L461>)
+## func QdrantPayloadToType
 
-```go
-func QdrantPayloadToType[T any](payload map[string]*qdrant.Value) (T, error)
-```
+	func QdrantPayloadToType[T any](payload map[string]*qdrant.Value) (T, error)
 
 
 
 <a name="RetrieveChildNodes"></a>
-## func [RetrieveChildNodes](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/qdrant/qdrant.go#L288>)
+## func RetrieveChildNodes
 
-```go
-func RetrieveChildNodes(ctx *logging.ContextMap, client *qdrant.Client, collectionName string, data *[]sharedtypes.DbResponse) (funcError error)
-```
+	func RetrieveChildNodes(ctx *logging.ContextMap, client *qdrant.Client, collectionName string, data *[]sharedtypes.DbResponse) (funcError error)
 
 RetrieveChildNodes retrieves the child nodes for each of the documents provided.
 
@@ -88,11 +74,9 @@ Returns:
 - error: Error if any issue occurs while retrieving the children.
 
 <a name="RetrieveDirectSiblingNodes"></a>
-## func [RetrieveDirectSiblingNodes](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/qdrant/qdrant.go#L358>)
+## func RetrieveDirectSiblingNodes
 
-```go
-func RetrieveDirectSiblingNodes(ctx *logging.ContextMap, client *qdrant.Client, collectionName string, data *[]sharedtypes.DbResponse) (funcError error)
-```
+	func RetrieveDirectSiblingNodes(ctx *logging.ContextMap, client *qdrant.Client, collectionName string, data *[]sharedtypes.DbResponse) (funcError error)
 
 RetrieveDirectSiblingNodes retrieves the nodes associated with the next & previous sibling \(if any\) for each of the documents provided.
 
@@ -108,11 +92,9 @@ Returns:
 - error: Error if any issue occurs while retrieving the siblings.
 
 <a name="RetrieveLeafNodes"></a>
-## func [RetrieveLeafNodes](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/qdrant/qdrant.go#L151>)
+## func RetrieveLeafNodes
 
-```go
-func RetrieveLeafNodes(ctx *logging.ContextMap, client *qdrant.Client, collectionName string, data *[]sharedtypes.DbResponse) (funcError error)
-```
+	func RetrieveLeafNodes(ctx *logging.ContextMap, client *qdrant.Client, collectionName string, data *[]sharedtypes.DbResponse) (funcError error)
 
 RetrieveLeafNodes retrieves all leaf nodes from the similarity search result branch \(ultimate children containing the original document\).
 
@@ -128,11 +110,9 @@ Returns:
 - error: Error if any issue occurs while retrieving the leaves.
 
 <a name="RetrieveParentNodes"></a>
-## func [RetrieveParentNodes](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/qdrant/qdrant.go#L218>)
+## func RetrieveParentNodes
 
-```go
-func RetrieveParentNodes(ctx *logging.ContextMap, client *qdrant.Client, collectionName string, data *[]sharedtypes.DbResponse) (funcError error)
-```
+	func RetrieveParentNodes(ctx *logging.ContextMap, client *qdrant.Client, collectionName string, data *[]sharedtypes.DbResponse) (funcError error)
 
 RetrieveParentNodes retrieves the parent node for each of the documents provided.
 
@@ -148,20 +128,16 @@ Returns:
 - error: Error if any issue occurs while retrieving the parents.
 
 <a name="ToQdrantPayload"></a>
-## func [ToQdrantPayload](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/qdrant/qdrant.go#L477>)
+## func ToQdrantPayload
 
-```go
-func ToQdrantPayload[T any](t T) (map[string]*qdrant.Value, error)
-```
+	func ToQdrantPayload[T any](t T) (map[string]*qdrant.Value, error)
 
 
 
 <a name="VectorDistance"></a>
-## func [VectorDistance](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/qdrant/qdrant.go#L69>)
+## func VectorDistance
 
-```go
-func VectorDistance(distance string) qdrant.Distance
-```
+	func VectorDistance(distance string) qdrant.Distance
 
 Get a qdrant vector distance metric from string
 
@@ -173,14 +149,12 @@ Available options are:
 - manhattan
 
 <a name="AsQdrantFilterConditions"></a>
-## type [AsQdrantFilterConditions](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/qdrant/qdrant.go#L109-L111>)
+## type AsQdrantFilterConditions
 
 
 
-```go
-type AsQdrantFilterConditions interface {
-    AsQdrantFilterConditions(field string) []*qdrant.Condition
-}
-```
+	type AsQdrantFilterConditions interface {
+	    AsQdrantFilterConditions(field string) []*qdrant.Condition
+	}
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

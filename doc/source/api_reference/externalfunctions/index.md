@@ -2,15 +2,11 @@
 
 # externalfunctions
 
-```go
-import "github.com/ansys/aali-flowkit/pkg/externalfunctions"
-```
-
-Package externalfunctions provides MCP \(Model Context Protocol\) client functions for FlowKit to communicate with MCP\-compliant servers.
+	import "github.com/ansys/aali-flowkit/pkg/externalfunctions"
 
 ## Index
 
-- [Variables](<#variables>)
+- Variables
 - [func AddDataRequest\(collectionName string, documentData \[\]sharedtypes.DbData\)](<#AddDataRequest>)
 - [func AddGraphDbParameter\(parameters aali\_graphdb.ParameterMap, name string, value string, paramType string\) aali\_graphdb.ParameterMap](<#AddGraphDbParameter>)
 - [func AddGuidsToAttributes\(criteriaSuggestions \[\]sharedtypes.MaterialLlmCriterion, availableAttributes \[\]sharedtypes.MaterialAttribute\) \(criteriaWithGuids \[\]sharedtypes.MaterialCriterionWithGuid\)](<#AddGuidsToAttributes>)
@@ -39,7 +35,6 @@ Package externalfunctions provides MCP \(Model Context Protocol\) client functio
 - [func BuildFinalQueryForCodeLLMRequest\(request string, knowledgedbResponse \[\]sharedtypes.DbResponse\) \(finalQuery string\)](<#BuildFinalQueryForCodeLLMRequest>)
 - [func BuildFinalQueryForGeneralLLMRequest\(request string, knowledgedbResponse \[\]sharedtypes.DbResponse\) \(finalQuery string\)](<#BuildFinalQueryForGeneralLLMRequest>)
 - [func BuildLibraryContext\(message string, libraryContext string\) \(messageWithContext string\)](<#BuildLibraryContext>)
-- [func CallTool\(serverURL string, toolName string, arguments map\[string\]interface\{\}\) \(mcptypes.MCPToolResult, error\)](<#CallTool>)
 - [func CastAnyToBool\(data any\) bool](<#CastAnyToBool>)
 - [func CastAnyToByte\(data any\) byte](<#CastAnyToByte>)
 - [func CastAnyToComplex128\(data any\) complex128](<#CastAnyToComplex128>)
@@ -123,14 +118,10 @@ Package externalfunctions provides MCP \(Model Context Protocol\) client functio
 - [func GetLocalFileContent\(localFilePath string\) \(checksum string, content \[\]byte\)](<#GetLocalFileContent>)
 - [func GetLocalFilesContent\(localFilePaths \[\]string\) \(filesMap map\[string\]\[\]byte\)](<#GetLocalFilesContent>)
 - [func GetLocalFilesToExtract\(localPath string, localFileExtensions \[\]string, localFilteredDirectories \[\]string, localExcludedDirectories \[\]string\) \(localFilesToExtract \[\]string\)](<#GetLocalFilesToExtract>)
-- [func GetPrompt\(serverURL string, promptName string, arguments map\[string\]interface\{\}\) \(mcptypes.MCPPromptResult, error\)](<#GetPrompt>)
 - [func GetSelectedSolution\(arguments string\) \(solution string\)](<#GetSelectedSolution>)
 - [func GetSolutionsToFixProblem\(db\_name, fmFailureCode, primeMeshFailureCode string\) \(solutions string\)](<#GetSolutionsToFixProblem>)
 - [func JsonPath\(pat string, data any, oneResult bool\) any](<#JsonPath>)
 - [func LangchainSplitter\(bytesContent \[\]byte, documentType string, chunkSize int, chunkOverlap int\) \(output \[\]string\)](<#LangchainSplitter>)
-- [func ListPrompts\(serverURL string\) \(\[\]mcptypes.MCPPrompt, error\)](<#ListPrompts>)
-- [func ListResources\(serverURL string\) \(\[\]mcptypes.MCPResource, error\)](<#ListResources>)
-- [func ListTools\(serverURL string\) \(\[\]mcptypes.MCPTool, error\)](<#ListTools>)
 - [func LoadAndCheckExampleDependencies\(dependenciesContent \[\]byte, elements \[\]sharedtypes.CodeGenerationElement, instancesReplacementDict map\[string\]string, InstancesReplacementPriorityList \[\]string\) \(checkedDependenciesMap map\[string\]\[\]string, equivalencesMap map\[string\]map\[string\]string\)](<#LoadAndCheckExampleDependencies>)
 - [func LoadCodeGenerationElements\(content \[\]byte, elementsFilePath string\) \(elements \[\]sharedtypes.CodeGenerationElement\)](<#LoadCodeGenerationElements>)
 - [func LoadCodeGenerationExamples\(source string, examplesToExtract \[\]string, githubRepoName string, githubRepoOwner string, githubRepoBranch string, githubAccessToken string, dependencies map\[string\]\[\]string, equivalencesMap map\[string\]map\[string\]string, chunkSize int, chunkOverlap int\) \(examples \[\]sharedtypes.CodeGenerationExample\)](<#LoadCodeGenerationExamples>)
@@ -166,7 +157,6 @@ Package externalfunctions provides MCP \(Model Context Protocol\) client functio
 - [func QdrantCreateCollection\(collectionName string, vectorSize uint64, vectorDistance string\)](<#QdrantCreateCollection>)
 - [func QdrantCreateIndex\(collectionName string, fieldName string, fieldType string, wait bool\)](<#QdrantCreateIndex>)
 - [func QdrantInsertData\(collectionName string, data \[\]interface\{\}, idFieldName string, vectorFieldName string\)](<#QdrantInsertData>)
-- [func ReadResource\(serverURL string, resourceURI string\) \(mcptypes.MCPResourceContent, error\)](<#ReadResource>)
 - [func RetrieveDependencies\(relationshipName string, relationshipDirection string, sourceDocumentId string, nodeTypesFilter sharedtypes.DbArrayFilter, maxHopsNumber int\) \(dependenciesIds \[\]string\)](<#RetrieveDependencies>)
 - [func SelectedSolution\(selectedSolution string\) \(solution string\)](<#SelectedSolution>)
 - [func SendLogicAppNotificationEmail\(logicAppEndpoint string, email string, subject string, content string\)](<#SendLogicAppNotificationEmail>)
@@ -212,6 +202,21 @@ Package externalfunctions provides MCP \(Model Context Protocol\) client functio
 - [type EmailRequest](<#EmailRequest>)
 - [type GeneralDataExtractionDocument](<#GeneralDataExtractionDocument>)
 - [type LlmCriteria](<#LlmCriteria>)
+- [type MCPContent](<#MCPContent>)
+- [type MCPPrompt](<#MCPPrompt>)
+  - [func ListPrompts\(serverURL string\) \(\[\]MCPPrompt, error\)](<#ListPrompts>)
+- [type MCPPromptArgument](<#MCPPromptArgument>)
+- [type MCPPromptMessage](<#MCPPromptMessage>)
+- [type MCPPromptResult](<#MCPPromptResult>)
+  - [func GetPrompt\(serverURL string, promptName string, arguments map\[string\]interface\{\}\) \(MCPPromptResult, error\)](<#GetPrompt>)
+- [type MCPResource](<#MCPResource>)
+  - [func ListResources\(serverURL string\) \(\[\]MCPResource, error\)](<#ListResources>)
+- [type MCPResourceContent](<#MCPResourceContent>)
+  - [func ReadResource\(serverURL string, resourceURI string\) \(MCPResourceContent, error\)](<#ReadResource>)
+- [type MCPTool](<#MCPTool>)
+  - [func ListTools\(serverURL string\) \(\[\]MCPTool, error\)](<#ListTools>)
+- [type MCPToolResult](<#MCPToolResult>)
+  - [func CallTool\(serverURL string, toolName string, arguments map\[string\]interface\{\}\) \(MCPToolResult, error\)](<#CallTool>)
 - [type MongoDbContext](<#MongoDbContext>)
 - [type MongoDbCustomerObject](<#MongoDbCustomerObject>)
 - [type MongoDbCustomerObjectDisco](<#MongoDbCustomerObjectDisco>)
@@ -223,169 +228,165 @@ Package externalfunctions provides MCP \(Model Context Protocol\) client functio
 
 <a name="ExternalFunctionsMap"></a>
 
-```go
-var ExternalFunctionsMap = map[string]interface{}{
-
-    "PerformVectorEmbeddingRequest":                                                             PerformVectorEmbeddingRequest,
-    "PerformVectorEmbeddingRequestWithTokenLimitCatch":                                          PerformVectorEmbeddingRequestWithTokenLimitCatch,
-    "PerformBatchEmbeddingRequest":                                                              PerformBatchEmbeddingRequest,
-    "PerformBatchHybridEmbeddingRequest":                                                        PerformBatchHybridEmbeddingRequest,
-    "PerformKeywordExtractionRequest":                                                           PerformKeywordExtractionRequest,
-    "PerformGeneralRequest":                                                                     PerformGeneralRequest,
-    "PerformGeneralRequestWithImages":                                                           PerformGeneralRequestWithImages,
-    "PerformGeneralModelSpecificationRequest":                                                   PerformGeneralModelSpecificationRequest,
-    "PerformGeneralRequestSpecificModel":                                                        PerformGeneralRequestSpecificModel,
-    "PerformGeneralRequestSpecificModelAndModelOptions":                                         PerformGeneralRequestSpecificModelAndModelOptions,
-    "PerformGeneralRequestSpecificModelModelOptionsAndImages":                                   PerformGeneralRequestSpecificModelModelOptionsAndImages,
-    "PerformGeneralRequestSpecificModelNoStreamWithOpenAiTokenOutput":                           PerformGeneralRequestSpecificModelNoStreamWithOpenAiTokenOutput,
-    "PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiTokenOutput":            PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiTokenOutput,
-    "PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOutputTokenOutput": PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOutputTokenOutput,
-    "PerformCodeLLMRequest":                                                                     PerformCodeLLMRequest,
-    "PerformGeneralRequestNoStreaming":                                                          PerformGeneralRequestNoStreaming,
-    "BuildLibraryContext":                                                                       BuildLibraryContext,
-    "BuildFinalQueryForGeneralLLMRequest":                                                       BuildFinalQueryForGeneralLLMRequest,
-    "BuildFinalQueryForCodeLLMRequest":                                                          BuildFinalQueryForCodeLLMRequest,
-    "AppendMessageHistory":                                                                      AppendMessageHistory,
-    "ShortenMessageHistory":                                                                     ShortenMessageHistory,
-    "CheckTokenLimitReached":                                                                    CheckTokenLimitReached,
-
-    "SendVectorsToKnowledgeDB": SendVectorsToKnowledgeDB,
-    "GetListCollections":       GetListCollections,
-    "RetrieveDependencies":     RetrieveDependencies,
-    "GeneralGraphDbQuery":      GeneralGraphDbQuery,
-    "AddGraphDbParameter":      AddGraphDbParameter,
-    "GeneralQuery":             GeneralQuery,
-    "SimilaritySearch":         SimilaritySearch,
-    "CreateKeywordsDbFilter":   CreateKeywordsDbFilter,
-    "CreateTagsDbFilter":       CreateTagsDbFilter,
-    "CreateMetadataDbFilter":   CreateMetadataDbFilter,
-    "CreateDbFilter":           CreateDbFilter,
-
-    "AnsysGPTCheckProhibitedWords":                   AnsysGPTCheckProhibitedWords,
-    "AnsysGPTExtractFieldsFromQuery":                 AnsysGPTExtractFieldsFromQuery,
-    "AnsysGPTPerformLLMRephraseRequest":              AnsysGPTPerformLLMRephraseRequest,
-    "AnsysGPTPerformLLMRephraseRequestNew":           AnsysGPTPerformLLMRephraseRequestNew,
-    "AnsysGPTBuildFinalQuery":                        AnsysGPTBuildFinalQuery,
-    "AnsysGPTPerformLLMRequest":                      AnsysGPTPerformLLMRequest,
-    "AnsysGPTReturnIndexList":                        AnsysGPTReturnIndexList,
-    "AnsysGPTACSSemanticHybridSearchs":               AnsysGPTACSSemanticHybridSearchs,
-    "AnsysGPTRemoveNoneCitationsFromSearchResponse":  AnsysGPTRemoveNoneCitationsFromSearchResponse,
-    "AnsysGPTReorderSearchResponseAndReturnOnlyTopK": AnsysGPTReorderSearchResponseAndReturnOnlyTopK,
-    "AnsysGPTGetSystemPrompt":                        AnsysGPTGetSystemPrompt,
-    "AisPerformLLMRephraseRequest":                   AisPerformLLMRephraseRequest,
-    "AisReturnIndexList":                             AisReturnIndexList,
-    "AisAcsSemanticHybridSearchs":                    AisAcsSemanticHybridSearchs,
-    "AisChangeAcsResponsesByFactor":                  AisChangeAcsResponsesByFactor,
-    "AecGetContextFromRetrieverModule":               AecGetContextFromRetrieverModule,
-    "AecPerformLLMFinalRequest":                      AecPerformLLMFinalRequest,
-
-    "GetGithubFilesToExtract":                    GetGithubFilesToExtract,
-    "GetLocalFilesToExtract":                     GetLocalFilesToExtract,
-    "AppendStringSlices":                         AppendStringSlices,
-    "DownloadGithubFileContent":                  DownloadGithubFileContent,
-    "GetLocalFileContent":                        GetLocalFileContent,
-    "GetDocumentType":                            GetDocumentType,
-    "LangchainSplitter":                          LangchainSplitter,
-    "GenerateDocumentTree":                       GenerateDocumentTree,
-    "AddDataRequest":                             AddDataRequest,
-    "CreateCollectionRequest":                    CreateCollectionRequest,
-    "CreateGeneralDataExtractionDocumentObjects": CreateGeneralDataExtractionDocumentObjects,
-
-    "AssignStringToString":   AssignStringToString,
-    "SendRestAPICall":        SendRestAPICall,
-    "PrintFeedback":          PrintFeedback,
-    "ExtractJSONStringField": ExtractJSONStringField,
-    "GenerateUUID":           GenerateUUID,
-    "JsonPath":               JsonPath,
-    "StringConcat":           StringConcat,
-    "StringFormat":           StringFormat,
-
-    "LoadCodeGenerationElements":      LoadCodeGenerationElements,
-    "LoadCodeGenerationExamples":      LoadCodeGenerationExamples,
-    "LoadAndCheckExampleDependencies": LoadAndCheckExampleDependencies,
-    "LoadUserGuideSections":           LoadUserGuideSections,
-
-    "StoreElementsInVectorDatabase":          StoreElementsInVectorDatabase,
-    "StoreElementsInGraphDatabase":           StoreElementsInGraphDatabase,
-    "StoreExamplesInVectorDatabase":          StoreExamplesInVectorDatabase,
-    "StoreExamplesInGraphDatabase":           StoreExamplesInGraphDatabase,
-    "StoreUserGuideSectionsInVectorDatabase": StoreUserGuideSectionsInVectorDatabase,
-    "StoreUserGuideSectionsInGraphDatabase":  StoreUserGuideSectionsInGraphDatabase,
-
-    "SimilartitySearchOnPathDescriptions":       SimilartitySearchOnPathDescriptions,
-    "FindRelevantPathDescription":               FindRelevantPathDescription,
-    "FetchPropertiesFromPathDescription":        FetchPropertiesFromPathDescription,
-    "FetchNodeDescriptionsFromPathDescription":  FetchNodeDescriptionsFromPathDescription,
-    "FetchActionsPathFromPathDescription":       FetchActionsPathFromPathDescription,
-    "SynthesizeActions":                         SynthesizeActions,
-    "FinalizeResult":                            FinalizeResult,
-    "GetSolutionsToFixProblem":                  GetSolutionsToFixProblem,
-    "GetSelectedSolution":                       GetSelectedSolution,
-    "AppendToolHistory":                         AppendToolHistory,
-    "AppendMeshPilotHistory":                    AppendMeshPilotHistory,
-    "GetActionsFromConfig":                      GetActionsFromConfig,
-    "ParseHistory":                              ParseHistory,
-    "SynthesizeActionsTool2":                    SynthesizeActionsTool2,
-    "SynthesizeActionsTool11":                   SynthesizeActionsTool11,
-    "SynthesizeActionsTool12":                   SynthesizeActionsTool12,
-    "SynthesizeActionsTool17":                   SynthesizeActionsTool17,
-    "SimilartitySearchOnPathDescriptionsQdrant": SimilartitySearchOnPathDescriptionsQdrant,
-    "GenerateActionsSubWorkflowPrompt":          GenerateActionsSubWorkflowPrompt,
-    "ProcessSubworkflowIdentificationOutput":    ProcessSubworkflowIdentificationOutput,
-    "MarkdownToHTML":                            MarkdownToHTML,
-    "ParseHistoryToHistoricMessages":            ParseHistoryToHistoricMessages,
-    "FinalizeMessage":                           FinalizeMessage,
-    "GenerateUserPrompt":                        GenerateUserPrompt,
-    "GenerateUserPromptWithList":                GenerateUserPromptWithList,
-    "GenerateUserPromptWithContext":             GenerateUserPromptWithContext,
-    "SelectedSolution":                          SelectedSolution,
-    "ProcessMainAgentOutput":                    ProcessMainAgentOutput,
-    "GenerateHelperSubWorkflowPrompt":           GenerateHelperSubWorkflowPrompt,
-
-    "QdrantCreateCollection": QdrantCreateCollection,
-    "QdrantInsertData":       QdrantInsertData,
-
-    "CheckApiKeyAuthMongoDb":                        CheckApiKeyAuthMongoDb,
-    "CheckCreateUserIdMongoDb":                      CheckCreateUserIdMongoDb,
-    "UpdateTotalTokenCountForCustomerMongoDb":       UpdateTotalTokenCountForCustomerMongoDb,
-    "UpdateTotalTokenCountForUserIdMongoDb":         UpdateTotalTokenCountForUserIdMongoDb,
-    "DenyCustomerAccessAndSendWarningMongoDb":       DenyCustomerAccessAndSendWarningMongoDb,
-    "DenyCustomerAccessAndSendWarningMongoDbUserId": DenyCustomerAccessAndSendWarningMongoDbUserId,
-    "SendLogicAppNotificationEmail":                 SendLogicAppNotificationEmail,
-    "CreateMessageWithVariable":                     CreateMessageWithVariable,
-
-    "MCPClient": MCPClient,
-
-    "ListTools":     ListTools,
-    "ListResources": ListResources,
-    "ListPrompts":   ListPrompts,
-    "CallTool":      CallTool,
-    "ReadResource":  ReadResource,
-    "GetPrompt":     GetPrompt,
-
-    "SerializeResponse":                SerializeResponse,
-    "AddGuidsToAttributes":             AddGuidsToAttributes,
-    "FilterOutNonExistingAttributes":   FilterOutNonExistingAttributes,
-    "FilterOutDuplicateAttributes":     FilterOutDuplicateAttributes,
-    "ExtractCriteriaSuggestions":       ExtractCriteriaSuggestions,
-    "LogRequestSuccess":                LogRequestSuccess,
-    "LogRequestFailed":                 LogRequestFailed,
-    "LogRequestFailedDebugWithMessage": LogRequestFailedDebugWithMessage,
-    "PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput": PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput,
-    "CheckApiKeyAuthKvDb":                  CheckApiKeyAuthKvDb,
-    "UpdateTotalTokenCountForCustomerKvDb": UpdateTotalTokenCountForCustomerKvDb,
-    "DenyCustomerAccessAndSendWarningKvDb": DenyCustomerAccessAndSendWarningKvDb,
-
-    "SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,
-}
-```
+	var ExternalFunctionsMap = map[string]interface{}{
+	
+	    "PerformVectorEmbeddingRequest":                                                             PerformVectorEmbeddingRequest,
+	    "PerformVectorEmbeddingRequestWithTokenLimitCatch":                                          PerformVectorEmbeddingRequestWithTokenLimitCatch,
+	    "PerformBatchEmbeddingRequest":                                                              PerformBatchEmbeddingRequest,
+	    "PerformBatchHybridEmbeddingRequest":                                                        PerformBatchHybridEmbeddingRequest,
+	    "PerformKeywordExtractionRequest":                                                           PerformKeywordExtractionRequest,
+	    "PerformGeneralRequest":                                                                     PerformGeneralRequest,
+	    "PerformGeneralRequestWithImages":                                                           PerformGeneralRequestWithImages,
+	    "PerformGeneralModelSpecificationRequest":                                                   PerformGeneralModelSpecificationRequest,
+	    "PerformGeneralRequestSpecificModel":                                                        PerformGeneralRequestSpecificModel,
+	    "PerformGeneralRequestSpecificModelAndModelOptions":                                         PerformGeneralRequestSpecificModelAndModelOptions,
+	    "PerformGeneralRequestSpecificModelModelOptionsAndImages":                                   PerformGeneralRequestSpecificModelModelOptionsAndImages,
+	    "PerformGeneralRequestSpecificModelNoStreamWithOpenAiTokenOutput":                           PerformGeneralRequestSpecificModelNoStreamWithOpenAiTokenOutput,
+	    "PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiTokenOutput":            PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiTokenOutput,
+	    "PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOutputTokenOutput": PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOutputTokenOutput,
+	    "PerformCodeLLMRequest":                                                                     PerformCodeLLMRequest,
+	    "PerformGeneralRequestNoStreaming":                                                          PerformGeneralRequestNoStreaming,
+	    "BuildLibraryContext":                                                                       BuildLibraryContext,
+	    "BuildFinalQueryForGeneralLLMRequest":                                                       BuildFinalQueryForGeneralLLMRequest,
+	    "BuildFinalQueryForCodeLLMRequest":                                                          BuildFinalQueryForCodeLLMRequest,
+	    "AppendMessageHistory":                                                                      AppendMessageHistory,
+	    "ShortenMessageHistory":                                                                     ShortenMessageHistory,
+	    "CheckTokenLimitReached":                                                                    CheckTokenLimitReached,
+	
+	    "SendVectorsToKnowledgeDB": SendVectorsToKnowledgeDB,
+	    "GetListCollections":       GetListCollections,
+	    "RetrieveDependencies":     RetrieveDependencies,
+	    "GeneralGraphDbQuery":      GeneralGraphDbQuery,
+	    "AddGraphDbParameter":      AddGraphDbParameter,
+	    "GeneralQuery":             GeneralQuery,
+	    "SimilaritySearch":         SimilaritySearch,
+	    "CreateKeywordsDbFilter":   CreateKeywordsDbFilter,
+	    "CreateTagsDbFilter":       CreateTagsDbFilter,
+	    "CreateMetadataDbFilter":   CreateMetadataDbFilter,
+	    "CreateDbFilter":           CreateDbFilter,
+	
+	    "AnsysGPTCheckProhibitedWords":                   AnsysGPTCheckProhibitedWords,
+	    "AnsysGPTExtractFieldsFromQuery":                 AnsysGPTExtractFieldsFromQuery,
+	    "AnsysGPTPerformLLMRephraseRequest":              AnsysGPTPerformLLMRephraseRequest,
+	    "AnsysGPTPerformLLMRephraseRequestNew":           AnsysGPTPerformLLMRephraseRequestNew,
+	    "AnsysGPTBuildFinalQuery":                        AnsysGPTBuildFinalQuery,
+	    "AnsysGPTPerformLLMRequest":                      AnsysGPTPerformLLMRequest,
+	    "AnsysGPTReturnIndexList":                        AnsysGPTReturnIndexList,
+	    "AnsysGPTACSSemanticHybridSearchs":               AnsysGPTACSSemanticHybridSearchs,
+	    "AnsysGPTRemoveNoneCitationsFromSearchResponse":  AnsysGPTRemoveNoneCitationsFromSearchResponse,
+	    "AnsysGPTReorderSearchResponseAndReturnOnlyTopK": AnsysGPTReorderSearchResponseAndReturnOnlyTopK,
+	    "AnsysGPTGetSystemPrompt":                        AnsysGPTGetSystemPrompt,
+	    "AisPerformLLMRephraseRequest":                   AisPerformLLMRephraseRequest,
+	    "AisReturnIndexList":                             AisReturnIndexList,
+	    "AisAcsSemanticHybridSearchs":                    AisAcsSemanticHybridSearchs,
+	    "AisChangeAcsResponsesByFactor":                  AisChangeAcsResponsesByFactor,
+	    "AecGetContextFromRetrieverModule":               AecGetContextFromRetrieverModule,
+	    "AecPerformLLMFinalRequest":                      AecPerformLLMFinalRequest,
+	
+	    "GetGithubFilesToExtract":                    GetGithubFilesToExtract,
+	    "GetLocalFilesToExtract":                     GetLocalFilesToExtract,
+	    "AppendStringSlices":                         AppendStringSlices,
+	    "DownloadGithubFileContent":                  DownloadGithubFileContent,
+	    "GetLocalFileContent":                        GetLocalFileContent,
+	    "GetDocumentType":                            GetDocumentType,
+	    "LangchainSplitter":                          LangchainSplitter,
+	    "GenerateDocumentTree":                       GenerateDocumentTree,
+	    "AddDataRequest":                             AddDataRequest,
+	    "CreateCollectionRequest":                    CreateCollectionRequest,
+	    "CreateGeneralDataExtractionDocumentObjects": CreateGeneralDataExtractionDocumentObjects,
+	
+	    "AssignStringToString":   AssignStringToString,
+	    "SendRestAPICall":        SendRestAPICall,
+	    "PrintFeedback":          PrintFeedback,
+	    "ExtractJSONStringField": ExtractJSONStringField,
+	    "GenerateUUID":           GenerateUUID,
+	    "JsonPath":               JsonPath,
+	    "StringConcat":           StringConcat,
+	    "StringFormat":           StringFormat,
+	
+	    "LoadCodeGenerationElements":      LoadCodeGenerationElements,
+	    "LoadCodeGenerationExamples":      LoadCodeGenerationExamples,
+	    "LoadAndCheckExampleDependencies": LoadAndCheckExampleDependencies,
+	    "LoadUserGuideSections":           LoadUserGuideSections,
+	
+	    "StoreElementsInVectorDatabase":          StoreElementsInVectorDatabase,
+	    "StoreElementsInGraphDatabase":           StoreElementsInGraphDatabase,
+	    "StoreExamplesInVectorDatabase":          StoreExamplesInVectorDatabase,
+	    "StoreExamplesInGraphDatabase":           StoreExamplesInGraphDatabase,
+	    "StoreUserGuideSectionsInVectorDatabase": StoreUserGuideSectionsInVectorDatabase,
+	    "StoreUserGuideSectionsInGraphDatabase":  StoreUserGuideSectionsInGraphDatabase,
+	
+	    "SimilartitySearchOnPathDescriptions":       SimilartitySearchOnPathDescriptions,
+	    "FindRelevantPathDescription":               FindRelevantPathDescription,
+	    "FetchPropertiesFromPathDescription":        FetchPropertiesFromPathDescription,
+	    "FetchNodeDescriptionsFromPathDescription":  FetchNodeDescriptionsFromPathDescription,
+	    "FetchActionsPathFromPathDescription":       FetchActionsPathFromPathDescription,
+	    "SynthesizeActions":                         SynthesizeActions,
+	    "FinalizeResult":                            FinalizeResult,
+	    "GetSolutionsToFixProblem":                  GetSolutionsToFixProblem,
+	    "GetSelectedSolution":                       GetSelectedSolution,
+	    "AppendToolHistory":                         AppendToolHistory,
+	    "AppendMeshPilotHistory":                    AppendMeshPilotHistory,
+	    "GetActionsFromConfig":                      GetActionsFromConfig,
+	    "ParseHistory":                              ParseHistory,
+	    "SynthesizeActionsTool2":                    SynthesizeActionsTool2,
+	    "SynthesizeActionsTool11":                   SynthesizeActionsTool11,
+	    "SynthesizeActionsTool12":                   SynthesizeActionsTool12,
+	    "SynthesizeActionsTool17":                   SynthesizeActionsTool17,
+	    "SimilartitySearchOnPathDescriptionsQdrant": SimilartitySearchOnPathDescriptionsQdrant,
+	    "GenerateActionsSubWorkflowPrompt":          GenerateActionsSubWorkflowPrompt,
+	    "ProcessSubworkflowIdentificationOutput":    ProcessSubworkflowIdentificationOutput,
+	    "MarkdownToHTML":                            MarkdownToHTML,
+	    "ParseHistoryToHistoricMessages":            ParseHistoryToHistoricMessages,
+	    "FinalizeMessage":                           FinalizeMessage,
+	    "GenerateUserPrompt":                        GenerateUserPrompt,
+	    "GenerateUserPromptWithList":                GenerateUserPromptWithList,
+	    "GenerateUserPromptWithContext":             GenerateUserPromptWithContext,
+	    "SelectedSolution":                          SelectedSolution,
+	    "ProcessMainAgentOutput":                    ProcessMainAgentOutput,
+	    "GenerateHelperSubWorkflowPrompt":           GenerateHelperSubWorkflowPrompt,
+	
+	    "QdrantCreateCollection": QdrantCreateCollection,
+	    "QdrantInsertData":       QdrantInsertData,
+	
+	    "CheckApiKeyAuthMongoDb":                        CheckApiKeyAuthMongoDb,
+	    "CheckCreateUserIdMongoDb":                      CheckCreateUserIdMongoDb,
+	    "UpdateTotalTokenCountForCustomerMongoDb":       UpdateTotalTokenCountForCustomerMongoDb,
+	    "UpdateTotalTokenCountForUserIdMongoDb":         UpdateTotalTokenCountForUserIdMongoDb,
+	    "DenyCustomerAccessAndSendWarningMongoDb":       DenyCustomerAccessAndSendWarningMongoDb,
+	    "DenyCustomerAccessAndSendWarningMongoDbUserId": DenyCustomerAccessAndSendWarningMongoDbUserId,
+	    "SendLogicAppNotificationEmail":                 SendLogicAppNotificationEmail,
+	    "CreateMessageWithVariable":                     CreateMessageWithVariable,
+	
+	    "MCPClient": MCPClient,
+	
+	    "ListTools":     ListTools,
+	    "ListResources": ListResources,
+	    "ListPrompts":   ListPrompts,
+	    "CallTool":      CallTool,
+	    "ReadResource":  ReadResource,
+	    "GetPrompt":     GetPrompt,
+	
+	    "SerializeResponse":                SerializeResponse,
+	    "AddGuidsToAttributes":             AddGuidsToAttributes,
+	    "FilterOutNonExistingAttributes":   FilterOutNonExistingAttributes,
+	    "FilterOutDuplicateAttributes":     FilterOutDuplicateAttributes,
+	    "ExtractCriteriaSuggestions":       ExtractCriteriaSuggestions,
+	    "LogRequestSuccess":                LogRequestSuccess,
+	    "LogRequestFailed":                 LogRequestFailed,
+	    "LogRequestFailedDebugWithMessage": LogRequestFailedDebugWithMessage,
+	    "PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput": PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput,
+	    "CheckApiKeyAuthKvDb":                  CheckApiKeyAuthKvDb,
+	    "UpdateTotalTokenCountForCustomerKvDb": UpdateTotalTokenCountForCustomerKvDb,
+	    "DenyCustomerAccessAndSendWarningKvDb": DenyCustomerAccessAndSendWarningKvDb,
+	
+	    "SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,
+	}
 
 <a name="AddDataRequest"></a>
-## func [AddDataRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/knowledgedb.go#L525>)
+## func AddDataRequest
 
-```go
-func AddDataRequest(collectionName string, documentData []sharedtypes.DbData)
-```
+	func AddDataRequest(collectionName string, documentData []sharedtypes.DbData)
 
 AddDataRequest sends a request to the add\_data endpoint.
 
@@ -399,11 +400,9 @@ Parameters:
 - data: the data to add.
 
 <a name="AddGraphDbParameter"></a>
-## func [AddGraphDbParameter](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/knowledgedb.go#L194>)
+## func AddGraphDbParameter
 
-```go
-func AddGraphDbParameter(parameters aali_graphdb.ParameterMap, name string, value string, paramType string) aali_graphdb.ParameterMap
-```
+	func AddGraphDbParameter(parameters aali_graphdb.ParameterMap, name string, value string, paramType string) aali_graphdb.ParameterMap
 
 AddGraphDbParameter adds a new GraphDbParameter to a map\[string\]GraphDbParameter
 
@@ -423,11 +422,9 @@ Returns:
 - The original parameters with the new one added
 
 <a name="AddGuidsToAttributes"></a>
-## func [AddGuidsToAttributes](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L80>)
+## func AddGuidsToAttributes
 
-```go
-func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute) (criteriaWithGuids []sharedtypes.MaterialCriterionWithGuid)
-```
+	func AddGuidsToAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute) (criteriaWithGuids []sharedtypes.MaterialCriterionWithGuid)
 
 AddGuidsToAttributes adds GUIDs to the attributes in the criteria
 
@@ -445,11 +442,9 @@ Returns:
 - criteriaWithGuids: the list of criteria with their identities
 
 <a name="AecGetContextFromRetrieverModule"></a>
-## func [AecGetContextFromRetrieverModule](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L803-L810>)
+## func AecGetContextFromRetrieverModule
 
-```go
-func AecGetContextFromRetrieverModule(retrieverModuleEndpoint string, userQuery string, dataSources []string, physics []string, topK int, plattform string, retrieverModuleKey string) (context []sharedtypes.AnsysGPTRetrieverModuleChunk)
-```
+	func AecGetContextFromRetrieverModule(retrieverModuleEndpoint string, userQuery string, dataSources []string, physics []string, topK int, plattform string, retrieverModuleKey string) (context []sharedtypes.AnsysGPTRetrieverModuleChunk)
 
 AecGetContextFromRetrieverModule retrieves context from the Ansys GPT Retriever Module
 
@@ -472,11 +467,9 @@ Returns:
 - context: the context retrieved from the retriever module
 
 <a name="AecPerformLLMFinalRequest"></a>
-## func [AecPerformLLMFinalRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L904-L918>)
+## func AecPerformLLMFinalRequest
 
-```go
-func AecPerformLLMFinalRequest(systemTemplate string, userTemplate string, query string, history []sharedtypes.HistoricMessage, context []sharedtypes.AnsysGPTRetrieverModuleChunk, prohibitedWords []string, errorList1 []string, errorList2 []string, tokenCountEndpoint string, previousInputTokenCount int, previousOutputTokenCount int, tokenCountModelName string, isStream bool, userEmail string, jwtToken string) (message string, stream *chan string)
-```
+	func AecPerformLLMFinalRequest(systemTemplate string, userTemplate string, query string, history []sharedtypes.HistoricMessage, context []sharedtypes.AnsysGPTRetrieverModuleChunk, prohibitedWords []string, errorList1 []string, errorList2 []string, tokenCountEndpoint string, previousInputTokenCount int, previousOutputTokenCount int, tokenCountModelName string, isStream bool, userEmail string, jwtToken string) (message string, stream *chan string)
 
 AecPerformLLMFinalRequest performs a final request to LLM
 
@@ -499,11 +492,9 @@ Returns:
 - stream: the stream channel
 
 <a name="AisAcsSemanticHybridSearchs"></a>
-## func [AisAcsSemanticHybridSearchs](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L693-L701>)
+## func AisAcsSemanticHybridSearchs
 
-```go
-func AisAcsSemanticHybridSearchs(acsEndpoint string, acsApiKey string, acsApiVersion string, query string, embeddedQuery []float32, indexList []string, physics []string, topK int) []sharedtypes.ACSSearchResponse
-```
+	func AisAcsSemanticHybridSearchs(acsEndpoint string, acsApiKey string, acsApiVersion string, query string, embeddedQuery []float32, indexList []string, physics []string, topK int) []sharedtypes.ACSSearchResponse
 
 AisAcsSemanticHybridSearchs performs a semantic hybrid search in ACS
 
@@ -524,11 +515,9 @@ Returns:
 - output: the search results
 
 <a name="AisChangeAcsResponsesByFactor"></a>
-## func [AisChangeAcsResponsesByFactor](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L762>)
+## func AisChangeAcsResponsesByFactor
 
-```go
-func AisChangeAcsResponsesByFactor(factors map[string]float64, semanticSearchOutput []sharedtypes.ACSSearchResponse) (changedSemanticSearchOutput []sharedtypes.ACSSearchResponse)
-```
+	func AisChangeAcsResponsesByFactor(factors map[string]float64, semanticSearchOutput []sharedtypes.ACSSearchResponse) (changedSemanticSearchOutput []sharedtypes.ACSSearchResponse)
 
 AisChangeAcsResponsesByFactor changes the ACS responses by a factor
 
@@ -546,11 +535,9 @@ Returns:
 - changedSemanticSearchOutput: the changed search response
 
 <a name="AisPerformLLMRephraseRequest"></a>
-## func [AisPerformLLMRephraseRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L546>)
+## func AisPerformLLMRephraseRequest
 
-```go
-func AisPerformLLMRephraseRequest(systemTemplate string, userTemplate string, query string, history []sharedtypes.HistoricMessage, tokenCountModelName string) (rephrasedQuery string, inputTokenCount int, outputTokenCount int)
-```
+	func AisPerformLLMRephraseRequest(systemTemplate string, userTemplate string, query string, history []sharedtypes.HistoricMessage, tokenCountModelName string) (rephrasedQuery string, inputTokenCount int, outputTokenCount int)
 
 AisPerformLLMRephraseRequest performs a rephrase request to LLM
 
@@ -570,11 +557,9 @@ Returns:
 - rephrasedQuery: the rephrased query
 
 <a name="AisReturnIndexList"></a>
-## func [AisReturnIndexList](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L610>)
+## func AisReturnIndexList
 
-```go
-func AisReturnIndexList(accessPoint string, physics []string, version []string) (indexList []string)
-```
+	func AisReturnIndexList(accessPoint string, physics []string, version []string) (indexList []string)
 
 AisReturnIndexList returns the index list for AIS
 
@@ -591,11 +576,9 @@ Returns:
 - indexList: the index list
 
 <a name="AnsysGPTACSSemanticHybridSearchs"></a>
-## func [AnsysGPTACSSemanticHybridSearchs](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L424-L432>)
+## func AnsysGPTACSSemanticHybridSearchs
 
-```go
-func AnsysGPTACSSemanticHybridSearchs(acsEndpoint string, acsApiKey string, acsApiVersion string, query string, embeddedQuery []float32, indexList []string, filter map[string]string, topK int) (output []sharedtypes.ACSSearchResponse)
-```
+	func AnsysGPTACSSemanticHybridSearchs(acsEndpoint string, acsApiKey string, acsApiVersion string, query string, embeddedQuery []float32, indexList []string, filter map[string]string, topK int) (output []sharedtypes.ACSSearchResponse)
 
 AnsysGPTACSSemanticHybridSearchs performs a semantic hybrid search in ACS
 
@@ -623,11 +606,9 @@ Returns:
 - output: the search results
 
 <a name="AnsysGPTBuildFinalQuery"></a>
-## func [AnsysGPTBuildFinalQuery](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L291>)
+## func AnsysGPTBuildFinalQuery
 
-```go
-func AnsysGPTBuildFinalQuery(refrasedQuery string, context []sharedtypes.ACSSearchResponse) (finalQuery string, errorResponse string, displayFixedMessageToUser bool)
-```
+	func AnsysGPTBuildFinalQuery(refrasedQuery string, context []sharedtypes.ACSSearchResponse) (finalQuery string, errorResponse string, displayFixedMessageToUser bool)
 
 AnsysGPTBuildFinalQuery builds the final query for Ansys GPT
 
@@ -645,11 +626,9 @@ Returns:
 - finalQuery: the final query
 
 <a name="AnsysGPTCheckProhibitedWords"></a>
-## func [AnsysGPTCheckProhibitedWords](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L56>)
+## func AnsysGPTCheckProhibitedWords
 
-```go
-func AnsysGPTCheckProhibitedWords(query string, prohibitedWords []string, errorResponseMessage string) (foundProhibited bool, responseMessage string)
-```
+	func AnsysGPTCheckProhibitedWords(query string, prohibitedWords []string, errorResponseMessage string) (foundProhibited bool, responseMessage string)
 
 AnsysGPTCheckProhibitedWords checks the user query for prohibited words
 
@@ -669,11 +648,9 @@ Returns:
 - responseMessage: the response message
 
 <a name="AnsysGPTExtractFieldsFromQuery"></a>
-## func [AnsysGPTExtractFieldsFromQuery](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L119>)
+## func AnsysGPTExtractFieldsFromQuery
 
-```go
-func AnsysGPTExtractFieldsFromQuery(query string, fieldValues map[string][]string, defaultFields []sharedtypes.AnsysGPTDefaultFields) (fields map[string]string)
-```
+	func AnsysGPTExtractFieldsFromQuery(query string, fieldValues map[string][]string, defaultFields []sharedtypes.AnsysGPTDefaultFields) (fields map[string]string)
 
 AnsysGPTExtractFieldsFromQuery extracts the fields from the user query
 
@@ -692,11 +669,9 @@ Returns:
 - fields: the extracted fields
 
 <a name="AnsysGPTGetSystemPrompt"></a>
-## func [AnsysGPTGetSystemPrompt](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L512>)
+## func AnsysGPTGetSystemPrompt
 
-```go
-func AnsysGPTGetSystemPrompt(query string, prohibitedWords []string, template string) (systemPrompt string)
-```
+	func AnsysGPTGetSystemPrompt(query string, prohibitedWords []string, template string) (systemPrompt string)
 
 AnsysGPTGetSystemPrompt returns the system prompt for Ansys GPT
 
@@ -713,11 +688,9 @@ Returns:
 - systemPrompt: the system prompt
 
 <a name="AnsysGPTPerformLLMRephraseRequest"></a>
-## func [AnsysGPTPerformLLMRephraseRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L249>)
+## func AnsysGPTPerformLLMRephraseRequest
 
-```go
-func AnsysGPTPerformLLMRephraseRequest(userTemplate string, query string, history []sharedtypes.HistoricMessage, systemPrompt string) (rephrasedQuery string)
-```
+	func AnsysGPTPerformLLMRephraseRequest(userTemplate string, query string, history []sharedtypes.HistoricMessage, systemPrompt string) (rephrasedQuery string)
 
 AnsysGPTPerformLLMRephraseRequest performs a rephrase request to LLM
 
@@ -736,11 +709,9 @@ Returns:
 - rephrasedQuery: the rephrased query
 
 <a name="AnsysGPTPerformLLMRephraseRequestNew"></a>
-## func [AnsysGPTPerformLLMRephraseRequestNew](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L195>)
+## func AnsysGPTPerformLLMRephraseRequestNew
 
-```go
-func AnsysGPTPerformLLMRephraseRequestNew(template string, query string, history []sharedtypes.HistoricMessage) (rephrasedQuery string)
-```
+	func AnsysGPTPerformLLMRephraseRequestNew(template string, query string, history []sharedtypes.HistoricMessage) (rephrasedQuery string)
 
 AnsysGPTPerformLLMRephraseRequestNew performs a rephrase request to LLM
 
@@ -759,11 +730,9 @@ Returns:
 - rephrasedQuery: the rephrased query
 
 <a name="AnsysGPTPerformLLMRequest"></a>
-## func [AnsysGPTPerformLLMRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L322>)
+## func AnsysGPTPerformLLMRequest
 
-```go
-func AnsysGPTPerformLLMRequest(finalQuery string, history []sharedtypes.HistoricMessage, systemPrompt string, isStream bool) (message string, stream *chan string)
-```
+	func AnsysGPTPerformLLMRequest(finalQuery string, history []sharedtypes.HistoricMessage, systemPrompt string, isStream bool) (message string, stream *chan string)
 
 AnsysGPTPerformLLMRequest performs a request to Ansys GPT
 
@@ -782,11 +751,9 @@ Returns:
 - stream: the stream channel
 
 <a name="AnsysGPTRemoveNoneCitationsFromSearchResponse"></a>
-## func [AnsysGPTRemoveNoneCitationsFromSearchResponse](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L458>)
+## func AnsysGPTRemoveNoneCitationsFromSearchResponse
 
-```go
-func AnsysGPTRemoveNoneCitationsFromSearchResponse(semanticSearchOutput []sharedtypes.ACSSearchResponse, citations []sharedtypes.AnsysGPTCitation) (reducedSemanticSearchOutput []sharedtypes.ACSSearchResponse)
-```
+	func AnsysGPTRemoveNoneCitationsFromSearchResponse(semanticSearchOutput []sharedtypes.ACSSearchResponse, citations []sharedtypes.AnsysGPTCitation) (reducedSemanticSearchOutput []sharedtypes.ACSSearchResponse)
 
 AnsysGPTRemoveNoneCitationsFromSearchResponse removes none citations from search response
 
@@ -804,11 +771,9 @@ Returns:
 - reducedSemanticSearchOutput: the reduced search response
 
 <a name="AnsysGPTReorderSearchResponseAndReturnOnlyTopK"></a>
-## func [AnsysGPTReorderSearchResponseAndReturnOnlyTopK](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L487>)
+## func AnsysGPTReorderSearchResponseAndReturnOnlyTopK
 
-```go
-func AnsysGPTReorderSearchResponseAndReturnOnlyTopK(semanticSearchOutput []sharedtypes.ACSSearchResponse, topK int) (reorderedSemanticSearchOutput []sharedtypes.ACSSearchResponse)
-```
+	func AnsysGPTReorderSearchResponseAndReturnOnlyTopK(semanticSearchOutput []sharedtypes.ACSSearchResponse, topK int) (reorderedSemanticSearchOutput []sharedtypes.ACSSearchResponse)
 
 AnsysGPTReorderSearchResponseAndReturnOnlyTopK reorders the search response
 
@@ -826,11 +791,9 @@ Returns:
 - reorderedSemanticSearchOutput: the reordered search response
 
 <a name="AnsysGPTReturnIndexList"></a>
-## func [AnsysGPTReturnIndexList](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysgpt.go#L375>)
+## func AnsysGPTReturnIndexList
 
-```go
-func AnsysGPTReturnIndexList(indexGroups []string) (indexList []string)
-```
+	func AnsysGPTReturnIndexList(indexGroups []string) (indexList []string)
 
 AnsysGPTReturnIndexList returns the index list for Ansys GPT
 
@@ -847,11 +810,9 @@ Returns:
 - indexList: the index list
 
 <a name="AppendMeshPilotHistory"></a>
-## func [AppendMeshPilotHistory](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1364>)
+## func AppendMeshPilotHistory
 
-```go
-func AppendMeshPilotHistory(history []map[string]string, role, content string) (updatedHistory []map[string]string)
-```
+	func AppendMeshPilotHistory(history []map[string]string, role, content string) (updatedHistory []map[string]string)
 
 AppendMeshPilotHistory this function append mesh pilot history
 
@@ -870,11 +831,9 @@ Returns:
 - updatedHistory: the updated mesh pilot history
 
 <a name="AppendMessageHistory"></a>
-## func [AppendMessageHistory](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L1170>)
+## func AppendMessageHistory
 
-```go
-func AppendMessageHistory(newMessage string, role AppendMessageHistoryRole, history []sharedtypes.HistoricMessage) (updatedHistory []sharedtypes.HistoricMessage)
-```
+	func AppendMessageHistory(newMessage string, role AppendMessageHistoryRole, history []sharedtypes.HistoricMessage) (updatedHistory []sharedtypes.HistoricMessage)
 
 AppendMessageHistory appends a new message to the conversation history
 
@@ -893,11 +852,9 @@ Returns:
 - updatedHistory: the updated conversation history
 
 <a name="AppendStringSlices"></a>
-## func [AppendStringSlices](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L168>)
+## func AppendStringSlices
 
-```go
-func AppendStringSlices(slice1, slice2, slice3, slice4, slice5 []string) []string
-```
+	func AppendStringSlices(slice1, slice2, slice3, slice4, slice5 []string) []string
 
 AppendStringSlices creates a new slice by appending all elements of the provided slices.
 
@@ -914,11 +871,9 @@ Returns:
 - result: a new slice with all elements appended.
 
 <a name="AppendToolHistory"></a>
-## func [AppendToolHistory](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1313>)
+## func AppendToolHistory
 
-```go
-func AppendToolHistory(toolHistory []map[string]string, toolId, toolName, toolArguments, toolResponse string) (updatedToolHistory []map[string]string)
-```
+	func AppendToolHistory(toolHistory []map[string]string, toolId, toolName, toolArguments, toolResponse string) (updatedToolHistory []map[string]string)
 
 AppendToolHistory this function append tool history
 
@@ -939,11 +894,9 @@ Returns:
 - updatedToolHistory: the updated tool history
 
 <a name="AssignStringToString"></a>
-## func [AssignStringToString](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/generic.go#L118>)
+## func AssignStringToString
 
-```go
-func AssignStringToString(inputString string) (outputString string)
-```
+	func AssignStringToString(inputString string) (outputString string)
 
 AssignStringToString assigns a string to another string
 
@@ -960,11 +913,9 @@ Returns:
 - outputString: the output string
 
 <a name="BuildFinalQueryForCodeLLMRequest"></a>
-## func [BuildFinalQueryForCodeLLMRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L1100>)
+## func BuildFinalQueryForCodeLLMRequest
 
-```go
-func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.DbResponse) (finalQuery string)
-```
+	func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.DbResponse) (finalQuery string)
 
 BuildFinalQueryForCodeLLMRequest builds the final query for a code generation request to LLM. The final query is a markdown string that contains the original request and the code examples from the KnowledgeDB.
 
@@ -982,11 +933,9 @@ Returns:
 - finalQuery: the final query
 
 <a name="BuildFinalQueryForGeneralLLMRequest"></a>
-## func [BuildFinalQueryForGeneralLLMRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L1069>)
+## func BuildFinalQueryForGeneralLLMRequest
 
-```go
-func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []sharedtypes.DbResponse) (finalQuery string)
-```
+	func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []sharedtypes.DbResponse) (finalQuery string)
 
 BuildFinalQueryForGeneralLLMRequest builds the final query for a general request to LLM. The final query is a markdown string that contains the original request and the examples from the KnowledgeDB.
 
@@ -1004,11 +953,9 @@ Returns:
 - finalQuery: the final query
 
 <a name="BuildLibraryContext"></a>
-## func [BuildLibraryContext](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L1049>)
+## func BuildLibraryContext
 
-```go
-func BuildLibraryContext(message string, libraryContext string) (messageWithContext string)
-```
+	func BuildLibraryContext(message string, libraryContext string) (messageWithContext string)
 
 BuildLibraryContext builds the context string for the query
 
@@ -1025,36 +972,10 @@ Returns:
 
 - messageWithContext: the message with context
 
-<a name="CallTool"></a>
-## func [CallTool](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L174>)
-
-```go
-func CallTool(serverURL string, toolName string, arguments map[string]interface{}) (mcptypes.MCPToolResult, error)
-```
-
-CallTool executes a specific tool on the MCP server. This follows the MCP standard tools/call method.
-
-Tags:
-
-- @displayName: Call MCP Tool
-
-Parameters:
-
-- serverURL: the WebSocket URL of the MCP server
-- toolName: the name of the tool to execute
-- arguments: arguments to pass to the tool
-
-Returns:
-
-- result: the tool execution result
-- error: any error that occurred during execution
-
 <a name="CastAnyToBool"></a>
-## func [CastAnyToBool](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L55>)
+## func CastAnyToBool
 
-```go
-func CastAnyToBool(data any) bool
-```
+	func CastAnyToBool(data any) bool
 
 CastAnyToBool casts data of type any to bool
 
@@ -1073,11 +994,9 @@ Returns
 - bool
 
 <a name="CastAnyToByte"></a>
-## func [CastAnyToByte](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L295>)
+## func CastAnyToByte
 
-```go
-func CastAnyToByte(data any) byte
-```
+	func CastAnyToByte(data any) byte
 
 CastAnyToByte casts data of type any to byte
 
@@ -1096,11 +1015,9 @@ Returns
 - byte
 
 <a name="CastAnyToComplex128"></a>
-## func [CastAnyToComplex128](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L279>)
+## func CastAnyToComplex128
 
-```go
-func CastAnyToComplex128(data any) complex128
-```
+	func CastAnyToComplex128(data any) complex128
 
 CastAnyToComplex128 casts data of type any to complex128
 
@@ -1119,11 +1036,9 @@ Returns
 - complex128
 
 <a name="CastAnyToComplex64"></a>
-## func [CastAnyToComplex64](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L263>)
+## func CastAnyToComplex64
 
-```go
-func CastAnyToComplex64(data any) complex64
-```
+	func CastAnyToComplex64(data any) complex64
 
 CastAnyToComplex64 casts data of type any to complex64
 
@@ -1142,11 +1057,9 @@ Returns
 - complex64
 
 <a name="CastAnyToFloat32"></a>
-## func [CastAnyToFloat32](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L231>)
+## func CastAnyToFloat32
 
-```go
-func CastAnyToFloat32(data any) float32
-```
+	func CastAnyToFloat32(data any) float32
 
 CastAnyToFloat32 casts data of type any to float32
 
@@ -1165,11 +1078,9 @@ Returns
 - float32
 
 <a name="CastAnyToFloat64"></a>
-## func [CastAnyToFloat64](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L247>)
+## func CastAnyToFloat64
 
-```go
-func CastAnyToFloat64(data any) float64
-```
+	func CastAnyToFloat64(data any) float64
 
 CastAnyToFloat64 casts data of type any to float64
 
@@ -1188,11 +1099,9 @@ Returns
 - float64
 
 <a name="CastAnyToInt"></a>
-## func [CastAnyToInt](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L135>)
+## func CastAnyToInt
 
-```go
-func CastAnyToInt(data any) int
-```
+	func CastAnyToInt(data any) int
 
 CastAnyToInt casts data of type any to int
 
@@ -1211,11 +1120,9 @@ Returns
 - int
 
 <a name="CastAnyToInt16"></a>
-## func [CastAnyToInt16](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L87>)
+## func CastAnyToInt16
 
-```go
-func CastAnyToInt16(data any) int16
-```
+	func CastAnyToInt16(data any) int16
 
 CastAnyToInt16 casts data of type any to int16
 
@@ -1234,11 +1141,9 @@ Returns
 - int16
 
 <a name="CastAnyToInt32"></a>
-## func [CastAnyToInt32](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L103>)
+## func CastAnyToInt32
 
-```go
-func CastAnyToInt32(data any) int32
-```
+	func CastAnyToInt32(data any) int32
 
 CastAnyToInt32 casts data of type any to int32
 
@@ -1257,11 +1162,9 @@ Returns
 - int32
 
 <a name="CastAnyToInt64"></a>
-## func [CastAnyToInt64](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L119>)
+## func CastAnyToInt64
 
-```go
-func CastAnyToInt64(data any) int64
-```
+	func CastAnyToInt64(data any) int64
 
 CastAnyToInt64 casts data of type any to int64
 
@@ -1280,11 +1183,9 @@ Returns
 - int64
 
 <a name="CastAnyToInt8"></a>
-## func [CastAnyToInt8](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L71>)
+## func CastAnyToInt8
 
-```go
-func CastAnyToInt8(data any) int8
-```
+	func CastAnyToInt8(data any) int8
 
 CastAnyToInt8 casts data of type any to int8
 
@@ -1303,11 +1204,9 @@ Returns
 - int8
 
 <a name="CastAnyToInterface"></a>
-## func [CastAnyToInterface](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L339>)
+## func CastAnyToInterface
 
-```go
-func CastAnyToInterface(data any) interface{}
-```
+	func CastAnyToInterface(data any) interface{}
 
 CastAnyToInterface casts data of type any to interface \{\}
 
@@ -1324,11 +1223,9 @@ Returns
 - interface \{\}
 
 <a name="CastAnyToRune"></a>
-## func [CastAnyToRune](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L311>)
+## func CastAnyToRune
 
-```go
-func CastAnyToRune(data any) rune
-```
+	func CastAnyToRune(data any) rune
 
 CastAnyToRune casts data of type any to rune
 
@@ -1347,11 +1244,9 @@ Returns
 - rune
 
 <a name="CastAnyToString"></a>
-## func [CastAnyToString](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L39>)
+## func CastAnyToString
 
-```go
-func CastAnyToString(data any) string
-```
+	func CastAnyToString(data any) string
 
 CastAnyToString casts data of type any to string
 
@@ -1370,11 +1265,9 @@ Returns
 - string
 
 <a name="CastAnyToUint"></a>
-## func [CastAnyToUint](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L215>)
+## func CastAnyToUint
 
-```go
-func CastAnyToUint(data any) uint
-```
+	func CastAnyToUint(data any) uint
 
 CastAnyToUint casts data of type any to uint
 
@@ -1393,11 +1286,9 @@ Returns
 - uint
 
 <a name="CastAnyToUint16"></a>
-## func [CastAnyToUint16](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L167>)
+## func CastAnyToUint16
 
-```go
-func CastAnyToUint16(data any) uint16
-```
+	func CastAnyToUint16(data any) uint16
 
 CastAnyToUint16 casts data of type any to uint16
 
@@ -1416,11 +1307,9 @@ Returns
 - uint16
 
 <a name="CastAnyToUint32"></a>
-## func [CastAnyToUint32](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L183>)
+## func CastAnyToUint32
 
-```go
-func CastAnyToUint32(data any) uint32
-```
+	func CastAnyToUint32(data any) uint32
 
 CastAnyToUint32 casts data of type any to uint32
 
@@ -1439,11 +1328,9 @@ Returns
 - uint32
 
 <a name="CastAnyToUint64"></a>
-## func [CastAnyToUint64](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L199>)
+## func CastAnyToUint64
 
-```go
-func CastAnyToUint64(data any) uint64
-```
+	func CastAnyToUint64(data any) uint64
 
 CastAnyToUint64 casts data of type any to uint64
 
@@ -1462,11 +1349,9 @@ Returns
 - uint64
 
 <a name="CastAnyToUint8"></a>
-## func [CastAnyToUint8](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L151>)
+## func CastAnyToUint8
 
-```go
-func CastAnyToUint8(data any) uint8
-```
+	func CastAnyToUint8(data any) uint8
 
 CastAnyToUint8 casts data of type any to uint8
 
@@ -1485,11 +1370,9 @@ Returns
 - uint8
 
 <a name="CastArrayMapStringAnyToAny"></a>
-## func [CastArrayMapStringAnyToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L325>)
+## func CastArrayMapStringAnyToAny
 
-```go
-func CastArrayMapStringAnyToAny(data []map[string]any) any
-```
+	func CastArrayMapStringAnyToAny(data []map[string]any) any
 
 CastArrayMapStringAnyToAny casts data of type \[\]map\[string\]any to any
 
@@ -1506,11 +1389,9 @@ Returns
 - any
 
 <a name="CastBoolToAny"></a>
-## func [CastBoolToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L381>)
+## func CastBoolToAny
 
-```go
-func CastBoolToAny(data bool) any
-```
+	func CastBoolToAny(data bool) any
 
 CastBoolToAny casts data of type bool to any
 
@@ -1527,11 +1408,9 @@ Returns
 - any
 
 <a name="CastByteToAny"></a>
-## func [CastByteToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L591>)
+## func CastByteToAny
 
-```go
-func CastByteToAny(data byte) any
-```
+	func CastByteToAny(data byte) any
 
 CastByteToAny casts data of type byte to any
 
@@ -1548,11 +1427,9 @@ Returns
 - any
 
 <a name="CastComplex128ToAny"></a>
-## func [CastComplex128ToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L577>)
+## func CastComplex128ToAny
 
-```go
-func CastComplex128ToAny(data complex128) any
-```
+	func CastComplex128ToAny(data complex128) any
 
 CastComplex128ToAny casts data of type complex128 to any
 
@@ -1569,11 +1446,9 @@ Returns
 - any
 
 <a name="CastComplex64ToAny"></a>
-## func [CastComplex64ToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L563>)
+## func CastComplex64ToAny
 
-```go
-func CastComplex64ToAny(data complex64) any
-```
+	func CastComplex64ToAny(data complex64) any
 
 CastComplex64ToAny casts data of type complex64 to any
 
@@ -1590,11 +1465,9 @@ Returns
 - any
 
 <a name="CastFloat32ToAny"></a>
-## func [CastFloat32ToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L535>)
+## func CastFloat32ToAny
 
-```go
-func CastFloat32ToAny(data float32) any
-```
+	func CastFloat32ToAny(data float32) any
 
 CastFloat32ToAny casts data of type float32 to any
 
@@ -1611,11 +1484,9 @@ Returns
 - any
 
 <a name="CastFloat64ToAny"></a>
-## func [CastFloat64ToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L549>)
+## func CastFloat64ToAny
 
-```go
-func CastFloat64ToAny(data float64) any
-```
+	func CastFloat64ToAny(data float64) any
 
 CastFloat64ToAny casts data of type float64 to any
 
@@ -1632,11 +1503,9 @@ Returns
 - any
 
 <a name="CastInt16ToAny"></a>
-## func [CastInt16ToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L409>)
+## func CastInt16ToAny
 
-```go
-func CastInt16ToAny(data int16) any
-```
+	func CastInt16ToAny(data int16) any
 
 CastInt16ToAny casts data of type int16 to any
 
@@ -1653,11 +1522,9 @@ Returns
 - any
 
 <a name="CastInt32ToAny"></a>
-## func [CastInt32ToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L423>)
+## func CastInt32ToAny
 
-```go
-func CastInt32ToAny(data int32) any
-```
+	func CastInt32ToAny(data int32) any
 
 CastInt32ToAny casts data of type int32 to any
 
@@ -1674,11 +1541,9 @@ Returns
 - any
 
 <a name="CastInt64ToAny"></a>
-## func [CastInt64ToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L437>)
+## func CastInt64ToAny
 
-```go
-func CastInt64ToAny(data int64) any
-```
+	func CastInt64ToAny(data int64) any
 
 CastInt64ToAny casts data of type int64 to any
 
@@ -1695,11 +1560,9 @@ Returns
 - any
 
 <a name="CastInt8ToAny"></a>
-## func [CastInt8ToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L395>)
+## func CastInt8ToAny
 
-```go
-func CastInt8ToAny(data int8) any
-```
+	func CastInt8ToAny(data int8) any
 
 CastInt8ToAny casts data of type int8 to any
 
@@ -1716,11 +1579,9 @@ Returns
 - any
 
 <a name="CastIntToAny"></a>
-## func [CastIntToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L451>)
+## func CastIntToAny
 
-```go
-func CastIntToAny(data int) any
-```
+	func CastIntToAny(data int) any
 
 CastIntToAny casts data of type int to any
 
@@ -1737,11 +1598,9 @@ Returns
 - any
 
 <a name="CastInterfaceToAny"></a>
-## func [CastInterfaceToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L353>)
+## func CastInterfaceToAny
 
-```go
-func CastInterfaceToAny(data interface{}) any
-```
+	func CastInterfaceToAny(data interface{}) any
 
 CastInterfaceToAny casts data of type interface \{\} to any
 
@@ -1758,11 +1617,9 @@ Returns
 - any
 
 <a name="CastRuneToAny"></a>
-## func [CastRuneToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L605>)
+## func CastRuneToAny
 
-```go
-func CastRuneToAny(data rune) any
-```
+	func CastRuneToAny(data rune) any
 
 CastRuneToAny casts data of type rune to any
 
@@ -1779,11 +1636,9 @@ Returns
 - any
 
 <a name="CastStringToAny"></a>
-## func [CastStringToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L367>)
+## func CastStringToAny
 
-```go
-func CastStringToAny(data string) any
-```
+	func CastStringToAny(data string) any
 
 CastStringToAny casts data of type string to any
 
@@ -1800,11 +1655,9 @@ Returns
 - any
 
 <a name="CastUint16ToAny"></a>
-## func [CastUint16ToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L479>)
+## func CastUint16ToAny
 
-```go
-func CastUint16ToAny(data uint16) any
-```
+	func CastUint16ToAny(data uint16) any
 
 CastUint16ToAny casts data of type uint16 to any
 
@@ -1821,11 +1674,9 @@ Returns
 - any
 
 <a name="CastUint32ToAny"></a>
-## func [CastUint32ToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L493>)
+## func CastUint32ToAny
 
-```go
-func CastUint32ToAny(data uint32) any
-```
+	func CastUint32ToAny(data uint32) any
 
 CastUint32ToAny casts data of type uint32 to any
 
@@ -1842,11 +1693,9 @@ Returns
 - any
 
 <a name="CastUint64ToAny"></a>
-## func [CastUint64ToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L507>)
+## func CastUint64ToAny
 
-```go
-func CastUint64ToAny(data uint64) any
-```
+	func CastUint64ToAny(data uint64) any
 
 CastUint64ToAny casts data of type uint64 to any
 
@@ -1863,11 +1712,9 @@ Returns
 - any
 
 <a name="CastUint8ToAny"></a>
-## func [CastUint8ToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L465>)
+## func CastUint8ToAny
 
-```go
-func CastUint8ToAny(data uint8) any
-```
+	func CastUint8ToAny(data uint8) any
 
 CastUint8ToAny casts data of type uint8 to any
 
@@ -1884,11 +1731,9 @@ Returns
 - any
 
 <a name="CastUintToAny"></a>
-## func [CastUintToAny](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/cast.go#L521>)
+## func CastUintToAny
 
-```go
-func CastUintToAny(data uint) any
-```
+	func CastUintToAny(data uint) any
 
 CastUintToAny casts data of type uint to any
 
@@ -1905,11 +1750,9 @@ Returns
 - any
 
 <a name="CheckApiKeyAuthKvDb"></a>
-## func [CheckApiKeyAuthKvDb](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L376>)
+## func CheckApiKeyAuthKvDb
 
-```go
-func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string) (isAuthenticated bool)
-```
+	func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string) (isAuthenticated bool)
 
 CheckApiKeyAuthKvDb checks if the provided API key is authenticated against the KVDB.
 
@@ -1926,11 +1769,9 @@ Returns:
 - isAuthenticated: true if the API key is authenticated, false otherwise
 
 <a name="CheckApiKeyAuthMongoDb"></a>
-## func [CheckApiKeyAuthMongoDb](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/auth.go#L51>)
+## func CheckApiKeyAuthMongoDb
 
-```go
-func CheckApiKeyAuthMongoDb(apiKey string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string) (isAuthenticated bool)
-```
+	func CheckApiKeyAuthMongoDb(apiKey string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string) (isAuthenticated bool)
 
 CheckApiKeyAuthMongoDb checks if the given API key is valid and has access to the service.
 
@@ -1950,11 +1791,9 @@ Returns:
 - isAuthenticated: A boolean indicating whether the API key is authenticated.
 
 <a name="CheckCreateUserIdMongoDb"></a>
-## func [CheckCreateUserIdMongoDb](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/auth.go#L95>)
+## func CheckCreateUserIdMongoDb
 
-```go
-func CheckCreateUserIdMongoDb(userId string, temporaryTokenLimit int, hoursUntilTokenLimitReset int, modelId []string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string) (existingUser bool)
-```
+	func CheckCreateUserIdMongoDb(userId string, temporaryTokenLimit int, hoursUntilTokenLimitReset int, modelId []string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string) (existingUser bool)
 
 CheckCreateUserIdMongoDb checks if a user ID exists in the MongoDB database and creates it if it doesn't.
 
@@ -1975,11 +1814,9 @@ Returns:
 - existingUser: A boolean indicating whether the user ID already exists.
 
 <a name="CheckTokenLimitReached"></a>
-## func [CheckTokenLimitReached](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L1231>)
+## func CheckTokenLimitReached
 
-```go
-func CheckTokenLimitReached(query string, tokenLimit int, modelName string, tokenLimitMessage string) (tokenLimitReached bool, responseMessage string)
-```
+	func CheckTokenLimitReached(query string, tokenLimit int, modelName string, tokenLimitMessage string) (tokenLimitReached bool, responseMessage string)
 
 CheckTokenLimitReached checks if the query exceeds the token limit for the specified model
 
@@ -1998,11 +1835,9 @@ Returns:
 - tokenLimitReached: true if the token limit is reached, false otherwise
 
 <a name="CreateCollectionRequest"></a>
-## func [CreateCollectionRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/knowledgedb.go#L570>)
+## func CreateCollectionRequest
 
-```go
-func CreateCollectionRequest(collectionName string, vectorSize uint64, vectorDistance string)
-```
+	func CreateCollectionRequest(collectionName string, vectorSize uint64, vectorDistance string)
 
 CreateCollectionRequest sends a request to the collection endpoint.
 
@@ -2017,11 +1852,9 @@ Parameters:
 - vectorDistance: the vector similarity distance algorithm to use for the vector index \(cosine, dot, euclid, manhattan\)
 
 <a name="CreateDbFilter"></a>
-## func [CreateDbFilter](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/knowledgedb.go#L469-L476>)
+## func CreateDbFilter
 
-```go
-func CreateDbFilter(guid []string, documentId []string, documentName []string, level []string, tags sharedtypes.DbArrayFilter, keywords sharedtypes.DbArrayFilter, metadata []sharedtypes.DbJsonFilter) (databaseFilter sharedtypes.DbFilters)
-```
+	func CreateDbFilter(guid []string, documentId []string, documentName []string, level []string, tags sharedtypes.DbArrayFilter, keywords sharedtypes.DbArrayFilter, metadata []sharedtypes.DbJsonFilter) (databaseFilter sharedtypes.DbFilters)
 
 CreateDbFilter creates a filter for the KnowledgeDB.
 
@@ -2046,20 +1879,16 @@ Returns:
 - databaseFilter: the filter
 
 <a name="CreateEmbeddings"></a>
-## func [CreateEmbeddings](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/privatefunctions.go#L2152>)
+## func CreateEmbeddings
 
-```go
-func CreateEmbeddings(dense bool, sparse bool, colbert bool, isDocument bool, passages []string) (dense_vector [][]float32, lexical_weights []map[uint]float32, colbert_vecs [][][]float32, func_error error)
-```
+	func CreateEmbeddings(dense bool, sparse bool, colbert bool, isDocument bool, passages []string) (dense_vector [][]float32, lexical_weights []map[uint]float32, colbert_vecs [][][]float32, func_error error)
 
 
 
 <a name="CreateGeneralDataExtractionDocumentObjects"></a>
-## func [CreateGeneralDataExtractionDocumentObjects](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L1645-L1649>)
+## func CreateGeneralDataExtractionDocumentObjects
 
-```go
-func CreateGeneralDataExtractionDocumentObjects(documentName string, documentChunks []string, denseEmbeddings [][]float32, sparseEmbeddings []map[uint]float32) (extractionData []interface{})
-```
+	func CreateGeneralDataExtractionDocumentObjects(documentName string, documentChunks []string, denseEmbeddings [][]float32, sparseEmbeddings []map[uint]float32) (extractionData []interface{})
 
 CreateGeneralDataExtractionDocumentObjects creates general data extraction document objects from the provided document chunks, dense embeddings, and sparse embeddings.
 
@@ -2079,11 +1908,9 @@ Returns:
 - extractionData: general data extraction document objects in interface format.
 
 <a name="CreateKeywordsDbFilter"></a>
-## func [CreateKeywordsDbFilter](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/knowledgedb.go#L397>)
+## func CreateKeywordsDbFilter
 
-```go
-func CreateKeywordsDbFilter(keywords []string, needAll bool) (databaseFilter sharedtypes.DbArrayFilter)
-```
+	func CreateKeywordsDbFilter(keywords []string, needAll bool) (databaseFilter sharedtypes.DbArrayFilter)
 
 CreateKeywordsDbFilter creates a keywords filter for the KnowledgeDB.
 
@@ -2103,11 +1930,9 @@ Returns:
 - databaseFilter: the keywords filter
 
 <a name="CreateMessageWithVariable"></a>
-## func [CreateMessageWithVariable](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/auth.go#L345>)
+## func CreateMessageWithVariable
 
-```go
-func CreateMessageWithVariable(message string, variable string) (updatedMessage string)
-```
+	func CreateMessageWithVariable(message string, variable string) (updatedMessage string)
 
 CreateMessageWithVariable creates a message with a variable.
 
@@ -2125,11 +1950,9 @@ Returns:
 - updatedMessage: The updated message with the variable inserted.
 
 <a name="CreateMetadataDbFilter"></a>
-## func [CreateMetadataDbFilter](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/knowledgedb.go#L447>)
+## func CreateMetadataDbFilter
 
-```go
-func CreateMetadataDbFilter(fieldName string, fieldType string, filterData []string, needAll bool) (databaseFilter sharedtypes.DbJsonFilter)
-```
+	func CreateMetadataDbFilter(fieldName string, fieldType string, filterData []string, needAll bool) (databaseFilter sharedtypes.DbJsonFilter)
 
 CreateMetadataDbFilter creates a metadata filter for the KnowledgeDB.
 
@@ -2151,11 +1974,9 @@ Returns:
 - databaseFilter: the metadata filter
 
 <a name="CreateTagsDbFilter"></a>
-## func [CreateTagsDbFilter](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/knowledgedb.go#L421>)
+## func CreateTagsDbFilter
 
-```go
-func CreateTagsDbFilter(tags []string, needAll bool) (databaseFilter sharedtypes.DbArrayFilter)
-```
+	func CreateTagsDbFilter(tags []string, needAll bool) (databaseFilter sharedtypes.DbArrayFilter)
 
 CreateTagsDbFilter creates a tags filter for the KnowledgeDB.
 
@@ -2175,11 +1996,9 @@ Returns:
 - databaseFilter: the tags filter
 
 <a name="DenyCustomerAccessAndSendWarningKvDb"></a>
-## func [DenyCustomerAccessAndSendWarningKvDb](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L485>)
+## func DenyCustomerAccessAndSendWarningKvDb
 
-```go
-func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string) (customerName string, sendWarning bool)
-```
+	func DenyCustomerAccessAndSendWarningKvDb(kvdbEndpoint string, apiKey string) (customerName string, sendWarning bool)
 
 DenyCustomerAccessAndSendWarningKvDb denies access to a customer and sends a warning if not already sent
 
@@ -2197,11 +2016,9 @@ Returns:
 - sendWarning: true if a warning was sent, false if it was already sent
 
 <a name="DenyCustomerAccessAndSendWarningMongoDb"></a>
-## func [DenyCustomerAccessAndSendWarningMongoDb](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/auth.go#L206>)
+## func DenyCustomerAccessAndSendWarningMongoDb
 
-```go
-func DenyCustomerAccessAndSendWarningMongoDb(apiKey string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string) (customerName string, sendWarning bool)
-```
+	func DenyCustomerAccessAndSendWarningMongoDb(apiKey string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string) (customerName string, sendWarning bool)
 
 DenyCustomerAccessAndSendWarningMongoDb denies access to the customer and sends a warning if necessary.
 
@@ -2222,11 +2039,9 @@ Returns:
 - sendWarning: A boolean indicating whether a warning should be sent to the customer.
 
 <a name="DenyCustomerAccessAndSendWarningMongoDbUserId"></a>
-## func [DenyCustomerAccessAndSendWarningMongoDbUserId](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/auth.go#L248>)
+## func DenyCustomerAccessAndSendWarningMongoDbUserId
 
-```go
-func DenyCustomerAccessAndSendWarningMongoDbUserId(userId string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string) (sendWarning bool)
-```
+	func DenyCustomerAccessAndSendWarningMongoDbUserId(userId string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string) (sendWarning bool)
 
 DenyCustomerAccessAndSendWarningMongoDbUserId denies access to the customer by user ID and sends a warning if necessary.
 
@@ -2246,11 +2061,9 @@ Returns:
 - sendWarning: A boolean indicating whether a warning should be sent to the customer.
 
 <a name="DownloadGithubFileContent"></a>
-## func [DownloadGithubFileContent](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L196-L197>)
+## func DownloadGithubFileContent
 
-```go
-func DownloadGithubFileContent(githubRepoName string, githubRepoOwner string, githubRepoBranch string, gihubFilePath string, githubAccessToken string) (checksum string, content []byte)
-```
+	func DownloadGithubFileContent(githubRepoName string, githubRepoOwner string, githubRepoBranch string, gihubFilePath string, githubAccessToken string) (checksum string, content []byte)
 
 DownloadGithubFileContent downloads file content from github and returns checksum and content.
 
@@ -2272,11 +2085,9 @@ Returns:
 - content: content of file.
 
 <a name="DownloadGithubFilesContent"></a>
-## func [DownloadGithubFilesContent](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L223-L224>)
+## func DownloadGithubFilesContent
 
-```go
-func DownloadGithubFilesContent(githubRepoName string, githubRepoOwner string, githubRepoBranch string, gihubFilePaths []string, githubAccessToken string) (filesMap map[string][]byte)
-```
+	func DownloadGithubFilesContent(githubRepoName string, githubRepoOwner string, githubRepoBranch string, gihubFilePaths []string, githubAccessToken string) (filesMap map[string][]byte)
 
 DownloadGithubFilesContent downloads file content from github and returns checksum and content.
 
@@ -2297,11 +2108,9 @@ Returns:
 - filesMap: map of file paths to file content.
 
 <a name="ExtractCriteriaSuggestions"></a>
-## func [ExtractCriteriaSuggestions](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L169>)
+## func ExtractCriteriaSuggestions
 
-```go
-func ExtractCriteriaSuggestions(llmResponse string) (criteriaSuggestions []sharedtypes.MaterialLlmCriterion)
-```
+	func ExtractCriteriaSuggestions(llmResponse string) (criteriaSuggestions []sharedtypes.MaterialLlmCriterion)
 
 ExtractCriteriaSuggestions extracts criteria suggestions from the LLM response text
 
@@ -2318,11 +2127,9 @@ Returns:
 - criteriaSuggestions: the list of criteria suggestions extracted from the LLM response
 
 <a name="ExtractJSONStringField"></a>
-## func [ExtractJSONStringField](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/generic.go#L151>)
+## func ExtractJSONStringField
 
-```go
-func ExtractJSONStringField(jsonStr string, keyPath string) string
-```
+	func ExtractJSONStringField(jsonStr string, keyPath string) string
 
 ExtractJSONStringField extracts a string field from a JSON string using a key path. The key path is a dot\-separated string that specifies the path to the field in the JSON object.
 
@@ -2340,20 +2147,16 @@ Returns:
 - the value of the field as a string
 
 <a name="ExtractJson"></a>
-## func [ExtractJson](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L309>)
+## func ExtractJson
 
-```go
-func ExtractJson(text string) (json string)
-```
+	func ExtractJson(text string) (json string)
 
 
 
 <a name="FetchActionsPathFromPathDescription"></a>
-## func [FetchActionsPathFromPathDescription](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L405>)
+## func FetchActionsPathFromPathDescription
 
-```go
-func FetchActionsPathFromPathDescription(db_name, description, nodeLabel string) (actions []map[string]string)
-```
+	func FetchActionsPathFromPathDescription(db_name, description, nodeLabel string) (actions []map[string]string)
 
 FetchActionsPathFromPathDescription fetch actions from path description
 
@@ -2371,11 +2174,9 @@ Returns:
 - actions: the list of actions to execute
 
 <a name="FetchNodeDescriptionsFromPathDescription"></a>
-## func [FetchNodeDescriptionsFromPathDescription](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L363>)
+## func FetchNodeDescriptionsFromPathDescription
 
-```go
-func FetchNodeDescriptionsFromPathDescription(db_name, description string) (actionDescriptions string)
-```
+	func FetchNodeDescriptionsFromPathDescription(db_name, description string) (actionDescriptions string)
 
 FetchNodeDescriptionsFromPathDescription get node descriptions from path description
 
@@ -2392,11 +2193,9 @@ Returns:
 - actionDescriptions: action descriptions
 
 <a name="FetchPropertiesFromPathDescription"></a>
-## func [FetchPropertiesFromPathDescription](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L325>)
+## func FetchPropertiesFromPathDescription
 
-```go
-func FetchPropertiesFromPathDescription(db_name, description string) (properties []string)
-```
+	func FetchPropertiesFromPathDescription(db_name, description string) (properties []string)
 
 FetchPropertiesFromPathDescription get properties from path description
 
@@ -2413,11 +2212,9 @@ Returns:
 - properties: the list of descriptions
 
 <a name="FilterOutDuplicateAttributes"></a>
-## func [FilterOutDuplicateAttributes](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L145>)
+## func FilterOutDuplicateAttributes
 
-```go
-func FilterOutDuplicateAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion) (filtered []sharedtypes.MaterialLlmCriterion)
-```
+	func FilterOutDuplicateAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion) (filtered []sharedtypes.MaterialLlmCriterion)
 
 FilterOutDuplicateAttributes filters out duplicate attributes from the criteria suggestions based on their names
 
@@ -2434,11 +2231,9 @@ Returns:
 - filtered: the list of criteria suggestions excluding duplicates based on attribute names
 
 <a name="FilterOutNonExistingAttributes"></a>
-## func [FilterOutNonExistingAttributes](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L117>)
+## func FilterOutNonExistingAttributes
 
-```go
-func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute) (filtered []sharedtypes.MaterialLlmCriterion)
-```
+	func FilterOutNonExistingAttributes(criteriaSuggestions []sharedtypes.MaterialLlmCriterion, availableAttributes []sharedtypes.MaterialAttribute) (filtered []sharedtypes.MaterialLlmCriterion)
 
 FilterOutNonExistingAttributes filters out criteria suggestions that do not match any of the available attributes based on their names
 
@@ -2456,11 +2251,9 @@ Returns:
 - filtered: the list of criteria suggestions excluding those that do not match any of the available attributes
 
 <a name="FinalizeMessage"></a>
-## func [FinalizeMessage](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1923>)
+## func FinalizeMessage
 
-```go
-func FinalizeMessage(message string) (result string)
-```
+	func FinalizeMessage(message string) (result string)
 
 FinalizeMessage this function takes message and generate response schema
 
@@ -2477,11 +2270,9 @@ Returns:
 - result: response schema sent to chat interface
 
 <a name="FinalizeResult"></a>
-## func [FinalizeResult](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L948>)
+## func FinalizeResult
 
-```go
-func FinalizeResult(actions []map[string]string, toolName string) (result string)
-```
+	func FinalizeResult(actions []map[string]string, toolName string) (result string)
 
 FinalizeResult converts actions to json string to send back data
 
@@ -2499,11 +2290,9 @@ Returns:
 - result: the actions in json format
 
 <a name="FindRelevantPathDescription"></a>
-## func [FindRelevantPathDescription](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L255>)
+## func FindRelevantPathDescription
 
-```go
-func FindRelevantPathDescription(descriptions []string, message string) (relevantDescription string)
-```
+	func FindRelevantPathDescription(descriptions []string, message string) (relevantDescription string)
 
 FindRelevantPathDescription finds the relevant description by prompting
 
@@ -2521,11 +2310,9 @@ Returns:
 - relevantDescription: the relevant desctiption
 
 <a name="GeneralGraphDbQuery"></a>
-## func [GeneralGraphDbQuery](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/knowledgedb.go#L217>)
+## func GeneralGraphDbQuery
 
-```go
-func GeneralGraphDbQuery(query string, parameters aali_graphdb.ParameterMap) []map[string]any
-```
+	func GeneralGraphDbQuery(query string, parameters aali_graphdb.ParameterMap) []map[string]any
 
 GeneralGraphDbQuery executes the given Cypher query and returns the response.
 
@@ -2545,11 +2332,9 @@ Returns:
 - databaseResponse: the graph db response
 
 <a name="GeneralQuery"></a>
-## func [GeneralQuery](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/knowledgedb.go#L245>)
+## func GeneralQuery
 
-```go
-func GeneralQuery(collectionName string, maxRetrievalCount int, outputFields []string, filters sharedtypes.DbFilters) (databaseResponse []sharedtypes.DbResponse)
-```
+	func GeneralQuery(collectionName string, maxRetrievalCount int, outputFields []string, filters sharedtypes.DbFilters) (databaseResponse []sharedtypes.DbResponse)
 
 GeneralQuery performs a general query in the KnowledgeDB.
 
@@ -2571,11 +2356,9 @@ Returns:
 - databaseResponse: the query results
 
 <a name="GenerateActionsSubWorkflowPrompt"></a>
-## func [GenerateActionsSubWorkflowPrompt](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1660>)
+## func GenerateActionsSubWorkflowPrompt
 
-```go
-func GenerateActionsSubWorkflowPrompt(userInstruction string) (systemPrompt string, userPrompt string)
-```
+	func GenerateActionsSubWorkflowPrompt(userInstruction string) (systemPrompt string, userPrompt string)
 
 GenerateActionsSubWorkflowPrompt generates system and user prompts for subworkflow identification.
 
@@ -2593,11 +2376,9 @@ Returns:
 - userPrompt: the user prompt
 
 <a name="GenerateDocumentTree"></a>
-## func [GenerateDocumentTree](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L414-L415>)
+## func GenerateDocumentTree
 
-```go
-func GenerateDocumentTree(documentName string, documentId string, documentChunks []string, embeddingsDimensions int, getSummary bool, getKeywords bool, numKeywords int, chunkSize int, numLlmWorkers int) (returnedDocumentData []sharedtypes.DbData)
-```
+	func GenerateDocumentTree(documentName string, documentId string, documentChunks []string, embeddingsDimensions int, getSummary bool, getKeywords bool, numKeywords int, chunkSize int, numLlmWorkers int) (returnedDocumentData []sharedtypes.DbData)
 
 GenerateDocumentTree generates a tree structure from the document chunks.
 
@@ -2622,11 +2403,9 @@ Returns:
 - documentData: tree structure of the document.
 
 <a name="GenerateHelperSubWorkflowPrompt"></a>
-## func [GenerateHelperSubWorkflowPrompt](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1705>)
+## func GenerateHelperSubWorkflowPrompt
 
-```go
-func GenerateHelperSubWorkflowPrompt(userInstruction string) (systemPrompt string, userPrompt string)
-```
+	func GenerateHelperSubWorkflowPrompt(userInstruction string) (systemPrompt string, userPrompt string)
 
 GenerateHelperSubWorkflowPrompt generates system and user prompts for helper subworkflow identification.
 
@@ -2644,11 +2423,9 @@ Returns:
 - userPrompt: the user prompt
 
 <a name="GenerateUUID"></a>
-## func [GenerateUUID](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/generic.go#L192>)
+## func GenerateUUID
 
-```go
-func GenerateUUID() string
-```
+	func GenerateUUID() string
 
 GenerateUUID generates a new UUID \(Universally Unique Identifier\).
 
@@ -2661,11 +2438,9 @@ Returns:
 - a string representation of the generated UUID
 
 <a name="GenerateUserPrompt"></a>
-## func [GenerateUserPrompt](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1750>)
+## func GenerateUserPrompt
 
-```go
-func GenerateUserPrompt(userInstruction string, userPromptTemplate string) (userPrompt string)
-```
+	func GenerateUserPrompt(userInstruction string, userPromptTemplate string) (userPrompt string)
 
 GenerateUserPrompt generates user instruction prompt based on the provided template.
 
@@ -2683,11 +2458,9 @@ Returns:
 - userPrompt: the user prompt
 
 <a name="GenerateUserPromptWithContext"></a>
-## func [GenerateUserPromptWithContext](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1772>)
+## func GenerateUserPromptWithContext
 
-```go
-func GenerateUserPromptWithContext(userInstruction string, context string, userPromptTemplate string) (userPrompt string)
-```
+	func GenerateUserPromptWithContext(userInstruction string, context string, userPromptTemplate string) (userPrompt string)
 
 GenerateUserPromptWithContext generates user instruction prompt based on the provided template with instruction and context.
 
@@ -2706,11 +2479,9 @@ Returns:
 - userPrompt: the user prompt
 
 <a name="GenerateUserPromptWithList"></a>
-## func [GenerateUserPromptWithList](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1794>)
+## func GenerateUserPromptWithList
 
-```go
-func GenerateUserPromptWithList(userInstruction string, userList []string, userPromptTemplate string) (userPrompt string)
-```
+	func GenerateUserPromptWithList(userInstruction string, userList []string, userPromptTemplate string) (userPrompt string)
 
 GenerateUserPromptWithList generates user instruction prompt based on the provided template, instruction, list.
 
@@ -2729,11 +2500,9 @@ Returns:
 - userPrompt: the user prompt
 
 <a name="GetActionsFromConfig"></a>
-## func [GetActionsFromConfig](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1424>)
+## func GetActionsFromConfig
 
-```go
-func GetActionsFromConfig(toolName string) (result string)
-```
+	func GetActionsFromConfig(toolName string) (result string)
 
 FinalizeResult converts actions to json string to send back data
 
@@ -2750,11 +2519,9 @@ Returns:
 - result: the actions in json format
 
 <a name="GetDocumentType"></a>
-## func [GetDocumentType](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L301>)
+## func GetDocumentType
 
-```go
-func GetDocumentType(filePath string) (documentType string)
-```
+	func GetDocumentType(filePath string) (documentType string)
 
 GetDocumentType returns the document type of a file.
 
@@ -2771,11 +2538,9 @@ Returns:
 - documentType: file extension.
 
 <a name="GetGithubFilesToExtract"></a>
-## func [GetGithubFilesToExtract](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L67-L69>)
+## func GetGithubFilesToExtract
 
-```go
-func GetGithubFilesToExtract(githubRepoName string, githubRepoOwner string, githubRepoBranch string, githubAccessToken string, githubFileExtensions []string, githubFilteredDirectories []string, githubExcludedDirectories []string) (githubFilesToExtract []string)
-```
+	func GetGithubFilesToExtract(githubRepoName string, githubRepoOwner string, githubRepoBranch string, githubAccessToken string, githubFileExtensions []string, githubFilteredDirectories []string, githubExcludedDirectories []string) (githubFilesToExtract []string)
 
 GetGithubFilesToExtract gets all files from github that need to be extracted.
 
@@ -2798,11 +2563,9 @@ Returns:
 - githubFilesToExtract: github files to extract.
 
 <a name="GetListCollections"></a>
-## func [GetListCollections](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/knowledgedb.go#L129>)
+## func GetListCollections
 
-```go
-func GetListCollections() (collectionsList []string)
-```
+	func GetListCollections() (collectionsList []string)
 
 GetListCollections retrieves the list of collections from the KnowledgeDB.
 
@@ -2821,11 +2584,9 @@ Returns:
 - collectionsList: the list of collections
 
 <a name="GetLocalFileContent"></a>
-## func [GetLocalFileContent](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L252>)
+## func GetLocalFileContent
 
-```go
-func GetLocalFileContent(localFilePath string) (checksum string, content []byte)
-```
+	func GetLocalFileContent(localFilePath string) (checksum string, content []byte)
 
 GetLocalFileContent reads local file and returns checksum and content.
 
@@ -2843,11 +2604,9 @@ Returns:
 - content: content of file.
 
 <a name="GetLocalFilesContent"></a>
-## func [GetLocalFilesContent](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L274>)
+## func GetLocalFilesContent
 
-```go
-func GetLocalFilesContent(localFilePaths []string) (filesMap map[string][]byte)
-```
+	func GetLocalFilesContent(localFilePaths []string) (filesMap map[string][]byte)
 
 GetLocalFilesContent reads local files and returns content.
 
@@ -2864,11 +2623,9 @@ Returns:
 - filesMap: map of file paths to file content.
 
 <a name="GetLocalFilesToExtract"></a>
-## func [GetLocalFilesToExtract](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L120-L121>)
+## func GetLocalFilesToExtract
 
-```go
-func GetLocalFilesToExtract(localPath string, localFileExtensions []string, localFilteredDirectories []string, localExcludedDirectories []string) (localFilesToExtract []string)
-```
+	func GetLocalFilesToExtract(localPath string, localFileExtensions []string, localFilteredDirectories []string, localExcludedDirectories []string) (localFilesToExtract []string)
 
 GetLocalFilesToExtract gets all files from local that need to be extracted.
 
@@ -2887,36 +2644,10 @@ Returns:
 
 - localFilesToExtract: local files to extract.
 
-<a name="GetPrompt"></a>
-## func [GetPrompt](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L287>)
-
-```go
-func GetPrompt(serverURL string, promptName string, arguments map[string]interface{}) (mcptypes.MCPPromptResult, error)
-```
-
-GetPrompt retrieves a specific prompt from the MCP server. This follows the MCP standard prompts/get method.
-
-Tags:
-
-- @displayName: Get MCP Prompt
-
-Parameters:
-
-- serverURL: the WebSocket URL of the MCP server
-- promptName: the name of the prompt to retrieve
-- arguments: arguments for the prompt
-
-Returns:
-
-- result: the prompt with generated messages
-- error: any error that occurred during the request
-
 <a name="GetSelectedSolution"></a>
-## func [GetSelectedSolution](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1278>)
+## func GetSelectedSolution
 
-```go
-func GetSelectedSolution(arguments string) (solution string)
-```
+	func GetSelectedSolution(arguments string) (solution string)
 
 GetSelectedSolution get user selected solutions from the options provided
 
@@ -2933,11 +2664,9 @@ Returns:
 - solution: the selected solution
 
 <a name="GetSolutionsToFixProblem"></a>
-## func [GetSolutionsToFixProblem](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1228>)
+## func GetSolutionsToFixProblem
 
-```go
-func GetSolutionsToFixProblem(db_name, fmFailureCode, primeMeshFailureCode string) (solutions string)
-```
+	func GetSolutionsToFixProblem(db_name, fmFailureCode, primeMeshFailureCode string) (solutions string)
 
 GetSolutionsToFixProblem do similarity search on path description
 
@@ -2955,11 +2684,9 @@ Returns:
 - solutions: the list of solutions in json
 
 <a name="JsonPath"></a>
-## func [JsonPath](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/generic.go#L210>)
+## func JsonPath
 
-```go
-func JsonPath(pat string, data any, oneResult bool) any
-```
+	func JsonPath(pat string, data any, oneResult bool) any
 
 JsonPath extracts some data from an arbitrary data structure using a JSONPath pattern
 
@@ -2978,11 +2705,9 @@ Returns
 - The extracted data. If oneResult=false, this will be an array of any.
 
 <a name="LangchainSplitter"></a>
-## func [LangchainSplitter](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L322>)
+## func LangchainSplitter
 
-```go
-func LangchainSplitter(bytesContent []byte, documentType string, chunkSize int, chunkOverlap int) (output []string)
-```
+	func LangchainSplitter(bytesContent []byte, documentType string, chunkSize int, chunkOverlap int) (output []string)
 
 LangchainSplitter splits content into chunks using langchain.
 
@@ -3001,78 +2726,10 @@ Returns:
 
 - output: chunks as an slice of strings.
 
-<a name="ListPrompts"></a>
-## func [ListPrompts](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L124>)
-
-```go
-func ListPrompts(serverURL string) ([]mcptypes.MCPPrompt, error)
-```
-
-ListPrompts retrieves all available prompts from the MCP server. This follows the MCP standard prompts/list method.
-
-Tags:
-
-- @displayName: List MCP Prompts
-
-Parameters:
-
-- serverURL: the WebSocket URL of the MCP server
-
-Returns:
-
-- prompts: list of available prompts
-- error: any error that occurred during the request
-
-<a name="ListResources"></a>
-## func [ListResources](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L85>)
-
-```go
-func ListResources(serverURL string) ([]mcptypes.MCPResource, error)
-```
-
-ListResources retrieves all available resources from the MCP server. This follows the MCP standard resources/list method.
-
-Tags:
-
-- @displayName: List MCP Resources
-
-Parameters:
-
-- serverURL: the WebSocket URL of the MCP server
-
-Returns:
-
-- resources: list of available resources
-- error: any error that occurred during the request
-
-<a name="ListTools"></a>
-## func [ListTools](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L47>)
-
-```go
-func ListTools(serverURL string) ([]mcptypes.MCPTool, error)
-```
-
-ListTools retrieves all available tools from the MCP server. This follows the MCP standard tools/list method.
-
-Tags:
-
-- @displayName: List MCP Tools
-
-Parameters:
-
-- serverURL: the WebSocket URL of the MCP server
-
-Returns:
-
-- tools: list of available tools
-- error: any error that occurred during the request
-
 <a name="LoadAndCheckExampleDependencies"></a>
-## func [LoadAndCheckExampleDependencies](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L938-L943>)
+## func LoadAndCheckExampleDependencies
 
-```go
-func LoadAndCheckExampleDependencies(dependenciesContent []byte, elements []sharedtypes.CodeGenerationElement, instancesReplacementDict map[string]string, InstancesReplacementPriorityList []string) (checkedDependenciesMap map[string][]string, equivalencesMap map[string]map[string]string)
-```
+	func LoadAndCheckExampleDependencies(dependenciesContent []byte, elements []sharedtypes.CodeGenerationElement, instancesReplacementDict map[string]string, InstancesReplacementPriorityList []string) (checkedDependenciesMap map[string][]string, equivalencesMap map[string]map[string]string)
 
 LoadAndCheckExampleDependencies loads and checks the dependencies of the examples.
 
@@ -3093,11 +2750,9 @@ Returns:
 - equivalencesMap: equivalences.
 
 <a name="LoadCodeGenerationElements"></a>
-## func [LoadCodeGenerationElements](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L609>)
+## func LoadCodeGenerationElements
 
-```go
-func LoadCodeGenerationElements(content []byte, elementsFilePath string) (elements []sharedtypes.CodeGenerationElement)
-```
+	func LoadCodeGenerationElements(content []byte, elementsFilePath string) (elements []sharedtypes.CodeGenerationElement)
 
 LoadCodeGenerationElements loads code generation elements from an xml or json file.
 
@@ -3115,11 +2770,9 @@ Returns:
 - elements: code generation elements.
 
 <a name="LoadCodeGenerationExamples"></a>
-## func [LoadCodeGenerationExamples](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L1082-L1092>)
+## func LoadCodeGenerationExamples
 
-```go
-func LoadCodeGenerationExamples(source string, examplesToExtract []string, githubRepoName string, githubRepoOwner string, githubRepoBranch string, githubAccessToken string, dependencies map[string][]string, equivalencesMap map[string]map[string]string, chunkSize int, chunkOverlap int) (examples []sharedtypes.CodeGenerationExample)
-```
+	func LoadCodeGenerationExamples(source string, examplesToExtract []string, githubRepoName string, githubRepoOwner string, githubRepoBranch string, githubAccessToken string, dependencies map[string][]string, equivalencesMap map[string]map[string]string, chunkSize int, chunkOverlap int) (examples []sharedtypes.CodeGenerationExample)
 
 LoadCodeGenerationExamples loads code generation examples from the provided paths.
 
@@ -3145,11 +2798,9 @@ Returns:
 - examples: code generation examples.
 
 <a name="LoadUserGuideSections"></a>
-## func [LoadUserGuideSections](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L1369-L1370>)
+## func LoadUserGuideSections
 
-```go
-func LoadUserGuideSections(source string, sectionFilePaths []string, githubRepoName string, githubRepoOwner string, githubRepoBranch string, githubAccessToken string) (sections []sharedtypes.CodeGenerationUserGuideSection)
-```
+	func LoadUserGuideSections(source string, sectionFilePaths []string, githubRepoName string, githubRepoOwner string, githubRepoBranch string, githubAccessToken string) (sections []sharedtypes.CodeGenerationUserGuideSection)
 
 LoadUserGuideSections loads user guide sections from the provided paths.
 
@@ -3171,11 +2822,9 @@ Returns:
 - sections: user guide sections.
 
 <a name="LogRequestFailed"></a>
-## func [LogRequestFailed](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L345>)
+## func LogRequestFailed
 
-```go
-func LogRequestFailed()
-```
+	func LogRequestFailed()
 
 LogRequestFailed writes a .Info log entry indicating that a request was not completed successfully.
 
@@ -3192,11 +2841,9 @@ Returns:
 - none
 
 <a name="LogRequestFailedDebugWithMessage"></a>
-## func [LogRequestFailedDebugWithMessage](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L361>)
+## func LogRequestFailedDebugWithMessage
 
-```go
-func LogRequestFailedDebugWithMessage(msg1, msg2 string)
-```
+	func LogRequestFailedDebugWithMessage(msg1, msg2 string)
 
 LogRequestFailedDebugWithMessage writes a .Debug log entry indicating that a request was not completed successfully with additional message.
 
@@ -3214,11 +2861,9 @@ Returns:
 - none
 
 <a name="LogRequestSuccess"></a>
-## func [LogRequestSuccess](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L330>)
+## func LogRequestSuccess
 
-```go
-func LogRequestSuccess()
-```
+	func LogRequestSuccess()
 
 LogRequestSuccess writes a .Info log entry indicating that a request was completed successfully.
 
@@ -3235,11 +2880,9 @@ Returns:
 - none
 
 <a name="MCPClient"></a>
-## func [MCPClient](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L338>)
+## func MCPClient
 
-```go
-func MCPClient(command string, serverURL string, arguments map[string]interface{}) (interface{}, error)
-```
+	func MCPClient(command string, serverURL string, arguments map[string]interface{}) (interface{}, error)
 
 MCPClient is a unified function for all MCP operations. It provides a single entry point for MCP functionality.
 
@@ -3259,11 +2902,9 @@ Returns:
 - error: any error that occurred
 
 <a name="MarkdownToHTML"></a>
-## func [MarkdownToHTML](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1905>)
+## func MarkdownToHTML
 
-```go
-func MarkdownToHTML(markdown string) (html string)
-```
+	func MarkdownToHTML(markdown string) (html string)
 
 MarkdownToHTML this function converts markdown to html
 
@@ -3280,11 +2921,9 @@ Returns:
 - html: content in html format
 
 <a name="ParseHistory"></a>
-## func [ParseHistory](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1392>)
+## func ParseHistory
 
-```go
-func ParseHistory(historyJson string) (history []map[string]string)
-```
+	func ParseHistory(historyJson string) (history []map[string]string)
 
 ParseHistory this function parses history from json to map
 
@@ -3301,11 +2940,9 @@ Returns:
 - history: the parsed history
 
 <a name="ParseHistoryToHistoricMessages"></a>
-## func [ParseHistoryToHistoricMessages](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1627>)
+## func ParseHistoryToHistoricMessages
 
-```go
-func ParseHistoryToHistoricMessages(historyJson string) (history []sharedtypes.HistoricMessage)
-```
+	func ParseHistoryToHistoricMessages(historyJson string) (history []sharedtypes.HistoricMessage)
 
 ParseHistoryToHistoricMessages this function to convert chat history to historic messages
 
@@ -3322,11 +2959,9 @@ Returns:
 - history: the history in sharedtypes.HistoricMessage format
 
 <a name="PerformBatchEmbeddingRequest"></a>
-## func [PerformBatchEmbeddingRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L163>)
+## func PerformBatchEmbeddingRequest
 
-```go
-func PerformBatchEmbeddingRequest(input []string) (embeddedVectors [][]float32)
-```
+	func PerformBatchEmbeddingRequest(input []string) (embeddedVectors [][]float32)
 
 PerformBatchEmbeddingRequest performs a batch vector embedding request to LLM
 
@@ -3343,11 +2978,9 @@ Returns:
 - embeddedVectors: the embedded vectors in float32 format
 
 <a name="PerformBatchHybridEmbeddingRequest"></a>
-## func [PerformBatchHybridEmbeddingRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L230>)
+## func PerformBatchHybridEmbeddingRequest
 
-```go
-func PerformBatchHybridEmbeddingRequest(input []string, maxBatchSize int) (denseEmbeddings [][]float32, sparseEmbeddings []map[uint]float32)
-```
+	func PerformBatchHybridEmbeddingRequest(input []string, maxBatchSize int) (denseEmbeddings [][]float32, sparseEmbeddings []map[uint]float32)
 
 PerformBatchHybridEmbeddingRequest performs a batch hybrid embedding request to LLM returning the sparse and dense embeddings
 
@@ -3365,11 +2998,9 @@ Returns:
 - sparseEmbeddings: the sparse embeddings in map format
 
 <a name="PerformCodeLLMRequest"></a>
-## func [PerformCodeLLMRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L945>)
+## func PerformCodeLLMRequest
 
-```go
-func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, isStream bool, validateCode bool) (message string, stream *chan string)
-```
+	func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, isStream bool, validateCode bool) (message string, stream *chan string)
 
 PerformCodeLLMRequest performs a code generation request to LLM
 
@@ -3389,11 +3020,9 @@ Returns:
 - stream: the stream channel
 
 <a name="PerformGeneralModelSpecificationRequest"></a>
-## func [PerformGeneralModelSpecificationRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L481>)
+## func PerformGeneralModelSpecificationRequest
 
-```go
-func PerformGeneralModelSpecificationRequest(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt map[string]string, modelIds []string) (message string, stream *chan string)
-```
+	func PerformGeneralModelSpecificationRequest(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt map[string]string, modelIds []string) (message string, stream *chan string)
 
 PerformGeneralModelSpecificationRequest performs a specified request to LLM with a configured model and Systemprompt.
 
@@ -3415,11 +3044,9 @@ Returns:
 - stream: the stream channel
 
 <a name="PerformGeneralRequest"></a>
-## func [PerformGeneralRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L367>)
+## func PerformGeneralRequest
 
-```go
-func PerformGeneralRequest(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt string) (message string, stream *chan string)
-```
+	func PerformGeneralRequest(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt string) (message string, stream *chan string)
 
 PerformGeneralRequest performs a general chat completion request to LLM
 
@@ -3440,11 +3067,9 @@ Returns:
 - stream: the stream channel
 
 <a name="PerformGeneralRequestNoStreaming"></a>
-## func [PerformGeneralRequestNoStreaming](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L1027>)
+## func PerformGeneralRequestNoStreaming
 
-```go
-func PerformGeneralRequestNoStreaming(input string, history []sharedtypes.HistoricMessage, systemPrompt string) (message string)
-```
+	func PerformGeneralRequestNoStreaming(input string, history []sharedtypes.HistoricMessage, systemPrompt string) (message string)
 
 PerformGeneralRequestNoStreaming performs a general chat completion request to LLM without streaming
 
@@ -3463,11 +3088,9 @@ Returns:
 - message: the generated message
 
 <a name="PerformGeneralRequestSpecificModel"></a>
-## func [PerformGeneralRequestSpecificModel](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L541>)
+## func PerformGeneralRequestSpecificModel
 
-```go
-func PerformGeneralRequestSpecificModel(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt string, modelIds []string) (message string, stream *chan string)
-```
+	func PerformGeneralRequestSpecificModel(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt string, modelIds []string) (message string, stream *chan string)
 
 PerformGeneralRequestSpecificModel performs a general request to LLM with a specific model
 
@@ -3489,11 +3112,9 @@ Returns:
 - stream: the stream channel
 
 <a name="PerformGeneralRequestSpecificModelAndModelOptions"></a>
-## func [PerformGeneralRequestSpecificModelAndModelOptions](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L600>)
+## func PerformGeneralRequestSpecificModelAndModelOptions
 
-```go
-func PerformGeneralRequestSpecificModelAndModelOptions(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt string, modelIds []string, modelOptions sharedtypes.ModelOptions) (message string, stream *chan string)
-```
+	func PerformGeneralRequestSpecificModelAndModelOptions(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt string, modelIds []string, modelOptions sharedtypes.ModelOptions) (message string, stream *chan string)
 
 PerformGeneralRequestSpecificModel performs a general request to LLM with a specific model
 
@@ -3516,11 +3137,9 @@ Returns:
 - stream: the stream channel
 
 <a name="PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOutputTokenOutput"></a>
-## func [PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOutputTokenOutput](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L874>)
+## func PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOutputTokenOutput
 
-```go
-func PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOutputTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, modelOptions sharedtypes.ModelOptions, tokenCountModelName string) (message string, inputTokenCount int, outputTokenCount int)
-```
+	func PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOutputTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, modelOptions sharedtypes.ModelOptions, tokenCountModelName string) (message string, inputTokenCount int, outputTokenCount int)
 
 PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOutputTokenOutput performs a general request to LLM with a specific model and model options, and returns the token count using OpenAI token count model. Does not stream the response.
 
@@ -3544,11 +3163,9 @@ Returns:
 - outputTokenCount: the output token count
 
 <a name="PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiTokenOutput"></a>
-## func [PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiTokenOutput](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L796>)
+## func PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiTokenOutput
 
-```go
-func PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, modelOptions sharedtypes.ModelOptions, tokenCountModelName string) (message string, tokenCount int)
-```
+	func PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, modelOptions sharedtypes.ModelOptions, tokenCountModelName string) (message string, tokenCount int)
 
 PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiTokenOutput performs a general request to LLM with a specific model and model options, and returns the token count using OpenAI token count model. Does not stream the response.
 
@@ -3571,11 +3188,9 @@ Returns:
 - tokenCount: the token count
 
 <a name="PerformGeneralRequestSpecificModelModelOptionsAndImages"></a>
-## func [PerformGeneralRequestSpecificModelModelOptionsAndImages](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L660>)
+## func PerformGeneralRequestSpecificModelModelOptionsAndImages
 
-```go
-func PerformGeneralRequestSpecificModelModelOptionsAndImages(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt string, modelIds []string, modelOptions sharedtypes.ModelOptions, images []string) (message string, stream *chan string)
-```
+	func PerformGeneralRequestSpecificModelModelOptionsAndImages(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt string, modelIds []string, modelOptions sharedtypes.ModelOptions, images []string) (message string, stream *chan string)
 
 PerformGeneralRequestSpecificModelModelOptionsAndImages performs a general request to LLM with a specific model including model options and images
 
@@ -3599,11 +3214,9 @@ Returns:
 - stream: the stream channel
 
 <a name="PerformGeneralRequestSpecificModelNoStreamWithOpenAiTokenOutput"></a>
-## func [PerformGeneralRequestSpecificModelNoStreamWithOpenAiTokenOutput](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L719>)
+## func PerformGeneralRequestSpecificModelNoStreamWithOpenAiTokenOutput
 
-```go
-func PerformGeneralRequestSpecificModelNoStreamWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string) (message string, tokenCount int)
-```
+	func PerformGeneralRequestSpecificModelNoStreamWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string) (message string, tokenCount int)
 
 PerformGeneralRequestSpecificModelNoStreamWithOpenAiTokenOutput performs a general request to LLM with a specific model and returns the token count using OpenAI token count model. Does not stream the response.
 
@@ -3625,11 +3238,9 @@ Returns:
 - tokenCount: the token count
 
 <a name="PerformGeneralRequestWithImages"></a>
-## func [PerformGeneralRequestWithImages](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L424>)
+## func PerformGeneralRequestWithImages
 
-```go
-func PerformGeneralRequestWithImages(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt string, images []string) (message string, stream *chan string)
-```
+	func PerformGeneralRequestWithImages(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt string, images []string) (message string, stream *chan string)
 
 PerformGeneralRequestWithImages performs a general request to LLM with images
 
@@ -3651,11 +3262,9 @@ Returns:
 - stream: the stream channel
 
 <a name="PerformKeywordExtractionRequest"></a>
-## func [PerformKeywordExtractionRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L273>)
+## func PerformKeywordExtractionRequest
 
-```go
-func PerformKeywordExtractionRequest(input string, maxKeywordsSearch uint32) (keywords []string)
-```
+	func PerformKeywordExtractionRequest(input string, maxKeywordsSearch uint32) (keywords []string)
 
 PerformKeywordExtractionRequest performs a keywords extraction request to LLM
 
@@ -3673,11 +3282,9 @@ Returns:
 - keywords: the keywords extracted from the input string as a slice of strings
 
 <a name="PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput"></a>
-## func [PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L211>)
+## func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput
 
-```go
-func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string, n int) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int)
-```
+	func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string, n int) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int)
 
 PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput performs multiple general LLM requests using specific models, extracts structured attributes \(criteria\) from the responses, and returns the total token count using the specified OpenAI token counting model. This version does not stream responses.
 
@@ -3700,11 +3307,9 @@ Returns:
 - tokenCount: the total token count \(input tokens × n \+ combined output tokens\)
 
 <a name="PerformSummaryRequest"></a>
-## func [PerformSummaryRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L322>)
+## func PerformSummaryRequest
 
-```go
-func PerformSummaryRequest(input string) (summary string)
-```
+	func PerformSummaryRequest(input string) (summary string)
 
 PerformSummaryRequest performs a summary request to LLM
 
@@ -3721,11 +3326,9 @@ Returns:
 - summary: the summary extracted from the input string
 
 <a name="PerformVectorEmbeddingRequest"></a>
-## func [PerformVectorEmbeddingRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L46>)
+## func PerformVectorEmbeddingRequest
 
-```go
-func PerformVectorEmbeddingRequest(input string) (embeddedVector []float32)
-```
+	func PerformVectorEmbeddingRequest(input string) (embeddedVector []float32)
 
 PerformVectorEmbeddingRequest performs a vector embedding request to LLM
 
@@ -3742,11 +3345,9 @@ Returns:
 - embeddedVector: the embedded vector in float32 format
 
 <a name="PerformVectorEmbeddingRequestWithTokenLimitCatch"></a>
-## func [PerformVectorEmbeddingRequestWithTokenLimitCatch](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L103>)
+## func PerformVectorEmbeddingRequestWithTokenLimitCatch
 
-```go
-func PerformVectorEmbeddingRequestWithTokenLimitCatch(input string, tokenLimitMessage string) (embeddedVector []float32, tokenLimitReached bool, responseMessage string)
-```
+	func PerformVectorEmbeddingRequestWithTokenLimitCatch(input string, tokenLimitMessage string) (embeddedVector []float32, tokenLimitReached bool, responseMessage string)
 
 PerformVectorEmbeddingRequestWithTokenLimitCatch performs a vector embedding request to LLM and catches the token limit error message
 
@@ -3763,11 +3364,9 @@ Returns:
 - embeddedVector: the embedded vector in float32 format
 
 <a name="PrintFeedback"></a>
-## func [PrintFeedback](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/generic.go#L129>)
+## func PrintFeedback
 
-```go
-func PrintFeedback(feedback sharedtypes.Feedback)
-```
+	func PrintFeedback(feedback sharedtypes.Feedback)
 
 PrintFeedback prints the feedback to the console in JSON format
 
@@ -3780,11 +3379,9 @@ Parameters:
 - feedback: the feedback to print
 
 <a name="ProcessMainAgentOutput"></a>
-## func [ProcessMainAgentOutput](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1858>)
+## func ProcessMainAgentOutput
 
-```go
-func ProcessMainAgentOutput(llmOutput string) (messageTo string, message string)
-```
+	func ProcessMainAgentOutput(llmOutput string) (messageTo string, message string)
 
 ProcessMainAgentOutput this function process output of llm
 
@@ -3802,11 +3399,9 @@ Returns:
 - message: message to send to the recipient
 
 <a name="ProcessSubworkflowIdentificationOutput"></a>
-## func [ProcessSubworkflowIdentificationOutput](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1815>)
+## func ProcessSubworkflowIdentificationOutput
 
-```go
-func ProcessSubworkflowIdentificationOutput(llmOutput string) (status string, workflowName string)
-```
+	func ProcessSubworkflowIdentificationOutput(llmOutput string) (status string, workflowName string)
 
 ProcessSubworkflowIdentificationOutput this function process output of llm
 
@@ -3824,11 +3419,9 @@ Returns:
 - workflowName: the identified subworkflow name
 
 <a name="QdrantCreateCollection"></a>
-## func [QdrantCreateCollection](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/qdrant.go#L44>)
+## func QdrantCreateCollection
 
-```go
-func QdrantCreateCollection(collectionName string, vectorSize uint64, vectorDistance string)
-```
+	func QdrantCreateCollection(collectionName string, vectorSize uint64, vectorDistance string)
 
 QdrantCreateCollection creates a collection in qdrant
 
@@ -3843,11 +3436,9 @@ Params:
 - vectorDistance \(string\): The distance metric to use of vector similarity search \(cosine, dot, euclid, manhattan\)
 
 <a name="QdrantCreateIndex"></a>
-## func [QdrantCreateIndex](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/qdrant.go#L117>)
+## func QdrantCreateIndex
 
-```go
-func QdrantCreateIndex(collectionName string, fieldName string, fieldType string, wait bool)
-```
+	func QdrantCreateIndex(collectionName string, fieldName string, fieldType string, wait bool)
 
 QdrantCreateIndex creates a field index on a qdrant collection
 
@@ -3863,11 +3454,9 @@ Params:
 - wait \(bool\): Whether to wait for the index to be created or return immediately & continue indexing in background
 
 <a name="QdrantInsertData"></a>
-## func [QdrantInsertData](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/qdrant.go#L74>)
+## func QdrantInsertData
 
-```go
-func QdrantInsertData(collectionName string, data []interface{}, idFieldName string, vectorFieldName string)
-```
+	func QdrantInsertData(collectionName string, data []interface{}, idFieldName string, vectorFieldName string)
 
 QdrantInsertData inserts data into a collection in qdrant
 
@@ -3882,35 +3471,10 @@ Params:
 - idFieldName \(string\): The name of the field to use as the ID
 - vectorFieldName \(string\): The name of the field to use as the vector
 
-<a name="ReadResource"></a>
-## func [ReadResource](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/mcp.go#L235>)
-
-```go
-func ReadResource(serverURL string, resourceURI string) (mcptypes.MCPResourceContent, error)
-```
-
-ReadResource reads a specific resource from the MCP server. This follows the MCP standard resources/read method.
-
-Tags:
-
-- @displayName: Read MCP Resource
-
-Parameters:
-
-- serverURL: the WebSocket URL of the MCP server
-- resourceURI: the URI of the resource to read
-
-Returns:
-
-- content: the resource content
-- error: any error that occurred during the request
-
 <a name="RetrieveDependencies"></a>
-## func [RetrieveDependencies](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/knowledgedb.go#L159-L164>)
+## func RetrieveDependencies
 
-```go
-func RetrieveDependencies(relationshipName string, relationshipDirection string, sourceDocumentId string, nodeTypesFilter sharedtypes.DbArrayFilter, maxHopsNumber int) (dependenciesIds []string)
-```
+	func RetrieveDependencies(relationshipName string, relationshipDirection string, sourceDocumentId string, nodeTypesFilter sharedtypes.DbArrayFilter, maxHopsNumber int) (dependenciesIds []string)
 
 RetrieveDependencies retrieves the dependencies of the specified source node.
 
@@ -3933,11 +3497,9 @@ Returns:
 - dependenciesIds: the list of dependencies
 
 <a name="SelectedSolution"></a>
-## func [SelectedSolution](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1959>)
+## func SelectedSolution
 
-```go
-func SelectedSolution(selectedSolution string) (solution string)
-```
+	func SelectedSolution(selectedSolution string) (solution string)
 
 SelectedSolution this function parse the selected solution
 
@@ -3954,11 +3516,9 @@ Returns:
 - solution: parsed solution
 
 <a name="SendLogicAppNotificationEmail"></a>
-## func [SendLogicAppNotificationEmail](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/auth.go#L289>)
+## func SendLogicAppNotificationEmail
 
-```go
-func SendLogicAppNotificationEmail(logicAppEndpoint string, email string, subject string, content string)
-```
+	func SendLogicAppNotificationEmail(logicAppEndpoint string, email string, subject string, content string)
 
 SendLogicAppNotificationEmail sends a POST request to the email service.
 
@@ -3974,11 +3534,9 @@ Parameters:
 - content: The email content.
 
 <a name="SendRestAPICall"></a>
-## func [SendRestAPICall](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/generic.go#L54>)
+## func SendRestAPICall
 
-```go
-func SendRestAPICall(requestType string, endpoint string, header map[string]string, query map[string]string, jsonBody string) (success bool, returnJsonBody string)
-```
+	func SendRestAPICall(requestType string, endpoint string, header map[string]string, query map[string]string, jsonBody string) (success bool, returnJsonBody string)
 
 SendAPICall sends an API call to the specified URL with the specified headers and query parameters.
 
@@ -4000,11 +3558,9 @@ Returns:
 - returnJsonBody: the JSON body of the response as a string
 
 <a name="SendVectorsToKnowledgeDB"></a>
-## func [SendVectorsToKnowledgeDB](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/knowledgedb.go#L61>)
+## func SendVectorsToKnowledgeDB
 
-```go
-func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64) (databaseResponse []sharedtypes.DbResponse)
-```
+	func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64) (databaseResponse []sharedtypes.DbResponse)
 
 SendVectorsToKnowledgeDB sends the given vector to the KnowledgeDB and returns the most relevant data. The number of results is specified in the config file. The keywords are used to filter the results. The min score filter is also specified in the config file. If it is not specified, the default value is used.
 
@@ -4028,11 +3584,9 @@ Returns:
 - databaseResponse: an array of the most relevant data
 
 <a name="SerializeResponse"></a>
-## func [SerializeResponse](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L57>)
+## func SerializeResponse
 
-```go
-func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, tokens int) (result string)
-```
+	func SerializeResponse(criteriaSuggestions []sharedtypes.MaterialCriterionWithGuid, tokens int) (result string)
 
 SerializeResponse formats the criteria to a response suitable for the UI clients in string format
 
@@ -4050,11 +3604,9 @@ Returns:
 - result: string representation of the response in JSON format
 
 <a name="SetCopilotGenerateRequestJsonBody"></a>
-## func [SetCopilotGenerateRequestJsonBody](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/rhsc.go#L47-L59>)
+## func SetCopilotGenerateRequestJsonBody
 
-```go
-func SetCopilotGenerateRequestJsonBody(query string, sessionID string, mode string, timeout int, priority int, agentPreference string, saveIntermediate bool, similarityTopK int, noCritique bool, maxIterations int, forceAzure bool) (jsonBody string)
-```
+	func SetCopilotGenerateRequestJsonBody(query string, sessionID string, mode string, timeout int, priority int, agentPreference string, saveIntermediate bool, similarityTopK int, noCritique bool, maxIterations int, forceAzure bool) (jsonBody string)
 
 SetGenerateRequestJsonBody creates a JSON body for the generate request to RHSC Copilot. It takes various parameters to configure the request and returns the JSON string.
 
@@ -4077,11 +3629,9 @@ Parameters:
 - forceAzure: whether to force the use of Azure for the request.
 
 <a name="ShortenMessageHistory"></a>
-## func [ShortenMessageHistory](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L1211>)
+## func ShortenMessageHistory
 
-```go
-func ShortenMessageHistory(history []sharedtypes.HistoricMessage, maxLength int) (updatedHistory []sharedtypes.HistoricMessage)
-```
+	func ShortenMessageHistory(history []sharedtypes.HistoricMessage, maxLength int) (updatedHistory []sharedtypes.HistoricMessage)
 
 ShortenMessageHistory shortens the conversation history to a maximum length. It will retain only the most recent messages and older messages will be removed.
 
@@ -4099,11 +3649,9 @@ Returns:
 - updatedHistory: the updated conversation history
 
 <a name="SimilaritySearch"></a>
-## func [SimilaritySearch](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/knowledgedb.go#L302-L311>)
+## func SimilaritySearch
 
-```go
-func SimilaritySearch(collectionName string, embeddedVector []float32, maxRetrievalCount int, filters sharedtypes.DbFilters, minScore float64, getLeafNodes bool, getSiblings bool, getParent bool, getChildren bool) (databaseResponse []sharedtypes.DbResponse)
-```
+	func SimilaritySearch(collectionName string, embeddedVector []float32, maxRetrievalCount int, filters sharedtypes.DbFilters, minScore float64, getLeafNodes bool, getSiblings bool, getParent bool, getChildren bool) (databaseResponse []sharedtypes.DbResponse)
 
 SimilaritySearch performs a similarity search in the KnowledgeDB.
 
@@ -4131,11 +3679,9 @@ Returns:
 - databaseResponse: the similarity search results
 
 <a name="SimilartitySearchOnPathDescriptions"></a>
-## func [SimilartitySearchOnPathDescriptions](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L58>)
+## func SimilartitySearchOnPathDescriptions
 
-```go
-func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (descriptions []string)
-```
+	func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (descriptions []string)
 
 SimilartitySearchOnPathDescriptions do similarity search on path description
 
@@ -4153,11 +3699,9 @@ Returns:
 - descriptions: the list of descriptions
 
 <a name="SimilartitySearchOnPathDescriptionsQdrant"></a>
-## func [SimilartitySearchOnPathDescriptionsQdrant](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L1565>)
+## func SimilartitySearchOnPathDescriptionsQdrant
 
-```go
-func SimilartitySearchOnPathDescriptionsQdrant(vector []float32, collection string, similaritySearchResults int, similaritySearchMinScore float64) (descriptions []string)
-```
+	func SimilartitySearchOnPathDescriptionsQdrant(vector []float32, collection string, similaritySearchResults int, similaritySearchMinScore float64) (descriptions []string)
 
 SimilartitySearchOnPathDescriptions \(Qdrant\) do similarity search on path description
 
@@ -4175,11 +3719,9 @@ Returns:
 - descriptions: the list of descriptions
 
 <a name="StoreElementsInGraphDatabase"></a>
-## func [StoreElementsInGraphDatabase](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L891>)
+## func StoreElementsInGraphDatabase
 
-```go
-func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement)
-```
+	func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement)
 
 StoreElementsInGraphDatabase stores elements in the graph database.
 
@@ -4192,11 +3734,9 @@ Parameters:
 - elements: code generation elements.
 
 <a name="StoreElementsInVectorDatabase"></a>
-## func [StoreElementsInVectorDatabase](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L774>)
+## func StoreElementsInVectorDatabase
 
-```go
-func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement, elementsCollectionName string, batchSize int, vectorDistance string)
-```
+	func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement, elementsCollectionName string, batchSize int, vectorDistance string)
 
 StoreElementsInVectorDatabase stores elements in the vector database.
 
@@ -4212,11 +3752,9 @@ Parameters:
 - vectorDistance: the distance metric to use for the vector index \(cosine, dot, euclid, manhattan\)
 
 <a name="StoreExamplesInGraphDatabase"></a>
-## func [StoreExamplesInGraphDatabase](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L1321>)
+## func StoreExamplesInGraphDatabase
 
-```go
-func StoreExamplesInGraphDatabase(examples []sharedtypes.CodeGenerationExample)
-```
+	func StoreExamplesInGraphDatabase(examples []sharedtypes.CodeGenerationExample)
 
 StoreExamplesInGraphDatabase stores examples in the graph database.
 
@@ -4229,11 +3767,9 @@ Parameters:
 - examples: code generation examples.
 
 <a name="StoreExamplesInVectorDatabase"></a>
-## func [StoreExamplesInVectorDatabase](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L1164>)
+## func StoreExamplesInVectorDatabase
 
-```go
-func StoreExamplesInVectorDatabase(examples []sharedtypes.CodeGenerationExample, examplesCollectionName string, batchSize int, vectorDistance string)
-```
+	func StoreExamplesInVectorDatabase(examples []sharedtypes.CodeGenerationExample, examplesCollectionName string, batchSize int, vectorDistance string)
 
 StoreExamplesInVectorDatabase stores examples in the vector database.
 
@@ -4249,11 +3785,9 @@ Parameters:
 - vectorDistance: the distance metric to use for the vector index \(cosine, dot, euclid, manhattan\)
 
 <a name="StoreUserGuideSectionsInGraphDatabase"></a>
-## func [StoreUserGuideSectionsInGraphDatabase](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L1598>)
+## func StoreUserGuideSectionsInGraphDatabase
 
-```go
-func StoreUserGuideSectionsInGraphDatabase(sections []sharedtypes.CodeGenerationUserGuideSection)
-```
+	func StoreUserGuideSectionsInGraphDatabase(sections []sharedtypes.CodeGenerationUserGuideSection)
 
 StoreUserGuideSectionsInGraphDatabase stores user guide sections in the graph database.
 
@@ -4267,11 +3801,9 @@ Parameters:
 - label: label for the sections \(UserGuide by default\).
 
 <a name="StoreUserGuideSectionsInVectorDatabase"></a>
-## func [StoreUserGuideSectionsInVectorDatabase](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/dataextraction.go#L1431>)
+## func StoreUserGuideSectionsInVectorDatabase
 
-```go
-func StoreUserGuideSectionsInVectorDatabase(sections []sharedtypes.CodeGenerationUserGuideSection, userGuideCollectionName string, batchSize int, chunkSize int, chunkOverlap int, vectorDistance string)
-```
+	func StoreUserGuideSectionsInVectorDatabase(sections []sharedtypes.CodeGenerationUserGuideSection, userGuideCollectionName string, batchSize int, chunkSize int, chunkOverlap int, vectorDistance string)
 
 StoreUserGuideSectionsInVectorDatabase stores user guide sections in the vector database.
 
@@ -4289,11 +3821,9 @@ Parameters:
 - vectorDistance: the distance metric to use for the vector index \(cosine, dot, euclid, manhattan\)
 
 <a name="StringConcat"></a>
-## func [StringConcat](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/generic.go#L252>)
+## func StringConcat
 
-```go
-func StringConcat(a string, b string, separator string) string
-```
+	func StringConcat(a string, b string, separator string) string
 
 StringConcat concatenates 2 strings together, with an optional separator.
 
@@ -4308,11 +3838,9 @@ Parameters
 - separator \(string\) the separator string. If not provided, will be an empty string.
 
 <a name="StringFormat"></a>
-## func [StringFormat](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/generic.go#L267>)
+## func StringFormat
 
-```go
-func StringFormat(data any, format string) string
-```
+	func StringFormat(data any, format string) string
 
 StringFormat formats any data as a string.
 
@@ -4328,11 +3856,9 @@ Parameters
 - format \(string\): the format specifier to use. If not provided will default to "%v". See the \[go fmt docs\]\(https://pkg.go.dev/fmt\) for details.
 
 <a name="SynthesizeActions"></a>
-## func [SynthesizeActions](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L807>)
+## func SynthesizeActions
 
-```go
-func SynthesizeActions(message string, properties []string, actions []map[string]string) (updatedActions []map[string]string)
-```
+	func SynthesizeActions(message string, properties []string, actions []map[string]string) (updatedActions []map[string]string)
 
 SynthesizeActions update action as per user instruction
 
@@ -4351,11 +3877,9 @@ Returns:
 - updatedActions: the list of synthesized actions
 
 <a name="SynthesizeActionsTool11"></a>
-## func [SynthesizeActionsTool11](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L550>)
+## func SynthesizeActionsTool11
 
-```go
-func SynthesizeActionsTool11(content string) (result string)
-```
+	func SynthesizeActionsTool11(content string) (result string)
 
 SynthesizeActionsTool11 synthesize actions based on user instruction
 
@@ -4372,11 +3896,9 @@ Returns:
 - result: the synthesized string
 
 <a name="SynthesizeActionsTool12"></a>
-## func [SynthesizeActionsTool12](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L631>)
+## func SynthesizeActionsTool12
 
-```go
-func SynthesizeActionsTool12(content string) (result string)
-```
+	func SynthesizeActionsTool12(content string) (result string)
 
 SynthesizeActionsTool12 synthesize actions based on user instruction
 
@@ -4393,11 +3915,9 @@ Returns:
 - result: the synthesized string
 
 <a name="SynthesizeActionsTool17"></a>
-## func [SynthesizeActionsTool17](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L717>)
+## func SynthesizeActionsTool17
 
-```go
-func SynthesizeActionsTool17(content string) (result string)
-```
+	func SynthesizeActionsTool17(content string) (result string)
 
 SynthesizeActionsTool17 synthesize actions based on user instruction
 
@@ -4414,11 +3934,9 @@ Returns:
 - result: the synthesized string
 
 <a name="SynthesizeActionsTool2"></a>
-## func [SynthesizeActionsTool2](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmeshpilot.go#L466>)
+## func SynthesizeActionsTool2
 
-```go
-func SynthesizeActionsTool2(message string, actions []map[string]string) (updatedActions []map[string]string)
-```
+	func SynthesizeActionsTool2(message string, actions []map[string]string) (updatedActions []map[string]string)
 
 SynthesizeActionsTool2 update action as per user instruction
 
@@ -4436,11 +3954,9 @@ Returns:
 - updatedActions: the list of synthesized actions
 
 <a name="UpdateTotalTokenCountForCustomerKvDb"></a>
-## func [UpdateTotalTokenCountForCustomerKvDb](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L423>)
+## func UpdateTotalTokenCountForCustomerKvDb
 
-```go
-func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, additionalTokenCount int) (tokenLimitReached bool)
-```
+	func UpdateTotalTokenCountForCustomerKvDb(kvdbEndpoint string, apiKey string, additionalTokenCount int) (tokenLimitReached bool)
 
 UpdateTotalTokenCountForCustomerKvDb updates the total token count for a customer in the KVDB
 
@@ -4458,11 +3974,9 @@ Returns:
 - tokenLimitReached: true if the new total token count exceeds the customer's token limit, false otherwise
 
 <a name="UpdateTotalTokenCountForCustomerMongoDb"></a>
-## func [UpdateTotalTokenCountForCustomerMongoDb](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/auth.go#L129>)
+## func UpdateTotalTokenCountForCustomerMongoDb
 
-```go
-func UpdateTotalTokenCountForCustomerMongoDb(apiKey string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string, additionalTokenCount int) (tokenLimitReached bool)
-```
+	func UpdateTotalTokenCountForCustomerMongoDb(apiKey string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string, additionalTokenCount int) (tokenLimitReached bool)
 
 UpdateTotalTokenCountForCustomerMongoDb updates the total token count for the given customer in the MongoDB database.
 
@@ -4483,11 +3997,9 @@ Returns:
 - tokenLimitReached: A boolean indicating whether the customer has reached the token limit.
 
 <a name="UpdateTotalTokenCountForUserIdMongoDb"></a>
-## func [UpdateTotalTokenCountForUserIdMongoDb](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/auth.go#L173>)
+## func UpdateTotalTokenCountForUserIdMongoDb
 
-```go
-func UpdateTotalTokenCountForUserIdMongoDb(userId string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string, additionalInputTokenCount int, additionalOutputTokenCount int, hoursUntilTokenLimitReset int) (tokenLimitReached bool)
-```
+	func UpdateTotalTokenCountForUserIdMongoDb(userId string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string, additionalInputTokenCount int, additionalOutputTokenCount int, hoursUntilTokenLimitReset int) (tokenLimitReached bool)
 
 UpdateTotalTokenCountForUserIdMongoDb updates the total token count for the given user ID in the MongoDB database.
 
@@ -4508,353 +4020,529 @@ Returns:
 - tokenLimitReached: A boolean indicating whether the customer has reached the token limit.
 
 <a name="ACSSearchRequest"></a>
-## type [ACSSearchRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L112-L122>)
+## type ACSSearchRequest
 
 ACSRequest represents the request structure for the Azure Cognitive Search.
 
-```go
-type ACSSearchRequest struct {
-    Search                string           `json:"search"`
-    VectorQueries         []ACSVectorQuery `json:"vectorQueries"`
-    VectorFilterMode      string           `json:"vectorFilterMode"`
-    Filter                string           `json:"filter"`
-    QueryType             string           `json:"queryType"`
-    SemanticConfiguration string           `json:"semanticConfiguration"`
-    Top                   int              `json:"top"`
-    Select                string           `json:"select"`
-    Count                 bool             `json:"count"`
-}
-```
+	type ACSSearchRequest struct {
+	    Search                string           `json:"search"`
+	    VectorQueries         []ACSVectorQuery `json:"vectorQueries"`
+	    VectorFilterMode      string           `json:"vectorFilterMode"`
+	    Filter                string           `json:"filter"`
+	    QueryType             string           `json:"queryType"`
+	    SemanticConfiguration string           `json:"semanticConfiguration"`
+	    Top                   int              `json:"top"`
+	    Select                string           `json:"select"`
+	    Count                 bool             `json:"count"`
+	}
 
 <a name="ACSSearchResponseALH"></a>
-## type [ACSSearchResponseALH](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L139-L154>)
+## type ACSSearchResponseALH
 
 ACSSearchResponse represents the response structure for the Azure Cognitive Search for ansysgpt\-alh & ansysgpt\-scbu.
 
-```go
-type ACSSearchResponseALH struct {
-    SourcetitleSAP      string  `json:"sourcetitleSAP"`
-    SourceURLSAP        string  `json:"sourceURLSAP"`
-    SourcetitleDCB      string  `json:"sourcetitleDCB"`
-    SourceURLDCB        string  `json:"sourceURLDCB"`
-    Content             string  `json:"content"`
-    TypeOFasset         string  `json:"typeOFasset"`
-    Physics             string  `json:"physics"`
-    Product             string  `json:"product"`
-    Version             string  `json:"version"`
-    Weight              float64 `json:"weight"`
-    TokenSize           int     `json:"token_size"`
-    SearchScore         float64 `json:"@search.score"`
-    SearchRerankerScore float64 `json:"@search.rerankerScore"`
-    IndexName           string  `json:"indexName"`
-}
-```
+	type ACSSearchResponseALH struct {
+	    SourcetitleSAP      string  `json:"sourcetitleSAP"`
+	    SourceURLSAP        string  `json:"sourceURLSAP"`
+	    SourcetitleDCB      string  `json:"sourcetitleDCB"`
+	    SourceURLDCB        string  `json:"sourceURLDCB"`
+	    Content             string  `json:"content"`
+	    TypeOFasset         string  `json:"typeOFasset"`
+	    Physics             string  `json:"physics"`
+	    Product             string  `json:"product"`
+	    Version             string  `json:"version"`
+	    Weight              float64 `json:"weight"`
+	    TokenSize           int     `json:"token_size"`
+	    SearchScore         float64 `json:"@search.score"`
+	    SearchRerankerScore float64 `json:"@search.rerankerScore"`
+	    IndexName           string  `json:"indexName"`
+	}
 
 <a name="ACSSearchResponseCrtech"></a>
-## type [ACSSearchResponseCrtech](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L185-L201>)
+## type ACSSearchResponseCrtech
 
 ACSSearchResponseCrtech represents the response structure for the Azure Cognitive Search for external\-crtech\-thermal\-desktop.
 
-```go
-type ACSSearchResponseCrtech struct {
-    Physics             string  `json:"physics"`
-    SourceTitleLvl3     string  `json:"sourceTitle_lvl3"`
-    SourceURLLvl3       string  `json:"sourceURL_lvl3"`
-    TokenSize           int     `json:"token_size"`
-    SourceTitleLvl2     string  `json:"sourceTitle_lvl2"`
-    Weight              float64 `json:"weight"`
-    SourceURLLvl2       string  `json:"sourceURL_lvl2"`
-    Product             string  `json:"product"`
-    Content             string  `json:"content"`
-    TypeOFasset         string  `json:"typeOFasset"`
-    Version             string  `json:"version"`
-    BridgeId            string  `json:"bridge_id"`
-    SearchScore         float64 `json:"@search.score"`
-    SearchRerankerScore float64 `json:"@search.rerankerScore"`
-    IndexName           string  `json:"indexName"`
-}
-```
+	type ACSSearchResponseCrtech struct {
+	    Physics             string  `json:"physics"`
+	    SourceTitleLvl3     string  `json:"sourceTitle_lvl3"`
+	    SourceURLLvl3       string  `json:"sourceURL_lvl3"`
+	    TokenSize           int     `json:"token_size"`
+	    SourceTitleLvl2     string  `json:"sourceTitle_lvl2"`
+	    Weight              float64 `json:"weight"`
+	    SourceURLLvl2       string  `json:"sourceURL_lvl2"`
+	    Product             string  `json:"product"`
+	    Content             string  `json:"content"`
+	    TypeOFasset         string  `json:"typeOFasset"`
+	    Version             string  `json:"version"`
+	    BridgeId            string  `json:"bridge_id"`
+	    SearchScore         float64 `json:"@search.score"`
+	    SearchRerankerScore float64 `json:"@search.rerankerScore"`
+	    IndexName           string  `json:"indexName"`
+	}
 
 <a name="ACSSearchResponseLSdyna"></a>
-## type [ACSSearchResponseLSdyna](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L164-L175>)
+## type ACSSearchResponseLSdyna
 
 ACSSearchResponse represents the response structure for the Azure Cognitive Search for lsdyna\-documentation\-r14.
 
-```go
-type ACSSearchResponseLSdyna struct {
-    Title               string  `json:"title"`
-    Url                 string  `json:"url"`
-    Content             string  `json:"content"`
-    TypeOFasset         string  `json:"typeOFasset"`
-    Physics             string  `json:"physics"`
-    Product             string  `json:"product"`
-    TokenSize           int     `json:"token_size"`
-    SearchScore         float64 `json:"@search.score"`
-    SearchRerankerScore float64 `json:"@search.rerankerScore"`
-    IndexName           string  `json:"indexName"`
-}
-```
+	type ACSSearchResponseLSdyna struct {
+	    Title               string  `json:"title"`
+	    Url                 string  `json:"url"`
+	    Content             string  `json:"content"`
+	    TypeOFasset         string  `json:"typeOFasset"`
+	    Physics             string  `json:"physics"`
+	    Product             string  `json:"product"`
+	    TokenSize           int     `json:"token_size"`
+	    SearchScore         float64 `json:"@search.score"`
+	    SearchRerankerScore float64 `json:"@search.rerankerScore"`
+	    IndexName           string  `json:"indexName"`
+	}
 
 <a name="ACSSearchResponseStruct"></a>
-## type [ACSSearchResponseStruct](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L125-L129>)
+## type ACSSearchResponseStruct
 
 ACSSearchResponseStruct represents the response structure for the Azure Cognitive Search for granular\-ansysgpt, ansysgpt\-documentation\-2023r2, scade\-documentation\-2023r2, ansys\-dot\-com\-marketing.
 
-```go
-type ACSSearchResponseStruct struct {
-    OdataContext string                          `json:"@odata.context"`
-    OdataCount   int                             `json:"@odata.count"`
-    Value        []sharedtypes.ACSSearchResponse `json:"value"`
-}
-```
+	type ACSSearchResponseStruct struct {
+	    OdataContext string                          `json:"@odata.context"`
+	    OdataCount   int                             `json:"@odata.count"`
+	    Value        []sharedtypes.ACSSearchResponse `json:"value"`
+	}
 
 <a name="ACSSearchResponseStructALH"></a>
-## type [ACSSearchResponseStructALH](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L132-L136>)
+## type ACSSearchResponseStructALH
 
 ACSSearchResponseStruct represents the response structure for the Azure Cognitive Search for ansysgpt\-alh & ansysgpt\-scbu.
 
-```go
-type ACSSearchResponseStructALH struct {
-    OdataContext string                 `json:"@odata.context"`
-    OdataCount   int                    `json:"@odata.count"`
-    Value        []ACSSearchResponseALH `json:"value"`
-}
-```
+	type ACSSearchResponseStructALH struct {
+	    OdataContext string                 `json:"@odata.context"`
+	    OdataCount   int                    `json:"@odata.count"`
+	    Value        []ACSSearchResponseALH `json:"value"`
+	}
 
 <a name="ACSSearchResponseStructCrtech"></a>
-## type [ACSSearchResponseStructCrtech](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L178-L182>)
+## type ACSSearchResponseStructCrtech
 
 ACSSearchResponseStructCrtech represents the response structure for the Azure Cognitive Search for external\-crtech\-thermal\-desktop.
 
-```go
-type ACSSearchResponseStructCrtech struct {
-    OdataContext string                    `json:"@odata.context"`
-    OdataCount   int                       `json:"@odata.count"`
-    Value        []ACSSearchResponseCrtech `json:"value"`
-}
-```
+	type ACSSearchResponseStructCrtech struct {
+	    OdataContext string                    `json:"@odata.context"`
+	    OdataCount   int                       `json:"@odata.count"`
+	    Value        []ACSSearchResponseCrtech `json:"value"`
+	}
 
 <a name="ACSSearchResponseStructLSdyna"></a>
-## type [ACSSearchResponseStructLSdyna](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L157-L161>)
+## type ACSSearchResponseStructLSdyna
 
 ACSSearchResponseStruct represents the response structure for the Azure Cognitive Search for lsdyna\-documentation\-r14.
 
-```go
-type ACSSearchResponseStructLSdyna struct {
-    OdataContext string                    `json:"@odata.context"`
-    OdataCount   int                       `json:"@odata.count"`
-    Value        []ACSSearchResponseLSdyna `json:"value"`
-}
-```
+	type ACSSearchResponseStructLSdyna struct {
+	    OdataContext string                    `json:"@odata.context"`
+	    OdataCount   int                       `json:"@odata.count"`
+	    Value        []ACSSearchResponseLSdyna `json:"value"`
+	}
 
 <a name="ACSVectorQuery"></a>
-## type [ACSVectorQuery](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L104-L109>)
+## type ACSVectorQuery
 
 ACSVectorQuery represents the vector query structure for the Azure Cognitive Search.
 
-```go
-type ACSVectorQuery struct {
-    Kind   string    `json:"kind"`
-    K      int       `json:"k"`
-    Vector []float32 `json:"vector"`
-    Fields string    `json:"fields"`
-}
-```
+	type ACSVectorQuery struct {
+	    Kind   string    `json:"kind"`
+	    K      int       `json:"k"`
+	    Vector []float32 `json:"vector"`
+	    Fields string    `json:"fields"`
+	}
 
 <a name="AnsysGPTRetrieverModuleRequest"></a>
-## type [AnsysGPTRetrieverModuleRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L204-L210>)
+## type AnsysGPTRetrieverModuleRequest
 
 AnsysGPTRetrieverModuleRequest represents the request structure for the Ansys GPT Retriever Module.
 
-```go
-type AnsysGPTRetrieverModuleRequest struct {
-    UserInput     string `json:"user_input"`
-    DataSource    string `json:"data_source"`
-    FilterPhysics string `json:"filter_physics"`
-    NumDocs       int    `json:"num_docs"`
-    Platform      string `json:"platform"`
-}
-```
+	type AnsysGPTRetrieverModuleRequest struct {
+	    UserInput     string `json:"user_input"`
+	    DataSource    string `json:"data_source"`
+	    FilterPhysics string `json:"filter_physics"`
+	    NumDocs       int    `json:"num_docs"`
+	    Platform      string `json:"platform"`
+	}
 
 <a name="AppendMessageHistoryRole"></a>
-## type [AppendMessageHistoryRole](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/llmhandler.go#L1150>)
+## type AppendMessageHistoryRole
 
 
 
-```go
-type AppendMessageHistoryRole string
-```
+	type AppendMessageHistoryRole string
 
 <a name="DataExtractionBranch"></a>
-## type [DataExtractionBranch](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L213-L217>)
+## type DataExtractionBranch
 
 DataExtractionBranch represents the branch structure for the data extraction.
 
-```go
-type DataExtractionBranch struct {
-    Text             string
-    ChildDataObjects []*sharedtypes.DbData
-    ChildDataIds     []uuid.UUID
-}
-```
+	type DataExtractionBranch struct {
+	    Text             string
+	    ChildDataObjects []*sharedtypes.DbData
+	    ChildDataIds     []uuid.UUID
+	}
 
 <a name="DataExtractionLLMInputChannelItem"></a>
-## type [DataExtractionLLMInputChannelItem](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L220-L233>)
+## type DataExtractionLLMInputChannelItem
 
 DataExtractionLLMInputChannelItem represents the input channel item for the data extraction llm handler workers.
 
-```go
-type DataExtractionLLMInputChannelItem struct {
-    Data                *sharedtypes.DbData
-    Adapter             string
-    ChatRequestType     string
-    MaxNumberOfKeywords uint32
-
-    InstructionSequenceWaitGroup *sync.WaitGroup
-    Lock                         *sync.Mutex
-
-    EmbeddingVector []float32
-    Summary         string
-    Keywords        []string
-    CollectionName  string
-}
-```
+	type DataExtractionLLMInputChannelItem struct {
+	    Data                *sharedtypes.DbData
+	    Adapter             string
+	    ChatRequestType     string
+	    MaxNumberOfKeywords uint32
+	
+	    InstructionSequenceWaitGroup *sync.WaitGroup
+	    Lock                         *sync.Mutex
+	
+	    EmbeddingVector []float32
+	    Summary         string
+	    Keywords        []string
+	    CollectionName  string
+	}
 
 <a name="DataExtractionSplitterServiceRequest"></a>
-## type [DataExtractionSplitterServiceRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L235-L239>)
+## type DataExtractionSplitterServiceRequest
 
 
 
-```go
-type DataExtractionSplitterServiceRequest struct {
-    DocumentContent []byte `json:"document_content"`
-    ChunkSize       int    `json:"chunk_size"`
-    ChunkOverlap    int    `json:"chunk_overlap"`
-}
-```
+	type DataExtractionSplitterServiceRequest struct {
+	    DocumentContent []byte `json:"document_content"`
+	    ChunkSize       int    `json:"chunk_size"`
+	    ChunkOverlap    int    `json:"chunk_overlap"`
+	}
 
 <a name="DataExtractionSplitterServiceResponse"></a>
-## type [DataExtractionSplitterServiceResponse](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L241-L243>)
+## type DataExtractionSplitterServiceResponse
 
 
 
-```go
-type DataExtractionSplitterServiceResponse struct {
-    Chunks []string `json:"chunks"`
-}
-```
+	type DataExtractionSplitterServiceResponse struct {
+	    Chunks []string `json:"chunks"`
+	}
 
 <a name="EmailRequest"></a>
-## type [EmailRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L289-L293>)
+## type EmailRequest
 
 EmailRequest represents the structure of the POST request body
 
-```go
-type EmailRequest struct {
-    Email   string `json:"email"`
-    Subject string `json:"subject"`
-    Content string `json:"content"`
-}
-```
+	type EmailRequest struct {
+	    Email   string `json:"email"`
+	    Subject string `json:"subject"`
+	    Content string `json:"content"`
+	}
 
 <a name="GeneralDataExtractionDocument"></a>
-## type [GeneralDataExtractionDocument](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L251-L259>)
+## type GeneralDataExtractionDocument
 
 
 
-```go
-type GeneralDataExtractionDocument struct {
-    DocumentName  string           `json:"document_name"`
-    Guid          string           `json:"guid"`
-    PreviousChunk string           `json:"previous_chunk"`
-    NextChunk     string           `json:"next_chunk"`
-    DenseVector   []float32        `json:"dense_vector"`
-    SparseVector  map[uint]float32 `json:"sparse_vector"`
-    Text          string           `json:"text"`
-}
-```
+	type GeneralDataExtractionDocument struct {
+	    DocumentName  string           `json:"document_name"`
+	    Guid          string           `json:"guid"`
+	    PreviousChunk string           `json:"previous_chunk"`
+	    NextChunk     string           `json:"next_chunk"`
+	    DenseVector   []float32        `json:"dense_vector"`
+	    SparseVector  map[uint]float32 `json:"sparse_vector"`
+	    Text          string           `json:"text"`
+	}
 
 <a name="LlmCriteria"></a>
-## type [LlmCriteria](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L42-L44>)
+## type LlmCriteria
 
 
 
-```go
-type LlmCriteria struct {
-    Criteria []sharedtypes.MaterialLlmCriterion
-}
-```
+	type LlmCriteria struct {
+	    Criteria []sharedtypes.MaterialLlmCriterion
+	}
+
+<a name="MCPContent"></a>
+## type MCPContent
+
+MCPContent represents content in MCP responses
+
+	type MCPContent struct {
+	    Type     string `json:"type"`
+	    Text     string `json:"text,omitempty"`
+	    Data     string `json:"data,omitempty"`
+	    MimeType string `json:"mimeType,omitempty"`
+	    URI      string `json:"uri,omitempty"`
+	}
+
+<a name="MCPPrompt"></a>
+## type MCPPrompt
+
+MCPPrompt represents an MCP prompt exposed by external functions
+
+	type MCPPrompt struct {
+	    Name        string              `json:"name"`
+	    Description string              `json:"description"`
+	    Arguments   []MCPPromptArgument `json:"arguments"`
+	}
+
+<a name="ListPrompts"></a>
+### func ListPrompts
+
+	func ListPrompts(serverURL string) ([]MCPPrompt, error)
+
+ListPrompts retrieves all available prompts from the MCP server. This follows the MCP standard prompts/list method.
+
+Tags:
+
+- @displayName: List MCP Prompts
+
+Parameters:
+
+- serverURL: the WebSocket URL of the MCP server
+
+Returns:
+
+- prompts: list of available prompts
+- error: any error that occurred during the request
+
+<a name="MCPPromptArgument"></a>
+## type MCPPromptArgument
+
+MCPPromptArgument represents an argument for a prompt
+
+	type MCPPromptArgument struct {
+	    Name        string `json:"name"`
+	    Description string `json:"description"`
+	    Required    bool   `json:"required"`
+	}
+
+<a name="MCPPromptMessage"></a>
+## type MCPPromptMessage
+
+MCPPromptMessage represents a message in a prompt result
+
+	type MCPPromptMessage struct {
+	    Role    string `json:"role"`
+	    Content string `json:"content"`
+	}
+
+<a name="MCPPromptResult"></a>
+## type MCPPromptResult
+
+MCPPromptResult represents the result of a prompt
+
+	type MCPPromptResult struct {
+	    Messages []MCPPromptMessage `json:"messages"`
+	}
+
+<a name="GetPrompt"></a>
+### func GetPrompt
+
+	func GetPrompt(serverURL string, promptName string, arguments map[string]interface{}) (MCPPromptResult, error)
+
+GetPrompt retrieves a specific prompt from the MCP server. This follows the MCP standard prompts/get method.
+
+Tags:
+
+- @displayName: Get MCP Prompt
+
+Parameters:
+
+- serverURL: the WebSocket URL of the MCP server
+- promptName: the name of the prompt to retrieve
+- arguments: arguments for the prompt
+
+Returns:
+
+- result: the prompt with generated messages
+- error: any error that occurred during the request
+
+<a name="MCPResource"></a>
+## type MCPResource
+
+MCPResource represents an MCP resource exposed by external functions
+
+	type MCPResource struct {
+	    URI         string `json:"uri"`
+	    Name        string `json:"name"`
+	    Description string `json:"description"`
+	    MimeType    string `json:"mimeType"`
+	}
+
+<a name="ListResources"></a>
+### func ListResources
+
+	func ListResources(serverURL string) ([]MCPResource, error)
+
+ListResources retrieves all available resources from the MCP server. This follows the MCP standard resources/list method.
+
+Tags:
+
+- @displayName: List MCP Resources
+
+Parameters:
+
+- serverURL: the WebSocket URL of the MCP server
+
+Returns:
+
+- resources: list of available resources
+- error: any error that occurred during the request
+
+<a name="MCPResourceContent"></a>
+## type MCPResourceContent
+
+MCPResourceContent represents the content of a resource
+
+	type MCPResourceContent struct {
+	    URI      string       `json:"uri"`
+	    MimeType string       `json:"mimeType"`
+	    Contents []MCPContent `json:"contents"`
+	}
+
+<a name="ReadResource"></a>
+### func ReadResource
+
+	func ReadResource(serverURL string, resourceURI string) (MCPResourceContent, error)
+
+ReadResource reads a specific resource from the MCP server. This follows the MCP standard resources/read method.
+
+Tags:
+
+- @displayName: Read MCP Resource
+
+Parameters:
+
+- serverURL: the WebSocket URL of the MCP server
+- resourceURI: the URI of the resource to read
+
+Returns:
+
+- content: the resource content
+- error: any error that occurred during the request
+
+<a name="MCPTool"></a>
+## type MCPTool
+
+MCPTool represents an MCP tool exposed by external functions
+
+	type MCPTool struct {
+	    Name        string          `json:"name"`
+	    Description string          `json:"description"`
+	    InputSchema json.RawMessage `json:"inputSchema"`
+	}
+
+<a name="ListTools"></a>
+### func ListTools
+
+	func ListTools(serverURL string) ([]MCPTool, error)
+
+ListTools retrieves all available tools from the MCP server. This follows the MCP standard tools/list method.
+
+Tags:
+
+- @displayName: List MCP Tools
+
+Parameters:
+
+- serverURL: the WebSocket URL of the MCP server
+
+Returns:
+
+- tools: list of available tools
+- error: any error that occurred during the request
+
+<a name="MCPToolResult"></a>
+## type MCPToolResult
+
+MCPToolResult represents the result of a tool execution
+
+	type MCPToolResult struct {
+	    Content []MCPContent `json:"content"`
+	}
+
+<a name="CallTool"></a>
+### func CallTool
+
+	func CallTool(serverURL string, toolName string, arguments map[string]interface{}) (MCPToolResult, error)
+
+CallTool executes a specific tool on the MCP server. This follows the MCP standard tools/call method.
+
+Tags:
+
+- @displayName: Call MCP Tool
+
+Parameters:
+
+- serverURL: the WebSocket URL of the MCP server
+- toolName: the name of the tool to execute
+- arguments: arguments to pass to the tool
+
+Returns:
+
+- result: the tool execution result
+- error: any error that occurred during execution
 
 <a name="MongoDbContext"></a>
-## type [MongoDbContext](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L262-L266>)
+## type MongoDbContext
 
 MongoDbContext is the structure for the mongodb client
 
-```go
-type MongoDbContext struct {
-    Client     *mongo.Client
-    Database   *mongo.Database
-    Collection *mongo.Collection
-}
-```
+	type MongoDbContext struct {
+	    Client     *mongo.Client
+	    Database   *mongo.Database
+	    Collection *mongo.Collection
+	}
 
 <a name="MongoDbCustomerObject"></a>
-## type [MongoDbCustomerObject](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L268-L275>)
+## type MongoDbCustomerObject
 
 
 
-```go
-type MongoDbCustomerObject struct {
-    ApiKey          string `bson:"api_key"`
-    CustomerName    string `bson:"customer_name"`
-    AccessDenied    bool   `bson:"access_denied"`
-    TotalTokenCount int    `bson:"total_token_usage"`
-    TokenLimit      int    `bson:"token_limit"`
-    WarningSent     bool   `bson:"warning_sent"`
-}
-```
+	type MongoDbCustomerObject struct {
+	    ApiKey          string `bson:"api_key"`
+	    CustomerName    string `bson:"customer_name"`
+	    AccessDenied    bool   `bson:"access_denied"`
+	    TotalTokenCount int    `bson:"total_token_usage"`
+	    TokenLimit      int    `bson:"token_limit"`
+	    WarningSent     bool   `bson:"warning_sent"`
+	}
 
 <a name="MongoDbCustomerObjectDisco"></a>
-## type [MongoDbCustomerObjectDisco](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L277-L286>)
+## type MongoDbCustomerObjectDisco
 
 
 
-```go
-type MongoDbCustomerObjectDisco struct {
-    UserId              string   `bson:"user_id"`
-    AccessDenied        bool     `bson:"access_denied"`
-    ModelId             []string `bson:"model_id"`
-    InputTokenCount     int      `bson:"input_token_count"`
-    OutputTokenCount    int      `bson:"output_token_count"`
-    TokenLimit          int      `bson:"token_limit"`
-    TokenLimitTimestamp int64    `bson:"token_limit_timestamp"`
-    WarningSent         bool     `bson:"warning_sent"`
-}
-```
+	type MongoDbCustomerObjectDisco struct {
+	    UserId              string   `bson:"user_id"`
+	    AccessDenied        bool     `bson:"access_denied"`
+	    ModelId             []string `bson:"model_id"`
+	    InputTokenCount     int      `bson:"input_token_count"`
+	    OutputTokenCount    int      `bson:"output_token_count"`
+	    TokenLimit          int      `bson:"token_limit"`
+	    TokenLimitTimestamp int64    `bson:"token_limit_timestamp"`
+	    WarningSent         bool     `bson:"warning_sent"`
+	}
 
 <a name="Response"></a>
-## type [Response](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/ansysmaterials.go#L37-L40>)
+## type Response
 
 
 
-```go
-type Response struct {
-    Criteria []sharedtypes.MaterialCriterionWithGuid
-    Tokens   int
-}
-```
+	type Response struct {
+	    Criteria []sharedtypes.MaterialCriterionWithGuid
+	    Tokens   int
+	}
 
 <a name="TokenCountUpdateRequest"></a>
-## type [TokenCountUpdateRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/externalfunctions/types.go#L245-L249>)
+## type TokenCountUpdateRequest
 
 
 
-```go
-type TokenCountUpdateRequest struct {
-    InputToken  int    `json:"input_token"`
-    OutputToken int    `json:"output_token"`
-    Platform    string `json:"platform"`
-}
-```
+	type TokenCountUpdateRequest struct {
+	    InputToken  int    `json:"input_token"`
+	    OutputToken int    `json:"output_token"`
+	    Platform    string `json:"platform"`
+	}
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

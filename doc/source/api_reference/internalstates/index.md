@@ -2,13 +2,11 @@
 
 # internalstates
 
-```go
-import "github.com/ansys/aali-flowkit/pkg/internalstates"
-```
+	import "github.com/ansys/aali-flowkit/pkg/internalstates"
 
 ## Index
 
-- [Variables](<#variables>)
+- Variables
 - [func InitializeInternalStates\(\)](<#InitializeInternalStates>)
 
 
@@ -16,16 +14,12 @@ import "github.com/ansys/aali-flowkit/pkg/internalstates"
 
 <a name="AvailableFunctions"></a>Global variables
 
-```go
-var AvailableFunctions map[string]*aaliflowkitgrpc.FunctionDefinition
-```
+	var AvailableFunctions map[string]*aaliflowkitgrpc.FunctionDefinition
 
 <a name="InitializeInternalStates"></a>
-## func [InitializeInternalStates](<https://github.com/ansys/aali-flowkit/blob/main/pkg/internalstates/internalstates.go#L35>)
+## func InitializeInternalStates
 
-```go
-func InitializeInternalStates()
-```
+	func InitializeInternalStates()
 
 InitializeInternalStates initializes the internal states of the agent This function should be called at the beginning of the agent to initialize the internal states of the agent
 

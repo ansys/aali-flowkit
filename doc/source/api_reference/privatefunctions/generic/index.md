@@ -2,9 +2,7 @@
 
 # generic
 
-```go
-import "github.com/ansys/aali-flowkit/pkg/privatefunctions/generic"
-```
+	import "github.com/ansys/aali-flowkit/pkg/privatefunctions/generic"
 
 ## Index
 
@@ -14,11 +12,9 @@ import "github.com/ansys/aali-flowkit/pkg/privatefunctions/generic"
 
 
 <a name="CreatePayloadAndSendHttpRequest"></a>
-## func [CreatePayloadAndSendHttpRequest](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/generic/generic.go#L50>)
+## func CreatePayloadAndSendHttpRequest
 
-```go
-func CreatePayloadAndSendHttpRequest(url string, requestType string, requestObject interface{}, responsePtr interface{}) (funcError error, statusCode int)
-```
+	func CreatePayloadAndSendHttpRequest(url string, requestType string, requestObject interface{}, responsePtr interface{}) (funcError error, statusCode int)
 
 CreatePayloadAndSendHttpRequest creates a JSON payload from a request object and sends an HTTP POST request to the specified URL. The response body is decoded into the responsePtr object.
 
@@ -35,11 +31,9 @@ Returns:
 - the status code of the HTTP response.
 
 <a name="ExtractStringFieldFromStruct"></a>
-## func [ExtractStringFieldFromStruct](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/generic/generic.go#L111>)
+## func ExtractStringFieldFromStruct
 
-```go
-func ExtractStringFieldFromStruct(data interface{}, fieldName string) (string, error)
-```
+	func ExtractStringFieldFromStruct(data interface{}, fieldName string) (string, error)
 
 ExtractStringFieldFromStruct extracts a string field from a struct.
 
@@ -54,11 +48,9 @@ Returns:
 - an error if the field is not found or is not a string.
 
 <a name="SnakeToCamel"></a>
-## func [SnakeToCamel](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/generic/generic.go#L160>)
+## func SnakeToCamel
 
-```go
-func SnakeToCamel(s string, upperFirst bool) string
-```
+	func SnakeToCamel(s string, upperFirst bool) string
 
 SnakeToCamel converts a snake\_case string to camelCase or PascalCase based on upperFirst flag
 

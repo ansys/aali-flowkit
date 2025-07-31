@@ -2,9 +2,7 @@
 
 # grpcserver
 
-```go
-import "github.com/ansys/aali-flowkit/pkg/grpcserver"
-```
+	import "github.com/ansys/aali-flowkit/pkg/grpcserver"
 
 ## Index
 
@@ -12,11 +10,9 @@ import "github.com/ansys/aali-flowkit/pkg/grpcserver"
 
 
 <a name="StartServer"></a>
-## func [StartServer](<https://github.com/ansys/aali-flowkit/blob/main/pkg/grpcserver/grpcserver.go#L53>)
+## func StartServer
 
-```go
-func StartServer()
-```
+	func StartServer()
 
 StartServer starts the gRPC server The server listens on the port specified in the configuration file The server implements the ExternalFunctionsServer interface
 

@@ -2,9 +2,7 @@
 
 # graphdb
 
-```go
-import "github.com/ansys/aali-flowkit/pkg/privatefunctions/graphdb"
-```
+	import "github.com/ansys/aali-flowkit/pkg/privatefunctions/graphdb"
 
 ## Index
 
@@ -12,11 +10,9 @@ import "github.com/ansys/aali-flowkit/pkg/privatefunctions/graphdb"
 
 
 <a name="Initialize"></a>
-## func [Initialize](<https://github.com/ansys/aali-flowkit/blob/main/pkg/privatefunctions/graphdb/graphdb.go#L57>)
+## func Initialize
 
-```go
-func Initialize(uri string) (funcError error)
-```
+	func Initialize(uri string) (funcError error)
 
 Initialize graph database connection.
 

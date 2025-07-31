@@ -805,6 +805,8 @@ func AecGetContextFromRetrieverModule(
 	userQuery string,
 	dataSources []string,
 	physics []string,
+	version []string,
+	product []string,
 	topK int,
 	plattform string,
 	retrieverModuleKey string) (context []sharedtypes.AnsysGPTRetrieverModuleChunk) {
@@ -814,6 +816,14 @@ func AecGetContextFromRetrieverModule(
 		physics = []string{"None"}
 	}
 	physicsString := strings.Join(physics, ", ")
+	versionString := ""
+	productString := ""
+	if len(version) != 0 {
+		versionString = strings.Join(version, ", ")
+	}
+	if len(product) != 0 {
+		productString = strings.Join(product, ", ")
+	}
 	dataSourceString := strings.Join(dataSources, ", ")
 
 	// Create HTTP client with timeout
@@ -826,6 +836,8 @@ func AecGetContextFromRetrieverModule(
 		UserInput:     userQuery,
 		DataSource:    dataSourceString,
 		FilterPhysics: physicsString,
+		FilterVersion: versionString,
+		FilterProduct: productString,
 		NumDocs:       topK,
 		Platform:      plattform,
 	}

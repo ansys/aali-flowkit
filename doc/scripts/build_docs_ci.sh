@@ -13,7 +13,7 @@ echo "=============================="
 # Check if we're in CI environment
 if [ -n "$CI" ]; then
     echo "Running in CI environment"
-    
+
     # Check if Go is available and what version
     if command -v go &> /dev/null; then
         GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
@@ -32,7 +32,7 @@ if make html; then
     exit 0
 else
     echo "Standard build failed, trying alternative build without Go dependency"
-    
+
     # If standard build fails, try html-only which doesn't regenerate API docs
     if make html-only; then
         echo "Documentation build completed successfully (using existing API docs)"

@@ -21,7 +21,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   doc-build:
-    name: "Build API reference documentation"
+    name: "Build project documentation"
     runs-on: ubuntu-latest
     needs: [doc-style]
     steps:

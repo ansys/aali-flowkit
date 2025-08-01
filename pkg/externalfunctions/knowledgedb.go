@@ -92,11 +92,21 @@ func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[ui
 
 	var filter qdrant.Filter
 	if keywordsSearch && len(keywords) > 0 {
+		// For elements collection, search keywords in existing text fields (name, type, etc.)
+		// match if keyword appears in ANY of these fields
+		keywordConditions := []*qdrant.Condition{}
+		for _, keyword := range keywords {
+			// Search in name fields (contains the keyword)
+			keywordConditions = append(keywordConditions,
+				qdrant.NewMatchText("name", keyword),
+				qdrant.NewMatchText("name_formatted", keyword),
+				qdrant.NewMatchText("name_pseudocode", keyword),
+				qdrant.NewMatchKeyword("type", keyword),
+				qdrant.NewMatchText("parent_class", keyword),
+			)
+		}
 		filter = qdrant.Filter{
-			Must: []*qdrant.Condition{
-				// qdrant.NewMatch("level", "leaf"), // Disabled - elements collection has no level field
-				qdrant.NewMatchKeywords("keywords", keywords...),
-			},
+			Should: keywordConditions, // OR logic - match any field containing any keyword
 		}
 	} else {
 		filter = qdrant.Filter{
@@ -163,7 +173,6 @@ func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[ui
 	dbResponses := make([]sharedtypes.DbResponse, len(scoredPoints))
 	for i, scoredPoint := range scoredPoints {
 		// fmt.Printf("Result #%d: Similarity Score %v", i, scoredPoint.Score)
-		// logging.Log.Debugf(&logging.ContextMap{}, "Similarity score: %v", scoredPoint.Score)
 		dbResponse, err := qdrant_utils.QdrantPayloadToType[sharedtypes.DbResponse](scoredPoint.Payload)
 		if err != nil {
 			errMsg := fmt.Sprintf("error converting qdrant payload to dbResponse: %q", err)
@@ -186,10 +195,6 @@ func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[ui
 				// fmt.Printf("Result #%d (CodeGenerationElement) Summary: '%s' DocumentName: '%s' Text: '%s'\n", i, dbResponse.Summary, dbResponse.DocumentName, dbResponse.Text)
 			}
 		}
-		// else {
-		// 	// Standard DbResponse conversion for document collections
-		// 	fmt.Printf("Result #%d (DbResponse) Summary: '%s' DocumentName: '%s' Text: '%s'\n", i, dbResponse.Summary, dbResponse.DocumentName, dbResponse.Text)
-		// }
 		dbResponses[i] = dbResponse
 	}
 	return dbResponses
@@ -663,7 +668,7 @@ func AddDataRequest(collectionName string, documentData []sharedtypes.DbData) {
 //
 // Parameters:
 //   - collectionName: the name of the collection to create.
-//   - vectorSize: the length of the vector embeddings
+//   - vectorSize: the length of the vector S
 //   - vectorDistance: the vector similarity distance algorithm to use for the vector index (cosine, dot, euclid, manhattan)
 func CreateCollectionRequest(collectionName string, vectorSize uint64, vectorDistance string) {
 	logCtx := &logging.ContextMap{}

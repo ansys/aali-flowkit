@@ -93,6 +93,7 @@
 - [func DenyCustomerAccessAndSendWarningMongoDbUserId\(userId string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string\) \(sendWarning bool\)](<#DenyCustomerAccessAndSendWarningMongoDbUserId>)
 - [func DownloadGithubFileContent\(githubRepoName string, githubRepoOwner string, githubRepoBranch string, gihubFilePath string, githubAccessToken string\) \(checksum string, content \[\]byte\)](<#DownloadGithubFileContent>)
 - [func DownloadGithubFilesContent\(githubRepoName string, githubRepoOwner string, githubRepoBranch string, gihubFilePaths \[\]string, githubAccessToken string\) \(filesMap map\[string\]\[\]byte\)](<#DownloadGithubFilesContent>)
+- [func ExecuteTool\(serverURL, toolName string, args map\[string\]interface\{\}\) \(map\[string\]interface\{\}, error\)](<#ExecuteTool>)
 - [func ExtractCriteriaSuggestions\(llmResponse string, traceID string, spanID string\) \(criteriaSuggestions \[\]sharedtypes.MaterialLlmCriterion, childSpanID string\)](<#ExtractCriteriaSuggestions>)
 - [func ExtractDesignRequirementsAndSearchCriteria\(userInput string, traceID string, spanID string\) \(designRequirements string, availableSearchCriteria \[\]string, childSpanID string\)](<#ExtractDesignRequirementsAndSearchCriteria>)
 - [func ExtractJSONStringField\(jsonStr string, keyPath string\) string](<#ExtractJSONStringField>)
@@ -121,10 +122,13 @@
 - [func GetLocalFileContent\(localFilePath string\) \(checksum string, content \[\]byte\)](<#GetLocalFileContent>)
 - [func GetLocalFilesContent\(localFilePaths \[\]string\) \(filesMap map\[string\]\[\]byte\)](<#GetLocalFilesContent>)
 - [func GetLocalFilesToExtract\(localPath string, localFileExtensions \[\]string, localFilteredDirectories \[\]string, localExcludedDirectories \[\]string\) \(localFilesToExtract \[\]string\)](<#GetLocalFilesToExtract>)
+- [func GetResource\(serverURL, resourceName string\) \(map\[string\]interface\{\}, error\)](<#GetResource>)
 - [func GetSelectedSolution\(arguments string\) \(solution string\)](<#GetSelectedSolution>)
 - [func GetSolutionsToFixProblem\(db\_name, fmFailureCode, primeMeshFailureCode string\) \(solutions string\)](<#GetSolutionsToFixProblem>)
+- [func GetSystemPrompt\(serverURL, promptName string\) \(string, error\)](<#GetSystemPrompt>)
 - [func JsonPath\(pat string, data any, oneResult bool\) any](<#JsonPath>)
 - [func LangchainSplitter\(bytesContent \[\]byte, documentType string, chunkSize int, chunkOverlap int\) \(output \[\]string\)](<#LangchainSplitter>)
+- [func ListAll\(serverURL string\) \(map\[string\]\[\]string, error\)](<#ListAll>)
 - [func LoadAndCheckExampleDependencies\(dependenciesContent \[\]byte, elements \[\]sharedtypes.CodeGenerationElement, instancesReplacementDict map\[string\]string, InstancesReplacementPriorityList \[\]string\) \(checkedDependenciesMap map\[string\]\[\]string, equivalencesMap map\[string\]map\[string\]string\)](<#LoadAndCheckExampleDependencies>)
 - [func LoadCodeGenerationElements\(content \[\]byte, elementsFilePath string\) \(elements \[\]sharedtypes.CodeGenerationElement\)](<#LoadCodeGenerationElements>)
 - [func LoadCodeGenerationExamples\(source string, examplesToExtract \[\]string, githubRepoName string, githubRepoOwner string, githubRepoBranch string, githubAccessToken string, dependencies map\[string\]\[\]string, equivalencesMap map\[string\]map\[string\]string, chunkSize int, chunkOverlap int\) \(examples \[\]sharedtypes.CodeGenerationExample\)](<#LoadCodeGenerationExamples>)
@@ -132,7 +136,6 @@
 - [func LogRequestFailed\(traceID string, spanID string\) \(childSpanID string\)](<#LogRequestFailed>)
 - [func LogRequestFailedDebugWithMessage\(msg1, msg2 string, traceID string, spanID string\) \(childSpanID string\)](<#LogRequestFailedDebugWithMessage>)
 - [func LogRequestSuccess\(traceID string, spanID string\) \(childSpanID string\)](<#LogRequestSuccess>)
-- [func MCPClient\(command string, serverURL string, arguments map\[string\]interface\{\}\) \(interface\{\}, error\)](<#MCPClient>)
 - [func MarkdownToHTML\(markdown string\) \(html string\)](<#MarkdownToHTML>)
 - [func ParseHistory\(historyJson string\) \(history \[\]map\[string\]string\)](<#ParseHistory>)
 - [func ParseHistoryToHistoricMessages\(historyJson string\) \(history \[\]sharedtypes.HistoricMessage\)](<#ParseHistoryToHistoricMessages>)
@@ -206,21 +209,6 @@
 - [type EmailRequest](<#EmailRequest>)
 - [type GeneralDataExtractionDocument](<#GeneralDataExtractionDocument>)
 - [type LlmCriteria](<#LlmCriteria>)
-- [type MCPContent](<#MCPContent>)
-- [type MCPPrompt](<#MCPPrompt>)
-  - [func ListPrompts\(serverURL string\) \(\[\]MCPPrompt, error\)](<#ListPrompts>)
-- [type MCPPromptArgument](<#MCPPromptArgument>)
-- [type MCPPromptMessage](<#MCPPromptMessage>)
-- [type MCPPromptResult](<#MCPPromptResult>)
-  - [func GetPrompt\(serverURL string, promptName string, arguments map\[string\]interface\{\}\) \(MCPPromptResult, error\)](<#GetPrompt>)
-- [type MCPResource](<#MCPResource>)
-  - [func ListResources\(serverURL string\) \(\[\]MCPResource, error\)](<#ListResources>)
-- [type MCPResourceContent](<#MCPResourceContent>)
-  - [func ReadResource\(serverURL string, resourceURI string\) \(MCPResourceContent, error\)](<#ReadResource>)
-- [type MCPTool](<#MCPTool>)
-  - [func ListTools\(serverURL string\) \(\[\]MCPTool, error\)](<#ListTools>)
-- [type MCPToolResult](<#MCPToolResult>)
-  - [func CallTool\(serverURL string, toolName string, arguments map\[string\]interface\{\}\) \(MCPToolResult, error\)](<#CallTool>)
 - [type MongoDbContext](<#MongoDbContext>)
 - [type MongoDbCustomerObject](<#MongoDbCustomerObject>)
 - [type MongoDbCustomerObjectDisco](<#MongoDbCustomerObjectDisco>)
@@ -362,14 +350,10 @@
 	    "SendLogicAppNotificationEmail":                 SendLogicAppNotificationEmail,
 	    "CreateMessageWithVariable":                     CreateMessageWithVariable,
 
-	    "MCPClient": MCPClient,
-
-	    "ListTools":     ListTools,
-	    "ListResources": ListResources,
-	    "ListPrompts":   ListPrompts,
-	    "CallTool":      CallTool,
-	    "ReadResource":  ReadResource,
-	    "GetPrompt":     GetPrompt,
+	    "ListAll":         ListAll,
+	    "ExecuteTool":     ExecuteTool,
+	    "GetResource":     GetResource,
+	    "GetSystemPrompt": GetSystemPrompt,
 
 	    "StartTrace":                       StartTrace,
 	    "SerializeResponse":                SerializeResponse,
@@ -2157,6 +2141,28 @@ Returns:
 
 - filesMap: map of file paths to file content.
 
+<a name="ExecuteTool"></a>
+## func ExecuteTool
+
+	func ExecuteTool(serverURL, toolName string, args map[string]interface{}) (map[string]interface{}, error)
+
+ExecuteTool executes a specific tool via the MCP server with provided arguments.
+
+Tags:
+
+- @displayName: Execute MCP Tool
+
+Parameters:
+
+- serverURL: the WebSocket URL of the MCP server
+- toolName: the name of the tool to execute
+- args: a map of arguments to pass to the tool
+
+Returns:
+
+- result: the response from the tool execution
+- error: any error that occurred during execution
+
 <a name="ExtractCriteriaSuggestions"></a>
 ## func ExtractCriteriaSuggestions
 
@@ -2726,6 +2732,27 @@ Returns:
 
 - localFilesToExtract: local files to extract.
 
+<a name="GetResource"></a>
+## func GetResource
+
+	func GetResource(serverURL, resourceName string) (map[string]interface{}, error)
+
+GetResource retrieves a named resource from the MCP server.
+
+Tags:
+
+- @displayName: Get MCP Resource
+
+Parameters:
+
+- serverURL: the WebSocket URL of the MCP server
+- resourceName: the name of the resource to retrieve
+
+Returns:
+
+- result: the retrieved resource as a map
+- error: any error that occurred during the request
+
 <a name="GetSelectedSolution"></a>
 ## func GetSelectedSolution
 
@@ -2764,6 +2791,27 @@ Parameters:
 Returns:
 
 - solutions: the list of solutions in json
+
+<a name="GetSystemPrompt"></a>
+## func GetSystemPrompt
+
+	func GetSystemPrompt(serverURL, promptName string) (string, error)
+
+GetSystemPrompt retrieves a system prompt by name from the MCP server.
+
+Tags:
+
+- @displayName: Get MCP Prompt
+
+Parameters:
+
+- serverURL: the WebSocket URL of the MCP server
+- promptName: the name of the system prompt to retrieve
+
+Returns:
+
+- promptStr: the text of the retrieved prompt
+- error: any error that occurred during the request
 
 <a name="JsonPath"></a>
 ## func JsonPath
@@ -2807,6 +2855,26 @@ Parameters:
 Returns:
 
 - output: chunks as an slice of strings.
+
+<a name="ListAll"></a>
+## func ListAll
+
+	func ListAll(serverURL string) (map[string][]string, error)
+
+ListAll retrieves all tools, resources, and prompts from the MCP server.
+
+Tags:
+
+- @displayName: List MCP Items
+
+Parameters:
+
+- serverURL: the WebSocket URL of the MCP server
+
+Returns:
+
+- result: a map with lists of tool/resource/prompt names categorized by type
+- error: any error that occurred during the process
 
 <a name="LoadAndCheckExampleDependencies"></a>
 ## func LoadAndCheckExampleDependencies
@@ -2964,28 +3032,6 @@ Parameters:
 Returns:
 
 - childSpanID: the child span ID created for this operation
-
-<a name="MCPClient"></a>
-## func MCPClient
-
-	func MCPClient(command string, serverURL string, arguments map[string]interface{}) (interface{}, error)
-
-MCPClient is a unified function for all MCP operations. It provides a single entry point for MCP functionality.
-
-Tags:
-
-- @displayName: MCP Client
-
-Parameters:
-
-- command: the MCP command to execute \(list\_tools, call\_tool, list\_resources, read\_resource, list\_prompts, get\_prompt\)
-- serverURL: the WebSocket URL of the MCP server
-- arguments: command\-specific arguments
-
-Returns:
-
-- result: the command result
-- error: any error that occurred
 
 <a name="MarkdownToHTML"></a>
 ## func MarkdownToHTML
@@ -4375,228 +4421,6 @@ EmailRequest represents the structure of the POST request body
 	type LlmCriteria struct {
 	    Criteria []sharedtypes.MaterialLlmCriterion
 	}
-
-<a name="MCPContent"></a>
-## type MCPContent
-
-MCPContent represents content in MCP responses
-
-	type MCPContent struct {
-	    Type     string `json:"type"`
-	    Text     string `json:"text,omitempty"`
-	    Data     string `json:"data,omitempty"`
-	    MimeType string `json:"mimeType,omitempty"`
-	    URI      string `json:"uri,omitempty"`
-	}
-
-<a name="MCPPrompt"></a>
-## type MCPPrompt
-
-MCPPrompt represents an MCP prompt exposed by external functions
-
-	type MCPPrompt struct {
-	    Name        string              `json:"name"`
-	    Description string              `json:"description"`
-	    Arguments   []MCPPromptArgument `json:"arguments"`
-	}
-
-<a name="ListPrompts"></a>
-### func ListPrompts
-
-	func ListPrompts(serverURL string) ([]MCPPrompt, error)
-
-ListPrompts retrieves all available prompts from the MCP server. This follows the MCP standard prompts/list method.
-
-Tags:
-
-- @displayName: List MCP Prompts
-
-Parameters:
-
-- serverURL: the WebSocket URL of the MCP server
-
-Returns:
-
-- prompts: list of available prompts
-- error: any error that occurred during the request
-
-<a name="MCPPromptArgument"></a>
-## type MCPPromptArgument
-
-MCPPromptArgument represents an argument for a prompt
-
-	type MCPPromptArgument struct {
-	    Name        string `json:"name"`
-	    Description string `json:"description"`
-	    Required    bool   `json:"required"`
-	}
-
-<a name="MCPPromptMessage"></a>
-## type MCPPromptMessage
-
-MCPPromptMessage represents a message in a prompt result
-
-	type MCPPromptMessage struct {
-	    Role    string `json:"role"`
-	    Content string `json:"content"`
-	}
-
-<a name="MCPPromptResult"></a>
-## type MCPPromptResult
-
-MCPPromptResult represents the result of a prompt
-
-	type MCPPromptResult struct {
-	    Messages []MCPPromptMessage `json:"messages"`
-	}
-
-<a name="GetPrompt"></a>
-### func GetPrompt
-
-	func GetPrompt(serverURL string, promptName string, arguments map[string]interface{}) (MCPPromptResult, error)
-
-GetPrompt retrieves a specific prompt from the MCP server. This follows the MCP standard prompts/get method.
-
-Tags:
-
-- @displayName: Get MCP Prompt
-
-Parameters:
-
-- serverURL: the WebSocket URL of the MCP server
-- promptName: the name of the prompt to retrieve
-- arguments: arguments for the prompt
-
-Returns:
-
-- result: the prompt with generated messages
-- error: any error that occurred during the request
-
-<a name="MCPResource"></a>
-## type MCPResource
-
-MCPResource represents an MCP resource exposed by external functions
-
-	type MCPResource struct {
-	    URI         string `json:"uri"`
-	    Name        string `json:"name"`
-	    Description string `json:"description"`
-	    MimeType    string `json:"mimeType"`
-	}
-
-<a name="ListResources"></a>
-### func ListResources
-
-	func ListResources(serverURL string) ([]MCPResource, error)
-
-ListResources retrieves all available resources from the MCP server. This follows the MCP standard resources/list method.
-
-Tags:
-
-- @displayName: List MCP Resources
-
-Parameters:
-
-- serverURL: the WebSocket URL of the MCP server
-
-Returns:
-
-- resources: list of available resources
-- error: any error that occurred during the request
-
-<a name="MCPResourceContent"></a>
-## type MCPResourceContent
-
-MCPResourceContent represents the content of a resource
-
-	type MCPResourceContent struct {
-	    URI      string       `json:"uri"`
-	    MimeType string       `json:"mimeType"`
-	    Contents []MCPContent `json:"contents"`
-	}
-
-<a name="ReadResource"></a>
-### func ReadResource
-
-	func ReadResource(serverURL string, resourceURI string) (MCPResourceContent, error)
-
-ReadResource reads a specific resource from the MCP server. This follows the MCP standard resources/read method.
-
-Tags:
-
-- @displayName: Read MCP Resource
-
-Parameters:
-
-- serverURL: the WebSocket URL of the MCP server
-- resourceURI: the URI of the resource to read
-
-Returns:
-
-- content: the resource content
-- error: any error that occurred during the request
-
-<a name="MCPTool"></a>
-## type MCPTool
-
-MCPTool represents an MCP tool exposed by external functions
-
-	type MCPTool struct {
-	    Name        string          `json:"name"`
-	    Description string          `json:"description"`
-	    InputSchema json.RawMessage `json:"inputSchema"`
-	}
-
-<a name="ListTools"></a>
-### func ListTools
-
-	func ListTools(serverURL string) ([]MCPTool, error)
-
-ListTools retrieves all available tools from the MCP server. This follows the MCP standard tools/list method.
-
-Tags:
-
-- @displayName: List MCP Tools
-
-Parameters:
-
-- serverURL: the WebSocket URL of the MCP server
-
-Returns:
-
-- tools: list of available tools
-- error: any error that occurred during the request
-
-<a name="MCPToolResult"></a>
-## type MCPToolResult
-
-MCPToolResult represents the result of a tool execution
-
-	type MCPToolResult struct {
-	    Content []MCPContent `json:"content"`
-	}
-
-<a name="CallTool"></a>
-### func CallTool
-
-	func CallTool(serverURL string, toolName string, arguments map[string]interface{}) (MCPToolResult, error)
-
-CallTool executes a specific tool on the MCP server. This follows the MCP standard tools/call method.
-
-Tags:
-
-- @displayName: Call MCP Tool
-
-Parameters:
-
-- serverURL: the WebSocket URL of the MCP server
-- toolName: the name of the tool to execute
-- arguments: arguments to pass to the tool
-
-Returns:
-
-- result: the tool execution result
-- error: any error that occurred during execution
 
 <a name="MongoDbContext"></a>
 ## type MongoDbContext

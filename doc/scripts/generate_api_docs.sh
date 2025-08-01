@@ -13,6 +13,22 @@ echo "Starting API documentation generation..."
 echo "Project root: $PROJECT_ROOT"
 echo "API reference directory: $API_REF_DIR"
 
+# Check if API docs already exist
+if [ -f "$API_REF_DIR/externalfunctions/index.md" ] && \
+   [ -f "$API_REF_DIR/functiondefinitions/index.md" ] && \
+   [ -f "$API_REF_DIR/grpcserver/index.md" ]; then
+    echo "API documentation files already exist. Skipping generation."
+    echo "To regenerate, delete the existing .md files in $API_REF_DIR"
+    exit 0
+fi
+
+# Check if Go is available
+if ! command -v go &> /dev/null; then
+    echo "Go is not installed. Cannot generate API documentation."
+    echo "Using existing documentation files if available."
+    exit 0
+fi
+
 # Install gomarkdoc if not present
 if ! command -v gomarkdoc &> /dev/null; then
     echo "Installing gomarkdoc..."

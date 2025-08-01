@@ -118,6 +118,13 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 		panic(errorMessage)
 	}
 
+	toolName9, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_19_NAME"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load tool name 9 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
 	collection1Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["COLLECTION_1_NAME"]
 	if !exists {
 		errorMessage := fmt.Sprintf("failed to load collection name 1 from the configuration")
@@ -160,6 +167,13 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 		panic(errorMessage)
 	}
 
+	collection7Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["COLLECTION_7_NAME"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load collection name 7 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
 	collection_name := ""
 	if toolName == toolName5 {
 		collection_name = collection2Name
@@ -175,6 +189,8 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 		toolName == toolName2 ||
 		toolName == toolName3 {
 		collection_name = collection1Name
+	} else if toolName == toolName9 {
+		collection_name = collection7Name
 	} else {
 		errorMessage := fmt.Sprintf("Invalid Tool Name: %q", toolName)
 		logging.Log.Error(ctx, errorMessage)
@@ -1022,6 +1038,13 @@ func FinalizeResult(actions []map[string]string, toolName string) (result string
 		panic(errorMessage)
 	}
 
+	toolAction19Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_19_NAME"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load action tool 19 name from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
 	// Get tool 2 action message from configuration
 	toolAction1Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_1_SUCCESS_MESSAGE"]
 	if !exists {
@@ -1141,6 +1164,22 @@ func FinalizeResult(actions []map[string]string, toolName string) (result string
 		panic(errorMessage)
 	}
 
+	// Get tool 19 action message from configuration
+	toolAction19Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_19_SUCCESS_MESSAGE"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load tool 19 action message from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	// Get tool 19 no action message from configuration
+	toolAction19NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_19_NO_ACTION_MESSAGE"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load tool 19 no action message from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
 	if toolName == toolAction1Name {
 		if hasActions {
 			message = toolAction1Message
@@ -1188,6 +1227,12 @@ func FinalizeResult(actions []map[string]string, toolName string) (result string
 			message = toolAction15Message
 		} else {
 			message = toolAction15NoActionMessage
+		}
+	} else if toolName == toolAction19Name {
+		if hasActions {
+			message = toolAction19Message
+		} else {
+			message = toolAction19NoActionMessage
 		}
 	} else {
 		errorMessage := fmt.Sprintf("Invalid toolName %s", toolName)
@@ -1429,34 +1474,40 @@ func GetActionsFromConfig(toolName string) (result string) {
 
 	// Configuration keys for different tools, for now only tool 9 and tool 11
 	configKeys := map[string]map[string]string{
-		"tool9": {
+		"tool7": {
 			"resultName":    "APP_ACTION_TOOL7_RESULT_NAME",
 			"resultMessage": "APP_ACTION_TOOL7_RESULT_MESSAGE",
 			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL7",
 			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_2",
 		},
-		"tool11": {
+		"tool9": {
 			"resultName":    "APP_ACTION_TOOL9_RESULT_NAME",
 			"resultMessage": "APP_ACTION_TOOL9_RESULT_MESSAGE",
 			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL9",
 			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_1",
 		},
-		"tool12": {
+		"tool10": {
 			"resultName":    "APP_ACTION_TOOL10_RESULT_NAME",
 			"resultMessage": "APP_ACTION_TOOL10_RESULT_MESSAGE",
 			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL10",
 			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_2",
 		},
-		"tool15": {
+		"tool13": {
 			"resultName":    "APP_ACTION_TOOL13_RESULT_NAME",
 			"resultMessage": "APP_ACTION_TOOL13_RESULT_MESSAGE",
 			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL13",
 			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_3",
 		},
-		"tool18": {
+		"tool16": {
 			"resultName":    "APP_ACTION_TOOL16_RESULT_NAME",
 			"resultMessage": "APP_ACTION_TOOL16_RESULT_MESSAGE",
 			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL16",
+			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_1",
+		},
+		"tool18": {
+			"resultName":    "APP_ACTION_TOOL18_RESULT_NAME",
+			"resultMessage": "APP_ACTION_TOOL18_RESULT_MESSAGE",
+			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL18",
 			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_1",
 		},
 	}
@@ -1473,17 +1524,19 @@ func GetActionsFromConfig(toolName string) (result string) {
 	}
 
 	// Get tool result name from the configuration
+	tool7ResultName := getConfigValue(configKeys["tool7"]["resultName"], "failed to load tool 7 result name from the configuration")
 	tool9ResultName := getConfigValue(configKeys["tool9"]["resultName"], "failed to load tool 9 result name from the configuration")
-	tool11ResultName := getConfigValue(configKeys["tool11"]["resultName"], "failed to load tool 11 result name from the configuration")
-	tool12ResultName := getConfigValue(configKeys["tool12"]["resultName"], "failed to load tool 12 result name from the configuration")
-	tool15ResultName := getConfigValue(configKeys["tool15"]["resultName"], "failed to load tool 15 result name from the configuration")
+	tool10ResultName := getConfigValue(configKeys["tool10"]["resultName"], "failed to load tool 10 result name from the configuration")
+	tool13ResultName := getConfigValue(configKeys["tool13"]["resultName"], "failed to load tool 13 result name from the configuration")
+	tool16ResultName := getConfigValue(configKeys["tool16"]["resultName"], "failed to load tool 16 result name from the configuration")
 	tool18ResultName := getConfigValue(configKeys["tool18"]["resultName"], "failed to load tool 18 result name from the configuration")
 
 	// Get tool result message from the configuration
+	tool7ResultMessage := getConfigValue(configKeys["tool7"]["resultMessage"], "failed to load tool 7 result message from the configuration")
 	tool9ResultMessage := getConfigValue(configKeys["tool9"]["resultMessage"], "failed to load tool 9 result message from the configuration")
-	tool11ResultMessage := getConfigValue(configKeys["tool11"]["resultMessage"], "failed to load tool 11 result message from the configuration")
-	tool12ResultMessage := getConfigValue(configKeys["tool12"]["resultMessage"], "failed to load tool 12 result message from the configuration")
-	tool15ResultMessage := getConfigValue(configKeys["tool15"]["resultMessage"], "failed to load tool 15 result message from the configuration")
+	tool10ResultMessage := getConfigValue(configKeys["tool10"]["resultMessage"], "failed to load tool 10 result message from the configuration")
+	tool13ResultMessage := getConfigValue(configKeys["tool13"]["resultMessage"], "failed to load tool 13 result message from the configuration")
+	tool16ResultMessage := getConfigValue(configKeys["tool16"]["resultMessage"], "failed to load tool 16 result message from the configuration")
 	tool18ResultMessage := getConfigValue(configKeys["tool18"]["resultMessage"], "failed to load tool 18 result message from the configuration")
 
 	// Get tool action success message from configuration
@@ -1495,22 +1548,26 @@ func GetActionsFromConfig(toolName string) (result string) {
 	var actionValue1, actionValue2, selectedMessage string
 
 	// Based on the tool name, set the action values and message
-	if toolName == tool9ResultName {
+	if toolName == tool7ResultName {
+		actionValue1 = getConfigValue(configKeys["tool7"]["actionValue1"], "failed to load tool 7 action value 1 from the configuration")
+		actionValue2 = getConfigValue(configKeys["tool7"]["actionValue2"], "failed to load tool 7 action value 2 from the configuration")
+		selectedMessage = tool7ResultMessage
+	} else if toolName == tool9ResultName {
 		actionValue1 = getConfigValue(configKeys["tool9"]["actionValue1"], "failed to load tool 9 action value 1 from the configuration")
 		actionValue2 = getConfigValue(configKeys["tool9"]["actionValue2"], "failed to load tool 9 action value 2 from the configuration")
 		selectedMessage = tool9ResultMessage
-	} else if toolName == tool11ResultName {
-		actionValue1 = getConfigValue(configKeys["tool11"]["actionValue1"], "failed to load tool 11 action value 1 from the configuration")
-		actionValue2 = getConfigValue(configKeys["tool11"]["actionValue2"], "failed to load tool 11 action value 2 from the configuration")
-		selectedMessage = tool11ResultMessage
-	} else if toolName == tool12ResultName {
-		actionValue1 = getConfigValue(configKeys["tool12"]["actionValue1"], "failed to load tool 12 action value 1 from the configuration")
-		actionValue2 = getConfigValue(configKeys["tool12"]["actionValue2"], "failed to load tool 12 action value 2 from the configuration")
-		selectedMessage = tool12ResultMessage
-	} else if toolName == tool15ResultName {
-		actionValue1 = getConfigValue(configKeys["tool15"]["actionValue1"], "failed to load tool 15 action value 1 from the configuration")
-		actionValue2 = getConfigValue(configKeys["tool15"]["actionValue2"], "failed to load tool 15 action value 2 from the configuration")
-		selectedMessage = tool15ResultMessage
+	} else if toolName == tool10ResultName {
+		actionValue1 = getConfigValue(configKeys["tool10"]["actionValue1"], "failed to load tool 10 action value 1 from the configuration")
+		actionValue2 = getConfigValue(configKeys["tool10"]["actionValue2"], "failed to load tool 10 action value 2 from the configuration")
+		selectedMessage = tool10ResultMessage
+	} else if toolName == tool13ResultName {
+		actionValue1 = getConfigValue(configKeys["tool13"]["actionValue1"], "failed to load tool 13 action value 1 from the configuration")
+		actionValue2 = getConfigValue(configKeys["tool13"]["actionValue2"], "failed to load tool 13 action value 2 from the configuration")
+		selectedMessage = tool13ResultMessage
+	} else if toolName == tool16ResultName {
+		actionValue1 = getConfigValue(configKeys["tool16"]["actionValue1"], "failed to load tool 16 action value 1 from the configuration")
+		actionValue2 = getConfigValue(configKeys["tool16"]["actionValue2"], "failed to load tool 16 action value 2 from the configuration")
+		selectedMessage = tool16ResultMessage
 	} else if toolName == tool18ResultName {
 		actionValue1 = getConfigValue(configKeys["tool18"]["actionValue1"], "failed to load tool 18 action value 1 from the configuration")
 		actionValue2 = getConfigValue(configKeys["tool18"]["actionValue2"], "failed to load tool 18 action value 2 from the configuration")
@@ -1522,7 +1579,7 @@ func GetActionsFromConfig(toolName string) (result string) {
 	}
 
 	message := toolActionSuccessMessage
-	if toolName == tool9ResultName || toolName == tool11ResultName || toolName == tool12ResultName || toolName == tool15ResultName || toolName == tool18ResultName {
+	if toolName == tool7ResultName || toolName == tool9ResultName || toolName == tool10ResultName || toolName == tool13ResultName || toolName == tool16ResultName || toolName == tool18ResultName {
 		message = selectedMessage
 		actions := []map[string]string{
 			{

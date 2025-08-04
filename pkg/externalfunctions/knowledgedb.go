@@ -43,47 +43,26 @@ import (
 //   - @displayName: Similarity Search
 //
 // Parameters:
-//   - vector: the vector to be sent to the KnowledgeDB (dense vector for backward compatibility)
+//   - vector: the vector to be sent to the KnowledgeDB
 //   - keywords: the keywords to be used to filter the results
 //   - keywordsSearch: the flag to enable the keywords search
 //   - collection: the collection name
 //   - similaritySearchResults: the number of results to be returned
 //   - similaritySearchMinScore: the minimum score for the results
+//   - sparseVector: optional sparse vector for hybrid search (defaults to nil for backward compatibility)
 //
 // Returns:
 //   - databaseResponse: an array of the most relevant data
-func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int,
-	similaritySearchMinScore float64) (databaseResponse []sharedtypes.DbResponse) {
-	// Call internal implementation with dense-only search
-	return sendVectorsToKnowledgeDBInternal(vector, nil, keywords, keywordsSearch, collection, similaritySearchResults, similaritySearchMinScore,
-		false)
-}
-
-// SendVectorsToKnowledgeDBHybrid - for hybrid search with explicit sparse vector input
-//
-// Tags:
-//   - @displayName: Hybrid Similarity Search
-//
-// Parameters:
-//   - denseVector: the dense vector for semantic search
-//   - sparseVector: the sparse vector for keyword/lexical search
-//   - keywords: the keywords to be used to filter the results
-//   - keywordsSearch: the flag to enable the keywords search
-//   - collection: the collection name
-//   - similaritySearchResults: the number of results to be returned
-//   - similaritySearchMinScore: the minimum score for the results
-//
-// Returns:
-//   - databaseResponse: an array of the most relevant data from hybrid search
-func SendVectorsToKnowledgeDBHybrid(denseVector []float32, sparseVector map[uint]float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64) (databaseResponse []sharedtypes.DbResponse) {
+func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64, sparseVector ...map[uint]float32) (databaseResponse []sharedtypes.DbResponse) {
+	// Handle variadic parameter - default to nil for backward compatibility
+	var sparse map[uint]float32
+	if len(sparseVector) > 0 {
+		sparse = sparseVector[0]
+	}
+	
 	// Enable hybrid search when both vectors are provided
-	useHybrid := len(sparseVector) > 0
-	return sendVectorsToKnowledgeDBInternal(denseVector, sparseVector, keywords, keywordsSearch, collection, similaritySearchResults,
-		similaritySearchMinScore, useHybrid)
-}
-
-// sendVectorsToKnowledgeDBInternal is the unified implementation supporting both dense and hybrid search
-func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[uint]float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64, useHybridSearch bool) (databaseResponse []sharedtypes.DbResponse) {
+	useHybrid := len(sparse) > 0
+	
 	logCtx := &logging.ContextMap{}
 	client, err := qdrant_utils.QdrantClient()
 	if err != nil {
@@ -120,19 +99,19 @@ func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[ui
 	var query qdrant.QueryPoints
 
 	// Use fusion if both dense and sparse vectors are available
-	if useHybridSearch && sparseVector != nil && len(sparseVector) > 0 {
+	if useHybrid && sparse != nil && len(sparse) > 0 {
 		// Create prefetch queries for hybrid search using RRF (Reciprocal Rank Fusion)
 		prefetchQueries := []*qdrant.PrefetchQuery{
 			// Dense vector search prefetch
 			{
-				Query:  qdrant.NewQueryDense(denseVector),
+				Query:  qdrant.NewQueryDense(vector),
 				Using:  nil, // Use default (unnamed) vector
 				Filter: &filter,
 				Limit:  &limit,
 			},
 			// Sparse vector search prefetch
 			{
-				Query:  createSparseQuery(sparseVector),
+				Query:  createSparseQuery(sparse),
 				Using:  qdrant.PtrOf("sparse_vector"), // Use sparse vector field
 				Filter: &filter,
 				Limit:  &limit,
@@ -153,7 +132,7 @@ func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[ui
 		// DENSE-ONLY SEARCH: Use existing logic for backward compatibility
 		query = qdrant.QueryPoints{
 			CollectionName: collection,
-			Query:          qdrant.NewQueryDense(denseVector),
+			Query:          qdrant.NewQueryDense(vector),
 			Limit:          &limit,
 			ScoreThreshold: &scoreThreshold,
 			Filter:         &filter,
@@ -199,6 +178,8 @@ func sendVectorsToKnowledgeDBInternal(denseVector []float32, sparseVector map[ui
 	}
 	return dbResponses
 }
+
+
 
 // Helper function to create sparse query from map[uint]float32
 func createSparseQuery(sparseVector map[uint]float32) *qdrant.Query {

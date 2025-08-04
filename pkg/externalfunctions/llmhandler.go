@@ -41,37 +41,22 @@ import (
 //
 // Parameters:
 //   - input: the input string
+//   - includeSparse: optional flag to include sparse vectors (defaults to false for backward compatibility)
 //
 // Returns:
 //   - embeddedVector: the embedded vector in float32 format
-func PerformVectorEmbeddingRequest(input string) (embeddedVector []float32) {
-	// Ensures all existing code continues to work unchanged
-	return performVectorEmbeddingRequestInternal(input, false).Dense
-}
+//   - sparseVector: the sparse embedded vector as term_id->weight map (only when includeSparse=true)
+func PerformVectorEmbeddingRequest(input string, includeSparse ...bool) (embeddedVector []float32, sparseVector map[uint]float32) {
+	// Handle variadic parameter - default to false for backward compatibility
+	shouldIncludeSparse := false
+	if len(includeSparse) > 0 {
+		shouldIncludeSparse = includeSparse[0]
+	}
 
-// PerformVectorEmbeddingRequestHybrid - for users who want hybrid embeddings
-//
-// Tags:
-//   - @displayName: Hybrid Embeddings
-//
-// Parameters:
-//   - input: the input string
-//
-// Returns:
-//   - denseVector: the dense embedded vector in float32 format
-//   - sparseVector: the sparse embedded vector as term_id->weight map
-func PerformVectorEmbeddingRequestHybrid(input string) (denseVector []float32, sparseVector map[uint]float32) {
-	result := performVectorEmbeddingRequestInternal(input, true)
-	return result.Dense, result.Sparse
-}
-
-// performVectorEmbeddingRequestInternal is the internal implementation that can return both dense and sparse
-// Allows for easy code reuse between legacy and hybrid functions
-func performVectorEmbeddingRequestInternal(input string, includeSparse bool) (result sharedtypes.EmbeddingResult) {
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Use hybrid embeddings if requested, otherwise use existing dense-only logic
-	responseChannel := sendEmbeddingsRequest(input, llmHandlerEndpoint, includeSparse, nil)
+	responseChannel := sendEmbeddingsRequest(input, llmHandlerEndpoint, shouldIncludeSparse, nil)
 	defer close(responseChannel)
 
 	var denseEmbedding []float32
@@ -100,7 +85,7 @@ func performVectorEmbeddingRequestInternal(input string, includeSparse bool) (re
 		}
 
 		// Process sparse embedding if available (added functionality)
-		if includeSparse && response.LexicalWeights != nil {
+		if shouldIncludeSparse && response.LexicalWeights != nil {
 			fmt.Print("Processing sparse embedding...\n")
 			if sparseInterface, ok := response.LexicalWeights.(map[string]interface{}); ok {
 				sparseEmbedding = make(map[uint]float32)
@@ -118,8 +103,10 @@ func performVectorEmbeddingRequestInternal(input string, includeSparse bool) (re
 		break
 	}
 
-	return sharedtypes.EmbeddingResult{Dense: denseEmbedding, Sparse: sparseEmbedding}
+	return denseEmbedding, sparseEmbedding
 }
+
+
 
 // PerformVectorEmbeddingRequestWithTokenLimitCatch performs a vector embedding request to LLM
 // and catches the token limit error message

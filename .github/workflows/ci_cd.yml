@@ -90,12 +90,22 @@ jobs:
     permissions:
       contents: write
       pages: write
+      id-token: write
     steps:
-      - name: Deploy the latest documentation
-        uses: ansys/actions/doc-deploy-dev@v9
+      - name: Download documentation artifact
+        uses: actions/download-artifact@v4
         with:
-          cname: ${{ env.DOCUMENTATION_CNAME }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          bot-user: "github-actions[bot]"
-          bot-email: "github-actions[bot]@users.noreply.github.com"
-          doc-artifact-name: documentation-html-with-api
+          name: documentation-html-with-api
+          path: ./docs-to-deploy
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs-to-deploy
+          publish_branch: gh-pages
+          force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Deploy documentation'
+          cname: ansys.github.io/aali-flowkit

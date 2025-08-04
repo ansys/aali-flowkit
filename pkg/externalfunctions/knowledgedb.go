@@ -67,29 +67,41 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	if err != nil {
 		logPanic(logCtx, "unable to create qdrant client: %q", err)
 	}
-
+	// Build flexible filter based on what fields actually exist in the collection
 	var filter qdrant.Filter
-	if keywordsSearch && len(keywords) > 0 {
-		// For elements collection, search keywords in existing text fields (name, type, etc.)
-		// match if keyword appears in ANY of these fields
-		keywordConditions := []*qdrant.Condition{}
-		for _, keyword := range keywords {
-			// Search in name fields (contains the keyword)
-			keywordConditions = append(keywordConditions,
-				qdrant.NewMatchText("name", keyword),
-				qdrant.NewMatchText("name_formatted", keyword),
-				qdrant.NewMatchText("name_pseudocode", keyword),
-				qdrant.NewMatchKeyword("type", keyword),
-				qdrant.NewMatchText("parent_class", keyword),
-			)
+	var conditions []*qdrant.Condition
+
+	// Try to add level filter if it's likely to exist (for standard collections)
+	useStandardLevelFilter := true
+
+	// Sample one point to see what fields are available
+	sampleQuery := qdrant.QueryPoints{
+		CollectionName: collection,
+		Limit:          qdrant.PtrOf(uint64(1)),
+		WithVectors:    qdrant.NewWithVectorsEnable(false),
+		WithPayload:    qdrant.NewWithPayloadEnable(true),
+	}
+	samplePoints, err := client.Query(context.TODO(), &sampleQuery)
+	if err == nil && len(samplePoints) > 0 {
+		payload := samplePoints[0].Payload
+
+		// Check if this is an older collection (has name_pseudocode but no level/keywords)
+		if _, hasNamePseudocode := payload["name_pseudocode"]; hasNamePseudocode {
+			useStandardLevelFilter = false
 		}
-		filter = qdrant.Filter{
-			Should: keywordConditions, // OR logic - match any field containing any keyword
+	}
+
+	if useStandardLevelFilter {
+		// Standard collection: use level filter and keywords if available
+		conditions = append(conditions, qdrant.NewMatch("level", "leaf"))
+		if keywordsSearch && len(keywords) > 0 {
+			conditions = append(conditions, qdrant.NewMatchKeywords("keywords", keywords...))
 		}
+		filter = qdrant.Filter{Must: conditions}
 	} else {
-		filter = qdrant.Filter{
-			// No filter needed for elements collection - search all definitions
-		}
+		// Older collection: no level filter, no keywords field - just do open search
+		// Don't apply any keyword filtering since the keywords field doesn't exist
+		filter = qdrant.Filter{}
 	}
 
 	limit := uint64(similaritySearchResults)
@@ -136,7 +148,7 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 			ScoreThreshold: &scoreThreshold,
 			Filter:         &filter,
 			WithVectors:    qdrant.NewWithVectorsEnable(false),
-			WithPayload:    qdrant.NewWithPayloadEnable(true),
+			WithPayload:    qdrant.NewWithPayloadInclude("guid", "document_id", "document_name", "summary", "keywords", "text"),
 		}
 	}
 

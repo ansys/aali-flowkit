@@ -47,7 +47,7 @@ import (
 //   - embeddedVector: the embedded vector in float32 format
 //   - sparseVector: the sparse embedded vector as term_id->weight map (only when includeSparse=true)
 func PerformVectorEmbeddingRequest(input string, includeSparse ...bool) (embeddedVector []float32, sparseVector map[uint]float32) {
-	// Handle variadic parameter - default to false for backward compatibility
+	// False default
 	shouldIncludeSparse := false
 	if len(includeSparse) > 0 {
 		shouldIncludeSparse = includeSparse[0]
@@ -105,8 +105,6 @@ func PerformVectorEmbeddingRequest(input string, includeSparse ...bool) (embedde
 
 	return denseEmbedding, sparseEmbedding
 }
-
-
 
 // PerformVectorEmbeddingRequestWithTokenLimitCatch performs a vector embedding request to LLM
 // and catches the token limit error message

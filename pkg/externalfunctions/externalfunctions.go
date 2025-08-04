@@ -48,17 +48,17 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"CheckTokenLimitReached":                                                                    CheckTokenLimitReached,
 
 	// knowledge db
-	"SendVectorsToKnowledgeDB":       SendVectorsToKnowledgeDB,
-	"GetListCollections":             GetListCollections,
-	"RetrieveDependencies":           RetrieveDependencies,
-	"GeneralGraphDbQuery":            GeneralGraphDbQuery,
-	"AddGraphDbParameter":            AddGraphDbParameter,
-	"GeneralQuery":                   GeneralQuery,
-	"SimilaritySearch":               SimilaritySearch,
-	"CreateKeywordsDbFilter":         CreateKeywordsDbFilter,
-	"CreateTagsDbFilter":             CreateTagsDbFilter,
-	"CreateMetadataDbFilter":         CreateMetadataDbFilter,
-	"CreateDbFilter":                 CreateDbFilter,
+	"SendVectorsToKnowledgeDB": SendVectorsToKnowledgeDB,
+	"GetListCollections":       GetListCollections,
+	"RetrieveDependencies":     RetrieveDependencies,
+	"GeneralGraphDbQuery":      GeneralGraphDbQuery,
+	"AddGraphDbParameter":      AddGraphDbParameter,
+	"GeneralQuery":             GeneralQuery,
+	"SimilaritySearch":         SimilaritySearch,
+	"CreateKeywordsDbFilter":   CreateKeywordsDbFilter,
+	"CreateTagsDbFilter":       CreateTagsDbFilter,
+	"CreateMetadataDbFilter":   CreateMetadataDbFilter,
+	"CreateDbFilter":           CreateDbFilter,
 
 	// ansys gpt
 	"AnsysGPTCheckProhibitedWords":                   AnsysGPTCheckProhibitedWords,

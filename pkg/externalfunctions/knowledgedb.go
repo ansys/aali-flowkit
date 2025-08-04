@@ -54,15 +54,14 @@ import (
 // Returns:
 //   - databaseResponse: an array of the most relevant data
 func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64, sparseVector ...map[uint]float32) (databaseResponse []sharedtypes.DbResponse) {
-	// Handle variadic parameter - default to nil for backward compatibility
 	var sparse map[uint]float32
 	if len(sparseVector) > 0 {
 		sparse = sparseVector[0]
 	}
-	
+
 	// Enable hybrid search when both vectors are provided
 	useHybrid := len(sparse) > 0
-	
+
 	logCtx := &logging.ContextMap{}
 	client, err := qdrant_utils.QdrantClient()
 	if err != nil {
@@ -141,14 +140,14 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		}
 	}
 
-	// Execute query (unchanged from original)
+	// Execute query
 	scoredPoints, err := client.Query(context.TODO(), &query)
 	if err != nil {
 		logPanic(logCtx, "error in qdrant query: %q", err)
 	}
 	// fmt.Printf("Got %d points from qdrant query", len(scoredPoints))
 
-	// Transform results (unchanged from original)
+	// Transform results
 	dbResponses := make([]sharedtypes.DbResponse, len(scoredPoints))
 	for i, scoredPoint := range scoredPoints {
 		// fmt.Printf("Result #%d: Similarity Score %v", i, scoredPoint.Score)
@@ -178,8 +177,6 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	}
 	return dbResponses
 }
-
-
 
 // Helper function to create sparse query from map[uint]float32
 func createSparseQuery(sparseVector map[uint]float32) *qdrant.Query {

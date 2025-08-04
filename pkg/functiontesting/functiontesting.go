@@ -38,7 +38,7 @@ import (
 //   - indexName: the name of the index to search
 //   - query: the query string to search for
 func TestAnsysGPTACSSearchIndex(indexName string, query string) {
-	embeddedQuery := externalfunctions.PerformVectorEmbeddingRequest(query)
+	embeddedQuery, _ := externalfunctions.PerformVectorEmbeddingRequest(query)
 
 	// defaultFields := []sharedtypes.AnsysGPTDefaultFields{
 	// 	{QueryWord: "course", FieldName: "type_of_asset", FieldDefaultValue: "aic"},

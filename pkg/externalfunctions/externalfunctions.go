@@ -25,7 +25,6 @@ package externalfunctions
 var ExternalFunctionsMap = map[string]interface{}{
 	// llm handler
 	"PerformVectorEmbeddingRequest":                                                             PerformVectorEmbeddingRequest,
-	"PerformVectorEmbeddingRequestHybrid":                                                       PerformVectorEmbeddingRequestHybrid,
 	"PerformVectorEmbeddingRequestWithTokenLimitCatch":                                          PerformVectorEmbeddingRequestWithTokenLimitCatch,
 	"PerformBatchEmbeddingRequest":                                                              PerformBatchEmbeddingRequest,
 	"PerformBatchHybridEmbeddingRequest":                                                        PerformBatchHybridEmbeddingRequest,
@@ -50,7 +49,6 @@ var ExternalFunctionsMap = map[string]interface{}{
 
 	// knowledge db
 	"SendVectorsToKnowledgeDB":       SendVectorsToKnowledgeDB,
-	"SendVectorsToKnowledgeDBHybrid": SendVectorsToKnowledgeDBHybrid,
 	"GetListCollections":             GetListCollections,
 	"RetrieveDependencies":           RetrieveDependencies,
 	"GeneralGraphDbQuery":            GeneralGraphDbQuery,

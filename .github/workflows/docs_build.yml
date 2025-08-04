@@ -16,7 +16,7 @@ jobs:
     name: "Documentation style"
     runs-on: ubuntu-latest
     steps:
-      - uses: ansys/actions/doc-style@v9
+      - uses: ansys/actions/doc-style@v10
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 

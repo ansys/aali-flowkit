@@ -136,21 +136,55 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 			panic(errMsg)
 		}
 
-		// Handle different collection schemas - try CodeGenerationElement first for standard elements collection
+		// Handle different collection schemas based on distinctive payload fields from workflows
 		if _, hasNamePseudocode := scoredPoint.Payload["name_pseudocode"]; hasNamePseudocode {
-			// This is a CodeGenerationElement (elements collection)
+			// Type 1: VectorDatabaseElement (API Reference/Elements Collection)
 			codeElement, err := qdrant_utils.QdrantPayloadToType[sharedtypes.CodeGenerationElement](scoredPoint.Payload)
 			if err == nil {
-				// Map CodeGenerationElement to DbResponse
 				dbResponse.DocumentName = codeElement.NameFormatted
 				dbResponse.Text = codeElement.Name
 				dbResponse.Summary = string(codeElement.Type)
 				if len(codeElement.Dependencies) > 0 {
 					dbResponse.Summary = fmt.Sprintf("%s in %s", dbResponse.Summary, strings.Join(codeElement.Dependencies, "."))
 				}
-				// fmt.Printf("Result #%d (CodeGenerationElement) Summary: '%s' DocumentName: '%s' Text: '%s'\n", i, dbResponse.Summary, dbResponse.DocumentName, dbResponse.Text)
+			}
+		} else if _, hasSectionName := scoredPoint.Payload["section_name"]; hasSectionName {
+			// Type 2: VectorDatabaseUserGuideSection (User Guide Collection)
+			payloadMap := qdrant_utils.QdrantPayloadToMap(scoredPoint.Payload)
+			if title, hasTitle := payloadMap["title"]; hasTitle {
+				if titleStr, ok := title.(string); ok {
+					dbResponse.DocumentName = titleStr
+				}
+			}
+			if sectionName, ok := payloadMap["section_name"].(string); ok {
+				dbResponse.Text = sectionName
+			}
+			if text, hasText := payloadMap["text"]; hasText {
+				if textStr, ok := text.(string); ok {
+					dbResponse.Summary = textStr
+				}
+			}
+		} else if _, hasDependencies := scoredPoint.Payload["dependencies"]; hasDependencies {
+			// Type 3: VectorDatabaseExample (Examples Collection)
+			payloadMap := qdrant_utils.QdrantPayloadToMap(scoredPoint.Payload)
+			if docName, hasDocName := payloadMap["document_name"]; hasDocName {
+				if docNameStr, ok := docName.(string); ok {
+					dbResponse.DocumentName = docNameStr
+				}
+			}
+			if text, hasText := payloadMap["text"]; hasText {
+				if textStr, ok := text.(string); ok {
+					dbResponse.Text = textStr
+					// Use first 100 chars as summary for examples
+					if len(textStr) > 100 {
+						dbResponse.Summary = textStr[:100] + "..."
+					} else {
+						dbResponse.Summary = textStr
+					}
+				}
 			}
 		}
+		// Note: If none of the above match, dbResponse retains the generic conversion from QdrantPayloadToType
 		dbResponses[i] = dbResponse
 	}
 	return dbResponses

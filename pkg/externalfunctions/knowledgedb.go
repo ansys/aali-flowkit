@@ -67,42 +67,9 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	if err != nil {
 		logPanic(logCtx, "unable to create qdrant client: %q", err)
 	}
-	// Build flexible filter based on what fields actually exist in the collection
-	var filter qdrant.Filter
-	var conditions []*qdrant.Condition
-
-	// Try to add level filter if it's likely to exist (for standard collections)
-	useStandardLevelFilter := true
-
-	// Sample one point to see what fields are available
-	sampleQuery := qdrant.QueryPoints{
-		CollectionName: collection,
-		Limit:          qdrant.PtrOf(uint64(1)),
-		WithVectors:    qdrant.NewWithVectorsEnable(false),
-		WithPayload:    qdrant.NewWithPayloadEnable(true),
-	}
-	samplePoints, err := client.Query(context.TODO(), &sampleQuery)
-	if err == nil && len(samplePoints) > 0 {
-		payload := samplePoints[0].Payload
-
-		// Check if this is an older collection (has name_pseudocode but no level/keywords)
-		if _, hasNamePseudocode := payload["name_pseudocode"]; hasNamePseudocode {
-			useStandardLevelFilter = false
-		}
-	}
-
-	if useStandardLevelFilter {
-		// Standard collection: use level filter and keywords if available
-		conditions = append(conditions, qdrant.NewMatch("level", "leaf"))
-		if keywordsSearch && len(keywords) > 0 {
-			conditions = append(conditions, qdrant.NewMatchKeywords("keywords", keywords...))
-		}
-		filter = qdrant.Filter{Must: conditions}
-	} else {
-		// Older collection: no level filter, no keywords field - just do open search
-		// Don't apply any keyword filtering since the keywords field doesn't exist
-		filter = qdrant.Filter{}
-	}
+	// Pure vector similarity search across all collection types
+	filter := qdrant.Filter{}
+	// Note: Keyword search disabled for now to ensure broad compatibility
 
 	limit := uint64(similaritySearchResults)
 	scoreThreshold := float32(similaritySearchMinScore)
@@ -140,7 +107,7 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 			WithPayload:    qdrant.NewWithPayloadEnable(true),
 		}
 	} else {
-		// DENSE-ONLY SEARCH: Use existing logic for backward compatibility
+		// DENSE-ONLY SEARCH: Simplified approach
 		query = qdrant.QueryPoints{
 			CollectionName: collection,
 			Query:          qdrant.NewQueryDense(vector),
@@ -148,7 +115,7 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 			ScoreThreshold: &scoreThreshold,
 			Filter:         &filter,
 			WithVectors:    qdrant.NewWithVectorsEnable(false),
-			WithPayload:    qdrant.NewWithPayloadInclude("guid", "document_id", "document_name", "summary", "keywords", "text"),
+			WithPayload:    qdrant.NewWithPayloadEnable(true),
 		}
 	}
 
@@ -157,7 +124,6 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	if err != nil {
 		logPanic(logCtx, "error in qdrant query: %q", err)
 	}
-	// fmt.Printf("Got %d points from qdrant query", len(scoredPoints))
 
 	// Transform results
 	dbResponses := make([]sharedtypes.DbResponse, len(scoredPoints))
@@ -170,7 +136,7 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 			panic(errMsg)
 		}
 
-		// Handle different collection schemas - try CodeGenerationElement first for elements collection
+		// Handle different collection schemas - try CodeGenerationElement first for standard elements collection
 		if _, hasNamePseudocode := scoredPoint.Payload["name_pseudocode"]; hasNamePseudocode {
 			// This is a CodeGenerationElement (elements collection)
 			codeElement, err := qdrant_utils.QdrantPayloadToType[sharedtypes.CodeGenerationElement](scoredPoint.Payload)

@@ -47,7 +47,8 @@ import (
 // The function returns an error if the file cannot be parsed.
 //
 // Parameters:
-//   - packagePath: the path to the package file to parse.
+//   - content: the content of the file to parse.
+//   - category: the category of the functions, used for grouping in the FunctionDefinition struct.
 //
 // Returns:
 //   - error: an error if the file cannot be parsed.

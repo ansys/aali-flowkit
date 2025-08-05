@@ -139,55 +139,207 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		// Handle different collection schemas based on distinctive payload fields from workflows
 		if _, hasNamePseudocode := scoredPoint.Payload["name_pseudocode"]; hasNamePseudocode {
 			// Type 1: VectorDatabaseElement (API Reference/Elements Collection)
-			codeElement, err := qdrant_utils.QdrantPayloadToType[sharedtypes.CodeGenerationElement](scoredPoint.Payload)
-			if err == nil {
-				dbResponse.DocumentName = codeElement.NameFormatted
-				dbResponse.Text = codeElement.Name
-				dbResponse.Summary = string(codeElement.Type)
-				if len(codeElement.Dependencies) > 0 {
-					dbResponse.Summary = fmt.Sprintf("%s in %s", dbResponse.Summary, strings.Join(codeElement.Dependencies, "."))
-				}
-			}
+			mapElementCollectionToDbResponse(&dbResponse, scoredPoint)
 		} else if _, hasSectionName := scoredPoint.Payload["section_name"]; hasSectionName {
 			// Type 2: VectorDatabaseUserGuideSection (User Guide Collection)
-			payloadMap := qdrant_utils.QdrantPayloadToMap(scoredPoint.Payload)
-			if title, hasTitle := payloadMap["title"]; hasTitle {
-				if titleStr, ok := title.(string); ok {
-					dbResponse.DocumentName = titleStr
-				}
-			}
-			if sectionName, ok := payloadMap["section_name"].(string); ok {
-				dbResponse.Text = sectionName
-			}
-			if text, hasText := payloadMap["text"]; hasText {
-				if textStr, ok := text.(string); ok {
-					dbResponse.Summary = textStr
-				}
-			}
+			mapUserGuideCollectionToDbResponse(&dbResponse, scoredPoint)
 		} else if _, hasDependencies := scoredPoint.Payload["dependencies"]; hasDependencies {
 			// Type 3: VectorDatabaseExample (Examples Collection)
-			payloadMap := qdrant_utils.QdrantPayloadToMap(scoredPoint.Payload)
-			if docName, hasDocName := payloadMap["document_name"]; hasDocName {
-				if docNameStr, ok := docName.(string); ok {
-					dbResponse.DocumentName = docNameStr
-				}
-			}
-			if text, hasText := payloadMap["text"]; hasText {
-				if textStr, ok := text.(string); ok {
-					dbResponse.Text = textStr
-					// Use first 100 chars as summary for examples
-					if len(textStr) > 100 {
-						dbResponse.Summary = textStr[:100] + "..."
-					} else {
-						dbResponse.Summary = textStr
-					}
-				}
-			}
+			mapExampleCollectionToDbResponse(&dbResponse, scoredPoint)
 		}
 		// Note: If none of the above match, dbResponse retains the generic conversion from QdrantPayloadToType
 		dbResponses[i] = dbResponse
 	}
 	return dbResponses
+}
+
+// mapElementCollectionToDbResponse maps VectorDatabaseElement (API Reference) to DbResponse
+func mapElementCollectionToDbResponse(dbResponse *sharedtypes.DbResponse, scoredPoint *qdrant.ScoredPoint) {
+	// Set common fields
+	if id, err := uuid.Parse(scoredPoint.Id.GetUuid()); err == nil {
+		dbResponse.Guid = id
+	}
+	dbResponse.Distance = float64(scoredPoint.Score)
+
+	// Convert to CodeGenerationElement for proper field access
+	codeElement, err := qdrant_utils.QdrantPayloadToType[sharedtypes.CodeGenerationElement](scoredPoint.Payload)
+	if err != nil {
+		return // Fall back to generic conversion
+	}
+
+	// Map element-specific fields
+	dbResponse.DocumentName = codeElement.NameFormatted
+	dbResponse.Text = codeElement.Name
+	dbResponse.Summary = string(codeElement.Type)
+	dbResponse.Level = "element"
+
+	// Add dependencies info to summary and keywords
+	if len(codeElement.Dependencies) > 0 {
+		dbResponse.Summary = fmt.Sprintf("%s in %s", dbResponse.Summary, strings.Join(codeElement.Dependencies, "."))
+		dbResponse.Keywords = codeElement.Dependencies
+	}
+
+	// Map VectorDatabaseElement fields (not CodeGenerationElement)
+	// Use payload map to access VectorDatabaseElement fields directly
+	payloadMap := qdrant_utils.QdrantPayloadToMap(scoredPoint.Payload)
+
+	// Basic fields from VectorDatabaseElement
+	if name, hasName := payloadMap["name"]; hasName {
+		if nameStr, ok := name.(string); ok {
+			dbResponse.Text = nameStr
+		}
+	}
+	if nameFormatted, hasFormatted := payloadMap["name_formatted"]; hasFormatted {
+		if formattedStr, ok := nameFormatted.(string); ok {
+			dbResponse.DocumentName = formattedStr
+		}
+	}
+	if elementType, hasType := payloadMap["type"]; hasType {
+		if typeStr, ok := elementType.(string); ok {
+			dbResponse.Summary = typeStr
+		}
+	}
+	if parentClass, hasParent := payloadMap["parent_class"]; hasParent {
+		if parentStr, ok := parentClass.(string); ok && parentStr != "" {
+			dbResponse.DocumentId = parentStr
+		}
+	}
+	if dbResponse.DocumentId == "" {
+		// Fallback to name if no parent class
+		if name, hasName := payloadMap["name"]; hasName {
+			if nameStr, ok := name.(string); ok {
+				dbResponse.DocumentId = nameStr
+			}
+		}
+	}
+}
+
+// mapUserGuideCollectionToDbResponse maps VectorDatabaseUserGuideSection to DbResponse
+func mapUserGuideCollectionToDbResponse(dbResponse *sharedtypes.DbResponse, scoredPoint *qdrant.ScoredPoint) {
+	// Set common fields
+	if id, err := uuid.Parse(scoredPoint.Id.GetUuid()); err == nil {
+		dbResponse.Guid = id
+	}
+	dbResponse.Distance = float64(scoredPoint.Score)
+
+	// Convert payload to map for flexible access
+	payloadMap := qdrant_utils.QdrantPayloadToMap(scoredPoint.Payload)
+
+	// Map user guide specific fields
+	if title, hasTitle := payloadMap["title"]; hasTitle {
+		if titleStr, ok := title.(string); ok {
+			dbResponse.DocumentName = titleStr
+		}
+	}
+
+	if sectionName, ok := payloadMap["section_name"].(string); ok {
+		dbResponse.Text = sectionName
+	}
+
+	if text, hasText := payloadMap["text"]; hasText {
+		if textStr, ok := text.(string); ok {
+			dbResponse.Summary = textStr
+		}
+	}
+
+	if docName, hasDocName := payloadMap["document_name"]; hasDocName {
+		if docNameStr, ok := docName.(string); ok {
+			dbResponse.DocumentId = docNameStr
+		}
+	}
+
+	// Handle level (convert from int to string)
+	if level, hasLevel := payloadMap["level"]; hasLevel {
+		if levelInt, ok := level.(float64); ok {
+			dbResponse.Level = fmt.Sprintf("level_%d", int(levelInt))
+		}
+	}
+
+	// Handle parent section relationships
+	if parentSectionName, hasParent := payloadMap["parent_section_name"]; hasParent {
+		if parentStr, ok := parentSectionName.(string); ok && parentStr != "" {
+			// For user guide, we can't directly map parent_section_name to UUID
+			// This would require a lookup, so we'll store it in metadata for now
+			if dbResponse.Metadata == nil {
+				dbResponse.Metadata = make(map[string]interface{})
+			}
+			dbResponse.Metadata["parent_section_name"] = parentStr
+		}
+	}
+}
+
+// mapExampleCollectionToDbResponse maps VectorDatabaseExample to DbResponse
+func mapExampleCollectionToDbResponse(dbResponse *sharedtypes.DbResponse, scoredPoint *qdrant.ScoredPoint) {
+	// Set common fields
+	if id, err := uuid.Parse(scoredPoint.Id.GetUuid()); err == nil {
+		dbResponse.Guid = id
+	}
+	dbResponse.Distance = float64(scoredPoint.Score)
+
+	// Convert payload to map for flexible access
+	payloadMap := qdrant_utils.QdrantPayloadToMap(scoredPoint.Payload)
+
+	// Map example specific fields
+	if docName, hasDocName := payloadMap["document_name"]; hasDocName {
+		if docNameStr, ok := docName.(string); ok {
+			dbResponse.DocumentName = docNameStr
+			dbResponse.DocumentId = docNameStr // Use document name as ID for examples
+		}
+	}
+
+	if text, hasText := payloadMap["text"]; hasText {
+		if textStr, ok := text.(string); ok {
+			dbResponse.Text = textStr
+			// Use first 200 chars as summary for examples
+			if len(textStr) > 200 {
+				dbResponse.Summary = textStr[:200] + "..."
+			} else {
+				dbResponse.Summary = textStr
+			}
+		}
+	}
+
+	// Map dependencies to keywords
+	if deps, hasDeps := payloadMap["dependencies"]; hasDeps {
+		if depsSlice, ok := deps.([]interface{}); ok {
+			keywords := make([]string, 0, len(depsSlice))
+			for _, dep := range depsSlice {
+				if depStr, ok := dep.(string); ok {
+					keywords = append(keywords, depStr)
+				}
+			}
+			dbResponse.Keywords = keywords
+		}
+	}
+
+	// Handle dependency equivalences
+	if depEquiv, hasDepEquiv := payloadMap["dependency_equivalences"]; hasDepEquiv {
+		if depEquivMap, ok := depEquiv.(map[string]interface{}); ok && len(depEquivMap) > 0 {
+			if dbResponse.Metadata == nil {
+				dbResponse.Metadata = make(map[string]interface{})
+			}
+			dbResponse.Metadata["dependency_equivalences"] = depEquivMap
+		}
+	}
+
+	// Handle chunking relationships (previous/next chunk)
+	if prevChunk, hasPrev := payloadMap["previous_chunk"]; hasPrev && prevChunk != nil {
+		if prevChunkStr, ok := prevChunk.(string); ok {
+			if prevUUID, err := uuid.Parse(prevChunkStr); err == nil {
+				dbResponse.PreviousSiblingId = &prevUUID
+			}
+		}
+	}
+
+	if nextChunk, hasNext := payloadMap["next_chunk"]; hasNext && nextChunk != nil {
+		if nextChunkStr, ok := nextChunk.(string); ok {
+			if nextUUID, err := uuid.Parse(nextChunkStr); err == nil {
+				dbResponse.NextSiblingId = &nextUUID
+			}
+		}
+	}
+
+	dbResponse.Level = "example"
 }
 
 // Helper function to create sparse query from map[uint]float32

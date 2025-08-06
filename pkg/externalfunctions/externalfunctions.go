@@ -138,6 +138,8 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"ProcessSubworkflowIdentificationOutput":    ProcessSubworkflowIdentificationOutput,
 	"MarkdownToHTML":                            MarkdownToHTML,
 	"ParseHistoryToHistoricMessages":            ParseHistoryToHistoricMessages,
+	"ParseSlashCommand":                         ParseSlashCommand,
+	"SynthesizeSlashCommand":                    SynthesizeSlashCommand,
 	"FinalizeMessage":                           FinalizeMessage,
 	"GenerateUserPrompt":                        GenerateUserPrompt,
 	"GenerateUserPromptWithList":                GenerateUserPromptWithList,

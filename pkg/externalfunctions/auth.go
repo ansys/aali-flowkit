@@ -93,6 +93,11 @@ func CheckApiKeyAuthMongoDb(apiKey string, mongoDbUrl string, mongoDatabaseName 
 // Returns:
 //   - existingUser: A boolean indicating whether the user ID already exists.
 func CheckCreateUserIdMongoDb(userId string, temporaryTokenLimit int, hoursUntilTokenLimitReset int, modelId []string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string) (existingUser bool) {
+	// check if userId is empty
+	if userId == "" {
+		logging.Log.Errorf(&logging.ContextMap{}, "User ID is empty")
+		panic(fmt.Errorf("user ID is empty"))
+	}
 
 	// create mongoDb context
 	mongoDbContext, err := mongoDbInitializeClient(mongoDbUrl, mongoDatabaseName, mongoDbCollectionName)
@@ -170,7 +175,7 @@ func UpdateTotalTokenCountForCustomerMongoDb(apiKey string, mongoDbUrl string, m
 //
 // Returns:
 //   - tokenLimitReached: A boolean indicating whether the customer has reached the token limit.
-func UpdateTotalTokenCountForUserIdMongoDb(userId string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string, additionalInputTokenCount int, additionalOutputTokenCount int, hoursUntilTokenLimitReset int) (tokenLimitReached bool) {
+func UpdateTotalTokenCountForUserIdMongoDb(userId string, mongoDbUrl string, mongoDatabaseName string, mongoDbCollectionName string, additionalInputTokenCount int, additionalOutputTokenCount int, hoursUntilTokenLimitReset int, modelId []string) (tokenLimitReached bool) {
 	// create mongoDb context
 	mongoDbContext, err := mongoDbInitializeClient(mongoDbUrl, mongoDatabaseName, mongoDbCollectionName)
 	if err != nil {
@@ -180,7 +185,7 @@ func UpdateTotalTokenCountForUserIdMongoDb(userId string, mongoDbUrl string, mon
 	defer mongoDbContext.Client.Disconnect(context.Background())
 
 	// update token count
-	tokenLimitReached, err = mongoDbAddToInputOutputTokenCountAndCheckLimit(mongoDbContext, userId, additionalInputTokenCount, additionalOutputTokenCount, hoursUntilTokenLimitReset)
+	tokenLimitReached, err = mongoDbAddToInputOutputTokenCountAndCheckLimit(mongoDbContext, userId, additionalInputTokenCount, additionalOutputTokenCount, hoursUntilTokenLimitReset, modelId)
 	if err != nil {
 		logging.Log.Errorf(&logging.ContextMap{}, "Error updating total token count for customer: %v", err)
 		panic(err)

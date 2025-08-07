@@ -41,16 +41,16 @@ import (
 //
 // Parameters:
 //   - input: the input string
-//   - includeSparse: optional flag to include sparse vectors (defaults to false for backward compatibility)
+//   - includeSparse: optional flag to include sparse vectors (pass nil for default false, &true/&false for specific value)
 //
 // Returns:
 //   - embeddedVector: the embedded vector in float32 format
 //   - sparseVector: the sparse embedded vector as term_id->weight map (only when includeSparse=true)
-func PerformVectorEmbeddingRequest(input string, includeSparse ...bool) (embeddedVector []float32, sparseVector map[uint]float32) {
+func PerformVectorEmbeddingRequest(input string, includeSparse *bool) (embeddedVector []float32, sparseVector map[uint]float32) {
 	// False default
 	shouldIncludeSparse := false
-	if len(includeSparse) > 0 {
-		shouldIncludeSparse = includeSparse[0]
+	if includeSparse != nil {
+		shouldIncludeSparse = *includeSparse
 	}
 
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT

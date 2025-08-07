@@ -247,7 +247,7 @@ func mapUserGuideCollectionToDbResponse(dbResponse *sharedtypes.DbResponse, scor
 	if docName, hasDocName := payloadMap["section_name"]; hasDocName {
 		if docNameStr, ok := docName.(string); ok {
 			dbResponse.DocumentName = docNameStr
-			dbResponse.DocumentId = docNameStr   // Group sections by section
+			dbResponse.DocumentId = docNameStr // Group sections by section
 		}
 	}
 

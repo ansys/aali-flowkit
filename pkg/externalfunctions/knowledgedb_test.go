@@ -107,16 +107,22 @@ func TestSendVectorsToKnowledgeDB(t *testing.T) {
 		QdrantCreateIndex(collection, "keywords", "keyword", true)
 		QdrantCreateIndex(collection, "level", "keyword", true)
 
-		// do a straight up search with an exact match
-		resp := SendVectorsToKnowledgeDB([]float32{0, -1, -2, -3}, []string{}, false, collection, 1, 0)
+		// do a straight up search with an exact match (dense-only)
+		resp := SendVectorsToKnowledgeDB([]float32{0, -1, -2, -3}, []string{}, false, collection, 1, 0, make(map[uint]float32))
 		require.Len(resp, 1, "expected 1 result but got %d", len(resp))
 		assert.Equal("Doc 1", resp[0].DocumentName)
 
-		// do a generalist search (keywords ignored in simplified implementation)
-		resp = SendVectorsToKnowledgeDB([]float32{4, 5, 6, 7}, []string{"kw5"}, true, collection, 1, 0)
+		// do a generalist search (keywords ignored in simplified implementation, still dense-only)
+		resp = SendVectorsToKnowledgeDB([]float32{4, 5, 6, 7}, []string{"kw5"}, true, collection, 1, 0, make(map[uint]float32))
 		require.Len(resp, 1, "expected 1 result but got %d", len(resp))
 		// Different distance metrics may return different top results, both Doc 2 and Doc 3 are valid
 		assert.Contains([]string{"Doc 2", "Doc 3"}, resp[0].DocumentName)
+
+		// Test explicit empty sparse vector (new caller style)
+		emptySparseVector := make(map[uint]float32)
+		resp = SendVectorsToKnowledgeDB([]float32{4, 5, 6, 7}, []string{}, false, collection, 1, 0, emptySparseVector)
+		require.Len(resp, 1, "expected 1 result but got %d", len(resp))
+		// Should return a valid result with dense-only search
 	}
 
 	t.Run("cosine", func(t *testing.T) { testcase(t, "cosine", "test-cosine") })

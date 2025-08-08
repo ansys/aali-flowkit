@@ -198,8 +198,28 @@ func (s *server) RunFunction(ctx context.Context, req *aaliflowkitgrpc.FunctionI
 
 	// Prepare arguments for the function
 	args := []reflect.Value{}
-	for _, input := range inputs {
-		args = append(args, reflect.ValueOf(input))
+	for i, input := range inputs {
+		if input == nil && i < len(functionDefinition.Input) {
+			// Handle missing parameters with standard datatype defaults
+			expectedType := functionDefinition.Input[i].GoType
+			switch expectedType {
+			case "bool":
+				args = append(args, reflect.ValueOf(false))
+			case "int":
+				args = append(args, reflect.ValueOf(0))
+			case "string":
+				args = append(args, reflect.ValueOf(""))
+			case "float64":
+				args = append(args, reflect.ValueOf(0.0))
+			case "map[uint]float32":
+				args = append(args, reflect.ValueOf(make(map[uint]float32)))
+			default:
+				// Catch-all default for other types
+				args = append(args, reflect.Zero(reflect.TypeOf(input)))
+			}
+		} else {
+			args = append(args, reflect.ValueOf(input))
+		}
 	}
 
 	// Call the function
@@ -283,8 +303,28 @@ func (s *server) StreamFunction(req *aaliflowkitgrpc.FunctionInputs, stream aali
 
 	// Prepare arguments for the function
 	args := []reflect.Value{}
-	for _, input := range inputs {
-		args = append(args, reflect.ValueOf(input))
+	for i, input := range inputs {
+		if input == nil && i < len(functionDefinition.Input) {
+			// Handle missing parameters with standard datatype defaults
+			expectedType := functionDefinition.Input[i].GoType
+			switch expectedType {
+			case "bool":
+				args = append(args, reflect.ValueOf(false))
+			case "int":
+				args = append(args, reflect.ValueOf(0))
+			case "string":
+				args = append(args, reflect.ValueOf(""))
+			case "float64":
+				args = append(args, reflect.ValueOf(0.0))
+			case "map[uint]float32":
+				args = append(args, reflect.ValueOf(make(map[uint]float32)))
+			default:
+				// Catch-all default for other types
+				args = append(args, reflect.Zero(reflect.TypeOf(input)))
+			}
+		} else {
+			args = append(args, reflect.ValueOf(input))
+		}
 	}
 
 	// Call the function

@@ -37,13 +37,7 @@ import (
 	"github.com/qdrant/go-client/qdrant"
 )
 
-// SendVectorsToKnowledgeDB sends the given vector to the KnowledgeDB and
-// returns the most relevant data. The number of results is specified in the
-// config file. The keywords are used to filter the results. The min score
-// filter is also specified in the config file. If it is not specified, the
-// default value is used.
-//
-// The function returns the most relevant data.
+// SendVectorsToKnowledgeDB sends the given vector to the KnowledgeDB and returns the most relevant data
 //
 // Tags:
 //   - @displayName: Similarity Search
@@ -55,63 +49,366 @@ import (
 //   - collection: the collection name
 //   - similaritySearchResults: the number of results to be returned
 //   - similaritySearchMinScore: the minimum score for the results
+//   - sparseVector: optional sparse vector for hybrid search (pass empty map for dense-only search)
 //
 // Returns:
 //   - databaseResponse: an array of the most relevant data
-func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64) (databaseResponse []sharedtypes.DbResponse) {
+func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64, sparseVector map[uint]float32) (databaseResponse []sharedtypes.DbResponse) {
+	// Use the provided sparse vector directly (will be empty map if not provided)
+	sparse := sparseVector
+
 	logCtx := &logging.ContextMap{}
 	client, err := qdrant_utils.QdrantClient()
 	if err != nil {
 		logPanic(logCtx, "unable to create qdrant client: %q", err)
 	}
+	// Pure vector similarity search across all collection types
+	filter := qdrant.Filter{}
+	// Note: Keyword search disabled for now to ensure broad compatibility
 
-	// perform the qdrant query
-	filter := qdrant.Filter{
-		Must: []*qdrant.Condition{
-			qdrant.NewMatch("level", "leaf"),
-		},
-	}
-	if keywordsSearch {
-		filter.Must = append(filter.Must, qdrant.NewMatchKeywords("keywords", keywords...))
-
-	}
 	limit := uint64(similaritySearchResults)
 	scoreThreshold := float32(similaritySearchMinScore)
-	query := qdrant.QueryPoints{
-		CollectionName: collection,
-		Query:          qdrant.NewQueryDense(vector),
-		Limit:          &limit,
-		ScoreThreshold: &scoreThreshold,
-		Filter:         &filter,
-		WithVectors:    qdrant.NewWithVectorsEnable(false),
-		WithPayload:    qdrant.NewWithPayloadInclude("guid", "document_id", "document_name", "summary", "keywords", "text"),
+
+	var query qdrant.QueryPoints
+
+	// Use fusion if both dense and sparse vectors are available
+	if sparse != nil && len(sparse) > 0 {
+		// Create prefetch queries for hybrid search using RRF (Reciprocal Rank Fusion)
+		prefetchQueries := []*qdrant.PrefetchQuery{
+			// Dense vector search prefetch
+			{
+				Query:  qdrant.NewQueryDense(vector),
+				Using:  nil, // Use default (unnamed) vector
+				Filter: &filter,
+				Limit:  &limit,
+			},
+			// Sparse vector search prefetch
+			{
+				Query:  createSparseQuery(sparse),
+				Using:  qdrant.PtrOf("sparse_vector"), // Use sparse vector field
+				Filter: &filter,
+				Limit:  &limit,
+			},
+		}
+
+		query = qdrant.QueryPoints{
+			CollectionName: collection,
+			Query:          qdrant.NewQueryFusion(qdrant.Fusion_RRF), // Use Reciprocal Rank Fusion
+			Prefetch:       prefetchQueries,
+			Limit:          &limit,
+			ScoreThreshold: &scoreThreshold,
+			Filter:         &filter,
+			WithVectors:    qdrant.NewWithVectorsEnable(false),
+			WithPayload:    qdrant.NewWithPayloadEnable(true),
+		}
+	} else {
+		// DENSE-ONLY SEARCH: Simplified approach
+		query = qdrant.QueryPoints{
+			CollectionName: collection,
+			Query:          qdrant.NewQueryDense(vector),
+			Limit:          &limit,
+			ScoreThreshold: &scoreThreshold,
+			Filter:         &filter,
+			WithVectors:    qdrant.NewWithVectorsEnable(false),
+			WithPayload:    qdrant.NewWithPayloadEnable(true),
+		}
 	}
+
+	// Execute query
 	scoredPoints, err := client.Query(context.TODO(), &query)
 	if err != nil {
 		logPanic(logCtx, "error in qdrant query: %q", err)
 	}
-	logging.Log.Debugf(logCtx, "Got %d points from qdrant query", len(scoredPoints))
 
-	// transform qdrant result into aali type
+	// Transform results
 	dbResponses := make([]sharedtypes.DbResponse, len(scoredPoints))
 	for i, scoredPoint := range scoredPoints {
-		logging.Log.Debugf(&logging.ContextMap{}, "Result #%d:", i)
-		logging.Log.Debugf(&logging.ContextMap{}, "Similarity score: %v", scoredPoint.Score)
-		dbResponse, err := qdrant_utils.QdrantPayloadToType[sharedtypes.DbResponse](scoredPoint.GetPayload())
+		// fmt.Printf("Result #%d: Similarity Score %v", i, scoredPoint.Score)
+		dbResponse, err := qdrant_utils.QdrantPayloadToType[sharedtypes.DbResponse](scoredPoint.Payload)
 		if err != nil {
 			errMsg := fmt.Sprintf("error converting qdrant payload to dbResponse: %q", err)
 			logging.Log.Errorf(logCtx, "%s", errMsg)
 			panic(errMsg)
 		}
 
-		logging.Log.Debugf(&logging.ContextMap{}, "Similarity file id: %v", dbResponse.DocumentId)
-		logging.Log.Debugf(&logging.ContextMap{}, "Similarity file name: %v", dbResponse.DocumentName)
-		logging.Log.Debugf(&logging.ContextMap{}, "Similarity summary: %v", dbResponse.Summary)
-
-		// Add the result to the list
+		// Handle different collection schemas based on distinctive payload fields from workflows
+		if _, hasNamePseudocode := scoredPoint.Payload["name_pseudocode"]; hasNamePseudocode {
+			// Type 1: VectorDatabaseElement (API Reference/Elements Collection)
+			mapElementCollectionToDbResponse(&dbResponse, scoredPoint)
+		} else if _, hasSectionName := scoredPoint.Payload["section_name"]; hasSectionName {
+			// Type 2: VectorDatabaseUserGuideSection (User Guide Collection)
+			mapUserGuideCollectionToDbResponse(&dbResponse, scoredPoint)
+		} else if _, hasDependencies := scoredPoint.Payload["dependencies"]; hasDependencies {
+			// Type 3: VectorDatabaseExample (Examples Collection)
+			mapExampleCollectionToDbResponse(&dbResponse, scoredPoint)
+		}
+		// Note: If none of the above match, dbResponse retains the generic conversion from QdrantPayloadToType
 		dbResponses[i] = dbResponse
 	}
 	return dbResponses
+}
+
+// mapElementCollectionToDbResponse maps VectorDatabaseElement (API Reference) to DbResponse
+func mapElementCollectionToDbResponse(dbResponse *sharedtypes.DbResponse, scoredPoint *qdrant.ScoredPoint) {
+	// Set common fields
+	if id, err := uuid.Parse(scoredPoint.Id.GetUuid()); err == nil {
+		dbResponse.Guid = id
+	}
+	dbResponse.Distance = float64(scoredPoint.Score)
+	dbResponse.Level = "element"
+
+	// Use payload map to access VectorDatabaseElement fields directly
+	payloadMap := qdrant_utils.QdrantPayloadToMap(scoredPoint.Payload)
+
+	// Use formatted name for main searchable text (e.g., "create analysis combo view")
+	if nameFormatted, hasFormatted := payloadMap["name_formatted"]; hasFormatted {
+		if formattedStr, ok := nameFormatted.(string); ok {
+			dbResponse.Text = formattedStr
+		}
+	}
+
+	// Use parent class as document name and ID for logical grouping
+	if parentClass, hasParent := payloadMap["parent_class"]; hasParent {
+		if parentStr, ok := parentClass.(string); ok && parentStr != "" {
+			dbResponse.DocumentId = parentStr // Group all SeaScapeDB methods together
+		}
+	}
+
+	// Use doc name as pseudocode
+	if dbResponse.DocumentName == "" {
+		if nameFormatted, hasFormatted := payloadMap["name_pseudocode"]; hasFormatted {
+			if formattedStr, ok := nameFormatted.(string); ok {
+				dbResponse.DocumentName = formattedStr
+			}
+		}
+	}
+
+	// Build summary with type and full signature
+	var summaryParts []string
+	if elementType, hasType := payloadMap["type"]; hasType {
+		if typeStr, ok := elementType.(string); ok {
+			summaryParts = append(summaryParts, typeStr)
+		}
+	}
+
+	// Add full signature for technical reference
+	if name, hasName := payloadMap["name"]; hasName {
+		if nameStr, ok := name.(string); ok {
+			summaryParts = append(summaryParts, nameStr)
+		}
+	}
+
+	if len(summaryParts) > 0 {
+		dbResponse.Summary = strings.Join(summaryParts, " - ")
+	}
+
+	// Add searchable keywords
+	var keywords []string
+	if parentClass, hasParent := payloadMap["parent_class"]; hasParent {
+		if parentStr, ok := parentClass.(string); ok && parentStr != "" {
+			keywords = append(keywords, parentStr)
+		}
+	}
+	if pseudocode, hasPseudo := payloadMap["name_pseudocode"]; hasPseudo {
+		if pseudoStr, ok := pseudocode.(string); ok && pseudoStr != "" {
+			keywords = append(keywords, pseudoStr)
+		}
+	}
+	if len(keywords) > 0 {
+		dbResponse.Keywords = keywords
+	}
+}
+
+// mapUserGuideCollectionToDbResponse maps VectorDatabaseUserGuideSection to DbResponse
+func mapUserGuideCollectionToDbResponse(dbResponse *sharedtypes.DbResponse, scoredPoint *qdrant.ScoredPoint) {
+	// Set common fields
+	if id, err := uuid.Parse(scoredPoint.Id.GetUuid()); err == nil {
+		dbResponse.Guid = id
+	}
+	dbResponse.Distance = float64(scoredPoint.Score)
+
+	// Convert payload to map for flexible access
+	payloadMap := qdrant_utils.QdrantPayloadToMap(scoredPoint.Payload)
+
+	// Use section title as main searchable text (prefer title, fallback to section_name)
+	if title, hasTitle := payloadMap["title"]; hasTitle {
+		if titleStr, ok := title.(string); ok && titleStr != "" {
+			dbResponse.Text = titleStr
+		}
+	} else if sectionName, hasSectionName := payloadMap["document_name"]; hasSectionName {
+		if sectionNameStr, ok := sectionName.(string); ok {
+			dbResponse.Text = sectionNameStr
+		}
+	}
+
+	// Use the actual document name for DocumentName and grouping
+	if docName, hasDocName := payloadMap["section_name"]; hasDocName {
+		if docNameStr, ok := docName.(string); ok {
+			dbResponse.DocumentName = docNameStr
+			dbResponse.DocumentId = docNameStr // Group sections by section
+		}
+	}
+
+	// Create summary from section content
+	if text, hasText := payloadMap["text"]; hasText {
+		if textStr, ok := text.(string); ok {
+			// Create summary from text content (first 200 chars)
+			if len(textStr) > 200 {
+				dbResponse.Summary = textStr[:200] + "..."
+			} else {
+				dbResponse.Summary = textStr
+			}
+		}
+	}
+
+	// Set hierarchical level
+	if level, hasLevel := payloadMap["level"]; hasLevel {
+		if levelInt, ok := level.(float64); ok {
+			dbResponse.Level = fmt.Sprintf("level_%d", int(levelInt))
+		}
+	}
+
+	// Add searchable keywords
+	var keywords []string
+	if sectionName, hasSection := payloadMap["section_name"]; hasSection {
+		if sectionStr, ok := sectionName.(string); ok && sectionStr != "" {
+			keywords = append(keywords, sectionStr)
+		}
+	}
+	if parentSectionName, hasParent := payloadMap["parent_section_name"]; hasParent {
+		if parentStr, ok := parentSectionName.(string); ok && parentStr != "" {
+			keywords = append(keywords, parentStr)
+			// Also store in metadata for relationship tracking
+			if dbResponse.Metadata == nil {
+				dbResponse.Metadata = make(map[string]interface{})
+			}
+			dbResponse.Metadata["parent_section_name"] = parentStr
+		}
+	}
+	if len(keywords) > 0 {
+		dbResponse.Keywords = keywords
+	}
+
+	// Handle chunking relationships for navigation
+	if prevChunk, hasPrev := payloadMap["previous_chunk"]; hasPrev && prevChunk != nil {
+		if prevChunkStr, ok := prevChunk.(string); ok {
+			if prevUUID, err := uuid.Parse(prevChunkStr); err == nil {
+				dbResponse.PreviousSiblingId = &prevUUID
+			}
+		}
+	}
+
+	if nextChunk, hasNext := payloadMap["next_chunk"]; hasNext && nextChunk != nil {
+		if nextChunkStr, ok := nextChunk.(string); ok {
+			if nextUUID, err := uuid.Parse(nextChunkStr); err == nil {
+				dbResponse.NextSiblingId = &nextUUID
+			}
+		}
+	}
+}
+
+// mapExampleCollectionToDbResponse maps VectorDatabaseExample to DbResponse
+func mapExampleCollectionToDbResponse(dbResponse *sharedtypes.DbResponse, scoredPoint *qdrant.ScoredPoint) {
+	// Set common fields
+	if id, err := uuid.Parse(scoredPoint.Id.GetUuid()); err == nil {
+		dbResponse.Guid = id
+	}
+	dbResponse.Distance = float64(scoredPoint.Score)
+	dbResponse.Level = "example"
+
+	// Convert payload to map for flexible access
+	payloadMap := qdrant_utils.QdrantPayloadToMap(scoredPoint.Payload)
+
+	// Use the actual example content for searching
+	if text, hasText := payloadMap["text"]; hasText {
+		if textStr, ok := text.(string); ok {
+			dbResponse.Text = textStr // The actual example code/content
+		}
+	}
+
+	// Use document name for both DocumentName and grouping
+	if docName, hasDocName := payloadMap["document_name"]; hasDocName {
+		if docNameStr, ok := docName.(string); ok {
+			dbResponse.DocumentName = docNameStr
+			dbResponse.DocumentId = docNameStr // Group examples by document
+		}
+	}
+
+	// Extract dependencies for keywords
+	var dependencies []string
+	if deps, hasDeps := payloadMap["dependencies"]; hasDeps {
+		if depsSlice, ok := deps.([]interface{}); ok {
+			for _, dep := range depsSlice {
+				if depStr, ok := dep.(string); ok {
+					dependencies = append(dependencies, depStr)
+				}
+			}
+			dbResponse.Keywords = dependencies
+		}
+	}
+
+	// Build summary from text content and dependencies
+	var summaryParts []string
+	if dbResponse.Text != "" {
+		// Use first 150 chars of example content
+		textPreview := dbResponse.Text
+		if len(textPreview) > 150 {
+			textPreview = textPreview[:150] + "..."
+		}
+		summaryParts = append(summaryParts, textPreview)
+	}
+
+	if len(dependencies) > 0 {
+		summaryParts = append(summaryParts, fmt.Sprintf("Dependencies: %s", strings.Join(dependencies, ", ")))
+	}
+
+	if len(summaryParts) > 0 {
+		dbResponse.Summary = strings.Join(summaryParts, " | ")
+	}
+
+	// Handle dependency equivalences in metadata
+	if depEquiv, hasDepEquiv := payloadMap["dependency_equivalences"]; hasDepEquiv {
+		if depEquivMap, ok := depEquiv.(map[string]interface{}); ok && len(depEquivMap) > 0 {
+			if dbResponse.Metadata == nil {
+				dbResponse.Metadata = make(map[string]interface{})
+			}
+			dbResponse.Metadata["dependency_equivalences"] = depEquivMap
+		}
+	}
+
+	// Handle chunking relationships for navigation
+	if prevChunk, hasPrev := payloadMap["previous_chunk"]; hasPrev && prevChunk != nil {
+		if prevChunkStr, ok := prevChunk.(string); ok {
+			if prevUUID, err := uuid.Parse(prevChunkStr); err == nil {
+				dbResponse.PreviousSiblingId = &prevUUID
+			}
+		}
+	}
+
+	if nextChunk, hasNext := payloadMap["next_chunk"]; hasNext && nextChunk != nil {
+		if nextChunkStr, ok := nextChunk.(string); ok {
+			if nextUUID, err := uuid.Parse(nextChunkStr); err == nil {
+				dbResponse.NextSiblingId = &nextUUID
+			}
+		}
+	}
+}
+
+// Helper function to create sparse query from map[uint]float32
+func createSparseQuery(sparseVector map[uint]float32) *qdrant.Query {
+	if len(sparseVector) == 0 {
+		return nil
+	}
+
+	indices := make([]uint32, 0, len(sparseVector))
+	values := make([]float32, 0, len(sparseVector))
+
+	for idx, val := range sparseVector {
+		indices = append(indices, uint32(idx))
+		values = append(values, val)
+	}
+
+	return qdrant.NewQuerySparse(indices, values)
 }
 
 // GetListCollections retrieves the list of collections from the KnowledgeDB.
@@ -565,7 +862,7 @@ func AddDataRequest(collectionName string, documentData []sharedtypes.DbData) {
 //
 // Parameters:
 //   - collectionName: the name of the collection to create.
-//   - vectorSize: the length of the vector embeddings
+//   - vectorSize: the length of the vector S
 //   - vectorDistance: the vector similarity distance algorithm to use for the vector index (cosine, dot, euclid, manhattan)
 func CreateCollectionRequest(collectionName string, vectorSize uint64, vectorDistance string) {
 	logCtx := &logging.ContextMap{}

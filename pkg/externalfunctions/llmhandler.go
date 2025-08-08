@@ -36,22 +36,19 @@ import (
 
 // PerformVectorEmbeddingRequest performs a vector embedding request to LLM
 //
-// Tags:
+// Tags:N
 //   - @displayName: Embeddings
 //
 // Parameters:
 //   - input: the input string
-//   - includeSparse: optional flag to include sparse vectors (pass nil for default false, &true/&false for specific value)
+//   - includeSparse: flag to include sparse vectors (false for dense-only, true for hybrid search)
 //
 // Returns:
 //   - embeddedVector: the embedded vector in float32 format
 //   - sparseVector: the sparse embedded vector as term_id->weight map (only when includeSparse=true)
-func PerformVectorEmbeddingRequest(input string, includeSparse *bool) (embeddedVector []float32, sparseVector map[uint]float32) {
-	// False default
-	shouldIncludeSparse := false
-	if includeSparse != nil {
-		shouldIncludeSparse = *includeSparse
-	}
+func PerformVectorEmbeddingRequest(input string, includeSparse bool) (embeddedVector []float32, sparseVector map[uint]float32) {
+	// Use the provided parameter directly
+	shouldIncludeSparse := includeSparse
 
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 

@@ -49,15 +49,13 @@ import (
 //   - collection: the collection name
 //   - similaritySearchResults: the number of results to be returned
 //   - similaritySearchMinScore: the minimum score for the results
-//   - sparseVector: optional sparse vector for hybrid search (pass nil for default, or pointer to sparse vector map)
+//   - sparseVector: optional sparse vector for hybrid search (pass empty map for dense-only search)
 //
 // Returns:
 //   - databaseResponse: an array of the most relevant data
-func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64, sparseVector *map[uint]float32) (databaseResponse []sharedtypes.DbResponse) {
-	var sparse map[uint]float32
-	if sparseVector != nil {
-		sparse = *sparseVector
-	}
+func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64, sparseVector map[uint]float32) (databaseResponse []sharedtypes.DbResponse) {
+	// Use the provided sparse vector directly (will be empty map if not provided)
+	sparse := sparseVector
 
 	logCtx := &logging.ContextMap{}
 	client, err := qdrant_utils.QdrantClient()

@@ -83,6 +83,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"GetGithubFilesToExtract":                    GetGithubFilesToExtract,
 	"GetLocalFilesToExtract":                     GetLocalFilesToExtract,
 	"AppendStringSlices":                         AppendStringSlices,
+	"AppendStrings":                              AppendStrings,
 	"DownloadGithubFileContent":                  DownloadGithubFileContent,
 	"GetLocalFileContent":                        GetLocalFileContent,
 	"GetDocumentType":                            GetDocumentType,

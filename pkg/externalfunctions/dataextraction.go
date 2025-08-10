@@ -178,6 +178,21 @@ func AppendStringSlices(slice1, slice2, slice3, slice4, slice5 []string) []strin
 	return result
 }
 
+
+// AppendString creates a new String by appending all elements of the provided Strings.
+//
+// Tags:
+//   - @displayName: Append String
+//
+// Parameters:
+//   - str1, str2, str3, str4, str5: string to append.
+//
+// Returns:
+//   - result: a new slice with all elements appended.
+func AppendStrings(str1, str2, str3, str4, str5 string) string {
+	return str1 + str2 + str3 + str4 + str5
+}
+
 // DownloadGithubFileContent downloads file content from github and returns checksum and content.
 //
 // Tags:

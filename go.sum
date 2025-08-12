@@ -34,6 +34,8 @@ github.com/ansys/aali-sharedtypes v1.0.3-0.20250717081706-2879ebbad98d h1:0U7pZ6
 github.com/ansys/aali-sharedtypes v1.0.3-0.20250717081706-2879ebbad98d/go.mod h1:cWfGDKNuQQdQzVoRGaz5nLUopFGUME1vHUlgAf8KCxQ=
 github.com/ansys/aali-sharedtypes v1.0.3 h1:HatfUjmIHKhBoRyHWCJobmxh35dUStJE08MPzmEZhR8=
 github.com/ansys/aali-sharedtypes v1.0.3/go.mod h1:cWfGDKNuQQdQzVoRGaz5nLUopFGUME1vHUlgAf8KCxQ=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250812174938-de4f55959f5a h1:oElmRzWx60WJ74o12M5UIItNnh0ddMFlhCFYFd0+tKg=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250812174938-de4f55959f5a/go.mod h1:cWfGDKNuQQdQzVoRGaz5nLUopFGUME1vHUlgAf8KCxQ=
 github.com/aymerick/douceur v0.2.0 h1:Mv+mAeH1Q+n9Fr+oyamOlAkUNPWPlA8PPGR0QAaYuPk=
 github.com/aymerick/douceur v0.2.0/go.mod h1:wlT5vV2O3h55X9m7iVYN0TBM0NH/MmbLnd30/FjWUq4=
 github.com/cenkalti/backoff v2.2.1+incompatible h1:tNowT99t7UNflLxfYYSlKYsBpXdEet03Pg2g16Swow4=

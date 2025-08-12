@@ -155,7 +155,6 @@ func mapElementCollectionToDbResponse(dbResponse *sharedtypes.DbResponse, scored
 		dbResponse.Guid = id
 	}
 	dbResponse.Distance = float64(scoredPoint.Score)
-	dbResponse.Level = "element"
 
 	// Use payload map to access VectorDatabaseElement fields directly
 	payloadMap := qdrant_utils.QdrantPayloadToMap(scoredPoint.Payload)
@@ -167,42 +166,62 @@ func mapElementCollectionToDbResponse(dbResponse *sharedtypes.DbResponse, scored
 		}
 	}
 
-	// Use parent class as document name and ID for logical grouping
+	// Use parent class for logical document grouping
 	if parentClass, hasParent := payloadMap["parent_class"]; hasParent {
 		if parentStr, ok := parentClass.(string); ok && parentStr != "" {
-			dbResponse.DocumentId = parentStr // Group all SeaScapeDB methods together
+			dbResponse.DocumentName = parentStr // e.g., "SeaScapeDB", "MeshPilot"
+			dbResponse.DocumentId = parentStr   // Group all methods/properties by parent class
 		}
 	}
 
-	// Use doc name as pseudocode
-	if dbResponse.DocumentName == "" {
-		if nameFormatted, hasFormatted := payloadMap["name_pseudocode"]; hasFormatted {
-			if formattedStr, ok := nameFormatted.(string); ok {
-				dbResponse.DocumentName = formattedStr
+	// Set level to the actual element type for better categorization
+	if elementType, hasType := payloadMap["type"]; hasType {
+		if typeStr, ok := elementType.(string); ok && typeStr != "" {
+			dbResponse.Level = typeStr // e.g., "function", "class", "property"
+		} else {
+			dbResponse.Level = "element" // fallback
+		}
+	} else {
+		dbResponse.Level = "element" // fallback
+	}
+
+	// Build comprehensive, meaningful summary
+	var summaryParts []string
+	
+	// Start with element type and parent context
+	if elementType, hasType := payloadMap["type"]; hasType {
+		if typeStr, ok := elementType.(string); ok && typeStr != "" {
+			if parentClass, hasParent := payloadMap["parent_class"]; hasParent {
+				if parentStr, ok := parentClass.(string); ok && parentStr != "" {
+					summaryParts = append(summaryParts, fmt.Sprintf("%s %s", strings.Title(typeStr), parentStr))
+				} else {
+					summaryParts = append(summaryParts, strings.Title(typeStr))
+				}
+			} else {
+				summaryParts = append(summaryParts, strings.Title(typeStr))
 			}
 		}
 	}
-
-	// Build summary with type and full signature
-	var summaryParts []string
-	if elementType, hasType := payloadMap["type"]; hasType {
-		if typeStr, ok := elementType.(string); ok {
-			summaryParts = append(summaryParts, typeStr)
-		}
-	}
-
-	// Add full signature for technical reference
+	
+	// Add technical signature for reference
 	if name, hasName := payloadMap["name"]; hasName {
-		if nameStr, ok := name.(string); ok {
-			summaryParts = append(summaryParts, nameStr)
+		if nameStr, ok := name.(string); ok && nameStr != "" && nameStr != dbResponse.Text {
+			summaryParts = append(summaryParts, fmt.Sprintf("API: %s", nameStr))
 		}
 	}
-
+	
+	// Add pseudocode reference if meaningful
+	if pseudocode, hasPseudo := payloadMap["name_pseudocode"]; hasPseudo {
+		if pseudoStr, ok := pseudocode.(string); ok && pseudoStr != "" && pseudoStr != dbResponse.Text {
+			summaryParts = append(summaryParts, fmt.Sprintf("Usage: %s", pseudoStr))
+		}
+	}
+	
 	if len(summaryParts) > 0 {
-		dbResponse.Summary = strings.Join(summaryParts, " - ")
+		dbResponse.Summary = strings.Join(summaryParts, " | ")
 	}
 
-	// Add searchable keywords
+	// Build comprehensive keywords for searchability
 	var keywords []string
 	if parentClass, hasParent := payloadMap["parent_class"]; hasParent {
 		if parentStr, ok := parentClass.(string); ok && parentStr != "" {
@@ -214,6 +233,12 @@ func mapElementCollectionToDbResponse(dbResponse *sharedtypes.DbResponse, scored
 			keywords = append(keywords, pseudoStr)
 		}
 	}
+	if elementType, hasType := payloadMap["type"]; hasType {
+		if typeStr, ok := elementType.(string); ok && typeStr != "" {
+			keywords = append(keywords, typeStr)
+		}
+	}
+	
 	if len(keywords) > 0 {
 		dbResponse.Keywords = keywords
 	}
@@ -230,45 +255,68 @@ func mapUserGuideCollectionToDbResponse(dbResponse *sharedtypes.DbResponse, scor
 	// Convert payload to map for flexible access
 	payloadMap := qdrant_utils.QdrantPayloadToMap(scoredPoint.Payload)
 
-	// Use section title as main searchable text (prefer title, fallback to section_name)
+	// Use actual text content for main searchable text (the actual content, not just the title)
+	if text, hasText := payloadMap["text"]; hasText {
+		if textStr, ok := text.(string); ok && textStr != "" {
+			dbResponse.Text = textStr
+		}
+	}
+
+	// Use document name for logical grouping (not section name)
+	if docName, hasDocName := payloadMap["document_name"]; hasDocName {
+		if docNameStr, ok := docName.(string); ok && docNameStr != "" {
+			dbResponse.DocumentName = docNameStr
+			dbResponse.DocumentId = docNameStr   // Group all sections/chunks by source document
+		}
+	}
+
+	// Build comprehensive summary with context and hierarchy
+	var summaryParts []string
+	
+	// Start with section title or name
 	if title, hasTitle := payloadMap["title"]; hasTitle {
 		if titleStr, ok := title.(string); ok && titleStr != "" {
-			dbResponse.Text = titleStr
+			summaryParts = append(summaryParts, titleStr)
 		}
-	} else if sectionName, hasSectionName := payloadMap["document_name"]; hasSectionName {
-		if sectionNameStr, ok := sectionName.(string); ok {
-			dbResponse.Text = sectionNameStr
-		}
-	}
-
-	// Use the actual document name for DocumentName and grouping
-	if docName, hasDocName := payloadMap["section_name"]; hasDocName {
-		if docNameStr, ok := docName.(string); ok {
-			dbResponse.DocumentName = docNameStr
-			dbResponse.DocumentId = docNameStr // Group sections by section
+	} else if sectionName, hasSectionName := payloadMap["section_name"]; hasSectionName {
+		if sectionNameStr, ok := sectionName.(string); ok && sectionNameStr != "" {
+			summaryParts = append(summaryParts, sectionNameStr)
 		}
 	}
-
-	// Create summary from section content
-	if text, hasText := payloadMap["text"]; hasText {
-		if textStr, ok := text.(string); ok {
-			// Create summary from text content (first 200 chars)
-			if len(textStr) > 200 {
-				dbResponse.Summary = textStr[:200] + "..."
-			} else {
-				dbResponse.Summary = textStr
-			}
+	
+	// Add document context
+	if docName, hasDocName := payloadMap["document_name"]; hasDocName {
+		if docNameStr, ok := docName.(string); ok && docNameStr != "" {
+			summaryParts = append(summaryParts, fmt.Sprintf("from %s", docNameStr))
 		}
 	}
-
-	// Set hierarchical level
+	
+	// Add hierarchical context
+	if parentSectionName, hasParent := payloadMap["parent_section_name"]; hasParent {
+		if parentStr, ok := parentSectionName.(string); ok && parentStr != "" {
+			summaryParts = append(summaryParts, fmt.Sprintf("under %s", parentStr))
+		}
+	}
+	
+	// Add level information
 	if level, hasLevel := payloadMap["level"]; hasLevel {
 		if levelInt, ok := level.(float64); ok {
-			dbResponse.Level = fmt.Sprintf("level_%d", int(levelInt))
+			summaryParts = append(summaryParts, fmt.Sprintf("level %d", int(levelInt)))
+		}
+	}
+	
+	if len(summaryParts) > 0 {
+		dbResponse.Summary = strings.Join(summaryParts, " | ")
+	}
+
+	// Set level as simple numeric representation
+	if level, hasLevel := payloadMap["level"]; hasLevel {
+		if levelInt, ok := level.(float64); ok {
+			dbResponse.Level = fmt.Sprintf("%d", int(levelInt))
 		}
 	}
 
-	// Add searchable keywords
+	// Add searchable keywords including section hierarchy
 	var keywords []string
 	if sectionName, hasSection := payloadMap["section_name"]; hasSection {
 		if sectionStr, ok := sectionName.(string); ok && sectionStr != "" {
@@ -278,13 +326,14 @@ func mapUserGuideCollectionToDbResponse(dbResponse *sharedtypes.DbResponse, scor
 	if parentSectionName, hasParent := payloadMap["parent_section_name"]; hasParent {
 		if parentStr, ok := parentSectionName.(string); ok && parentStr != "" {
 			keywords = append(keywords, parentStr)
-			// Also store in metadata for relationship tracking
-			if dbResponse.Metadata == nil {
-				dbResponse.Metadata = make(map[string]interface{})
-			}
-			dbResponse.Metadata["parent_section_name"] = parentStr
 		}
 	}
+	if title, hasTitle := payloadMap["title"]; hasTitle {
+		if titleStr, ok := title.(string); ok && titleStr != "" {
+			keywords = append(keywords, titleStr)
+		}
+	}
+	
 	if len(keywords) > 0 {
 		dbResponse.Keywords = keywords
 	}
@@ -326,11 +375,11 @@ func mapExampleCollectionToDbResponse(dbResponse *sharedtypes.DbResponse, scored
 		}
 	}
 
-	// Use document name for both DocumentName and grouping
+	// Use document name for logical grouping
 	if docName, hasDocName := payloadMap["document_name"]; hasDocName {
 		if docNameStr, ok := docName.(string); ok {
 			dbResponse.DocumentName = docNameStr
-			dbResponse.DocumentId = docNameStr // Group examples by document
+			dbResponse.DocumentId = docNameStr   // Group all examples by source document
 		}
 	}
 
@@ -347,33 +396,42 @@ func mapExampleCollectionToDbResponse(dbResponse *sharedtypes.DbResponse, scored
 		}
 	}
 
-	// Build summary from text content and dependencies
+	// Build comprehensive summary capturing unique context not in other fields
 	var summaryParts []string
-	if dbResponse.Text != "" {
-		// Use first 150 chars of example content
-		textPreview := dbResponse.Text
-		if len(textPreview) > 150 {
-			textPreview = textPreview[:150] + "..."
+	
+	// Start with document context
+	if docName, hasDocName := payloadMap["document_name"]; hasDocName {
+		if docNameStr, ok := docName.(string); ok && docNameStr != "" {
+			summaryParts = append(summaryParts, fmt.Sprintf("Example from %s", docNameStr))
 		}
-		summaryParts = append(summaryParts, textPreview)
 	}
-
-	if len(dependencies) > 0 {
-		summaryParts = append(summaryParts, fmt.Sprintf("Dependencies: %s", strings.Join(dependencies, ", ")))
-	}
-
-	if len(summaryParts) > 0 {
-		dbResponse.Summary = strings.Join(summaryParts, " | ")
-	}
-
-	// Handle dependency equivalences in metadata
+	
+	// Capture DependencyEquivalences information (critical unmapped data)
 	if depEquiv, hasDepEquiv := payloadMap["dependency_equivalences"]; hasDepEquiv {
 		if depEquivMap, ok := depEquiv.(map[string]interface{}); ok && len(depEquivMap) > 0 {
-			if dbResponse.Metadata == nil {
-				dbResponse.Metadata = make(map[string]interface{})
+			var equivalences []string
+			for key, value := range depEquivMap {
+				if valueStr, ok := value.(string); ok {
+					equivalences = append(equivalences, fmt.Sprintf("%s=%s", key, valueStr))
+				}
 			}
-			dbResponse.Metadata["dependency_equivalences"] = depEquivMap
+			if len(equivalences) > 0 {
+				summaryParts = append(summaryParts, fmt.Sprintf("Equivalences: %s", strings.Join(equivalences, ", ")))
+			}
 		}
+	}
+	
+	// Add dependency summary if available and not too verbose
+	if len(dependencies) > 0 && len(dependencies) <= 3 {
+		summaryParts = append(summaryParts, fmt.Sprintf("Uses: %s", strings.Join(dependencies, ", ")))
+	} else if len(dependencies) > 3 {
+		summaryParts = append(summaryParts, fmt.Sprintf("Uses %d dependencies", len(dependencies)))
+	}
+	
+	if len(summaryParts) > 0 {
+		dbResponse.Summary = strings.Join(summaryParts, " | ")
+	} else {
+		dbResponse.Summary = "Code example"
 	}
 
 	// Handle chunking relationships for navigation

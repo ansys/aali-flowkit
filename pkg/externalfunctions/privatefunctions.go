@@ -41,6 +41,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -2752,25 +2753,46 @@ func logPanic(ctx *logging.ContextMap, msg string, args ...any) {
 func connectToMCP(ctx context.Context, serverURL string) (*websocket.Conn, error) {
 	conn, _, err := websocket.Dial(ctx, serverURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to WebSocket server: %w", err)
+		return nil, fmt.Errorf("WebSocket connection failed - ensure MCP server is running at %s: %w", serverURL, err)
 	}
 	return conn, nil
 }
 
-// sendMCPRequest sends a JSON request over the WebSocket connection and returns the parsed response.
+// mcpRequestCounter is used to generate unique request IDs for JSON-RPC
+var mcpRequestCounter atomic.Uint64
+
+// sendMCPRequest sends a JSON-RPC 2.0 request over the WebSocket connection and returns the parsed response.
 //
 // Parameters:
 //   - ctx: The context for sending and receiving messages.
 //   - conn: The active WebSocket connection.
-//   - request: The request object to be marshaled and sent.
+//   - method: The JSON-RPC method name (e.g., "tools/list", "resources/read").
+//   - params: The parameters for the method (can be nil for no parameters).
 //
 // Returns:
-//   - response: The parsed response from the MCP server as a map.
-//   - err: An error if marshaling, sending, or receiving fails.
-func sendMCPRequest(ctx context.Context, conn *websocket.Conn, request interface{}) (map[string]interface{}, error) {
+//   - response: The parsed response result from the MCP server.
+//   - err: An error if the request fails or the server returns an error.
+func sendMCPRequest(ctx context.Context, conn *websocket.Conn, method string, params interface{}) (interface{}, error) {
+	// Generate unique request ID
+	requestID := mcpRequestCounter.Add(1)
+
+	// Create JSON-RPC 2.0 request
+	request := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      requestID,
+		"method":  method,
+	}
+
+	// Add params if provided
+	if params != nil {
+		request["params"] = params
+	} else {
+		request["params"] = map[string]interface{}{}
+	}
+
 	data, err := json.Marshal(request)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
+		return nil, fmt.Errorf("failed to marshal JSON-RPC request: %w", err)
 	}
 
 	err = conn.Write(ctx, websocket.MessageText, data)
@@ -2788,7 +2810,62 @@ func sendMCPRequest(ctx context.Context, conn *websocket.Conn, request interface
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	return response, nil
+	// Check for JSON-RPC error
+	if errorField, hasError := response["error"]; hasError && errorField != nil {
+		if errorMap, ok := errorField.(map[string]interface{}); ok {
+			code := errorMap["code"]
+			message := errorMap["message"]
+			data := errorMap["data"]
+			return nil, fmt.Errorf("JSON-RPC error %v: %v (data: %v)", code, message, data)
+		}
+		return nil, fmt.Errorf("JSON-RPC error: %v", errorField)
+	}
+
+	// Return the result field
+	if result, hasResult := response["result"]; hasResult {
+		return result, nil
+	}
+
+	return nil, fmt.Errorf("JSON-RPC response missing result field")
+}
+
+// sendMCPNotification sends a JSON-RPC 2.0 notification over the WebSocket connection.
+// Notifications do not expect a response and do not have an ID field.
+//
+// Parameters:
+//   - ctx: The context for sending messages.
+//   - conn: The active WebSocket connection.
+//   - method: The JSON-RPC notification method name.
+//   - params: The parameters for the notification (can be nil for no parameters).
+//
+// Returns:
+//   - err: An error if the notification fails to send.
+func sendMCPNotification(ctx context.Context, conn *websocket.Conn, method string, params interface{}) error {
+	// Create JSON-RPC 2.0 notification (no ID field for notifications)
+	notification := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"method":  method,
+	}
+
+	// Add params if provided
+	if params != nil {
+		notification["params"] = params
+	} else {
+		notification["params"] = map[string]interface{}{}
+	}
+
+	data, err := json.Marshal(notification)
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON-RPC notification: %w", err)
+	}
+
+	err = conn.Write(ctx, websocket.MessageText, data)
+	if err != nil {
+		return fmt.Errorf("failed to send notification: %w", err)
+	}
+
+	// Notifications don't expect a response
+	return nil
 }
 
 // kvdbGetEntry retrieves the value from a specific key from the KVDB

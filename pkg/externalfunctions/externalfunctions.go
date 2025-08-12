@@ -138,8 +138,6 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"ProcessSubworkflowIdentificationOutput":    ProcessSubworkflowIdentificationOutput,
 	"MarkdownToHTML":                            MarkdownToHTML,
 	"ParseHistoryToHistoricMessages":            ParseHistoryToHistoricMessages,
-	"ParseSlashCommand":                         ParseSlashCommand,
-	"SynthesizeSlashCommand":                    SynthesizeSlashCommand,
 	"FinalizeMessage":                           FinalizeMessage,
 	"GenerateUserPrompt":                        GenerateUserPrompt,
 	"GenerateUserPromptWithList":                GenerateUserPromptWithList,
@@ -162,14 +160,23 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"SendLogicAppNotificationEmail":                 SendLogicAppNotificationEmail,
 	"CreateMessageWithVariable":                     CreateMessageWithVariable,
 
-	// mcp
-	"ListAll":         ListAll,
+	// mcp - standard MCP functions
+	"InitializeMCP":        InitializeMCP,
+	"ValidateMCPServerURL": ValidateMCPServerURL,
+	"ListTools":            ListTools,
+	"ListResources":        ListResources,
+	"ListPrompts":          ListPrompts,
+	"ListAll":              ListAll,
+	"CallTool":             CallTool,
+	"ReadResource":         ReadResource,
+	"GetPrompt":            GetPrompt,
+
+	// mcp - backward compatibility wrappers (deprecated)
 	"ExecuteTool":     ExecuteTool,
 	"GetResource":     GetResource,
 	"GetSystemPrompt": GetSystemPrompt,
 
 	// materials
-	"StartTrace":                       StartTrace,
 	"SerializeResponse":                SerializeResponse,
 	"AddGuidsToAttributes":             AddGuidsToAttributes,
 	"FilterOutNonExistingAttributes":   FilterOutNonExistingAttributes,
@@ -179,11 +186,9 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"LogRequestFailed":                 LogRequestFailed,
 	"LogRequestFailedDebugWithMessage": LogRequestFailedDebugWithMessage,
 	"PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput": PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput,
-	"CheckApiKeyAuthKvDb":                        CheckApiKeyAuthKvDb,
-	"UpdateTotalTokenCountForCustomerKvDb":       UpdateTotalTokenCountForCustomerKvDb,
-	"DenyCustomerAccessAndSendWarningKvDb":       DenyCustomerAccessAndSendWarningKvDb,
-	"AddAvailableAttributesToSystemPrompt":       AddAvailableAttributesToSystemPrompt,
-	"ExtractDesignRequirementsAndSearchCriteria": ExtractDesignRequirementsAndSearchCriteria,
+	"CheckApiKeyAuthKvDb":                  CheckApiKeyAuthKvDb,
+	"UpdateTotalTokenCountForCustomerKvDb": UpdateTotalTokenCountForCustomerKvDb,
+	"DenyCustomerAccessAndSendWarningKvDb": DenyCustomerAccessAndSendWarningKvDb,
 
 	// rhsc
 	"SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,

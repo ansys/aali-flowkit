@@ -41,11 +41,41 @@ jobs:
           fi
 
 # ---------------------------------------------------------------------
+# UPDATE VERSION FILE  ── update the VERSION file on the main branch
+# ---------------------------------------------------------------------
+
+  update-version-file:
+    name: Update VERSION file
+    needs: [check-tag-branch]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      run: |
+        git clone --branch main https://${{ secrets.PYANSYS_CI_BOT_TOKEN }}@github.com/ansys/aali-agent.git
+
+    - name: Write tag name to VERSION file
+      run: |
+        cd aali-agent
+        echo "${{ github.ref_name }}" > VERSION
+
+    - name: Commit and push version change
+      run: |
+        cd aali-agent
+        git config --global user.email '${{ github.actor }}@users.noreply.github.com'
+        git config --global user.name '${{ github.actor }}'
+        if git diff --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -a -m "Update VERSION to ${{ github.ref_name }}"
+          git push origin main
+        fi
+
+# ---------------------------------------------------------------------
 # BUILD DOCS  ── build documentation
 # ---------------------------------------------------------------------
   docs-build:
     name: Build Documentation
-    needs: [check-tag-branch]
+    needs: [update-version-file]
     uses: "./.github/workflows/docs_build.yml"
     with:
       name: "Build Documentation"
@@ -56,7 +86,7 @@ jobs:
 # ---------------------------------------------------------------------
   release-docker:
     name : Generate Docker release
-    needs: [check-tag-branch]
+    needs: [update-version-file]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -123,7 +153,7 @@ jobs:
 # ---------------------------------------------------------------------
   build:
     name: Create binaries for Linux, Windows & macOS
-    needs: [check-tag-branch]
+    needs: [update-version-file]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

@@ -26,7 +26,9 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"reflect"
+	"strings"
 
 	"github.com/ansys/aali-flowkit/pkg/externalfunctions"
 	"github.com/ansys/aali-sharedtypes/pkg/aaliflowkitgrpc"
@@ -123,6 +125,46 @@ func apiKeyAuthInterceptor(apiKey string) grpc.UnaryServerInterceptor {
 		// Continue handling the request
 		return handler(ctx, req)
 	}
+}
+
+// HealthCheck checks the health of the gRPC server
+//
+// Parameters:
+// - ctx: the context of the request
+// - req: the request to check the health of the server
+//
+// Returns:
+// - aaliflowkitgrpc.HealthCheckResponse: a response indicating the health of the server
+// - error: an error if the health check fails
+func (s *server) HealthCheck(ctx context.Context, req *aaliflowkitgrpc.HealthRequest) (*aaliflowkitgrpc.HealthResponse, error) {
+	// return a successful health check response
+	return &aaliflowkitgrpc.HealthResponse{
+		Status: "OK",
+	}, nil
+}
+
+// GetVersion returns the version of the Aali FlowKit server
+//
+// Parameters:
+// - ctx: the context of the request
+// - req: the request to get the version of the server
+//
+// Returns:
+// - aaliflowkitgrpc.VersionResponse: a response containing the version of the server
+// - error: an error if the version retrieval fails
+func (s *server) GetVersion(ctx context.Context, req *aaliflowkitgrpc.VersionRequest) (*aaliflowkitgrpc.VersionResponse, error) {
+	// Get the version from the file
+	version := getAaliFlowktiVersion(&logging.ContextMap{})
+
+	// If the version is empty, return an error
+	if version == "" {
+		return nil, status.Errorf(codes.Internal, "failed to retrieve version")
+	}
+
+	// Return the version response
+	return &aaliflowkitgrpc.VersionResponse{
+		Version: version,
+	}, nil
 }
 
 // ListFunctions lists all available function from the external functions package
@@ -411,4 +453,21 @@ func convertOptionSetValues(functionName string, inputName string, inputValue in
 	}
 
 	return nil, fmt.Errorf("unsupported function: '%s'", functionName)
+}
+
+// getAaliFlowktiVersion reads the agent's version from a file and returns the value.
+//
+// Returns:
+//   - string: Version
+func getAaliFlowktiVersion(ctx *logging.ContextMap) string {
+	// Read the version from a file; the file is expected to be at ROOT level and called VERSION
+	file := "VERSION"
+	versionFile, err := os.ReadFile(file)
+	if err != nil {
+		logging.Log.Errorf(ctx, "Error reading version file: %s\n", err)
+		return ""
+	}
+
+	version := strings.TrimSpace(string(versionFile))
+	return version
 }

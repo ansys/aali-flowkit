@@ -29,7 +29,7 @@ jobs:
         sudo snap install golangci-lint --classic
 
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup Python for pre-commit hook
       uses: actions/setup-python@v5
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
@@ -59,7 +59,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
@@ -92,7 +92,7 @@ jobs:
       pages: write
     steps:
       - name: Download documentation artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: documentation-html-with-api
           path: ./docs-to-deploy

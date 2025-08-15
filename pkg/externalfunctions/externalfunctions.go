@@ -83,6 +83,8 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"GetGithubFilesToExtract":                    GetGithubFilesToExtract,
 	"GetLocalFilesToExtract":                     GetLocalFilesToExtract,
 	"AppendStringSlices":                         AppendStringSlices,
+	"OutputAppendedStringSlices":                 OutputAppendedStringSlices,
+	"OutputStringAsArray":                        OutputStringAsArray,
 	"DownloadGithubFileContent":                  DownloadGithubFileContent,
 	"GetLocalFileContent":                        GetLocalFileContent,
 	"GetDocumentType":                            GetDocumentType,
@@ -114,6 +116,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"StoreExamplesInGraphDatabase":           StoreExamplesInGraphDatabase,
 	"StoreUserGuideSectionsInVectorDatabase": StoreUserGuideSectionsInVectorDatabase,
 	"StoreUserGuideSectionsInGraphDatabase":  StoreUserGuideSectionsInGraphDatabase,
+        "AddPyaedtGroupElementsInGraphDatabase":  AddPyaedtGroupElementsInGraphDatabase,
 
 	// ansys mesh pilot
 	"SimilartitySearchOnPathDescriptions":       SimilartitySearchOnPathDescriptions,
@@ -187,4 +190,9 @@ var ExternalFunctionsMap = map[string]interface{}{
 
 	// rhsc
 	"SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,
+	//"MaterialsTestFunc": MaterialsTestFunc,
+
+	//pyaedt
+	//"GetExamplesForElement": GetExamplesForElement,
+
 }

@@ -114,30 +114,42 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		}
 	}
 
-	// Execute query
+	// perform the qdrant query
+	//filter := qdrant.Filter{
+		//Must: []*qdrant.Condition{
+		//	qdrant.NewMatchInt("level", 2),
+		//},
+	//}
+	//if keywordsSearch {
+	//	filter.Must = append(filter.Must, qdrant.NewMatchKeywords("name_formatted", keywords...)) // filter.Should
+	//	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: keywordsSearch filter added")
+	//}
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Similarity search Query to Qdrant %s", query)
 	scoredPoints, err := client.Query(context.TODO(), &query)
 	if err != nil {
 		logPanic(logCtx, "error in qdrant query: %q", err)
 	}
 
 	// Transform results
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Got %f points from qdrant query", len(scoredPoints))
 	dbResponses := make([]sharedtypes.DbResponse, len(scoredPoints))
 	for i, scoredPoint := range scoredPoints {
 		logging.Log.Debugf(&logging.ContextMap{}, "Result #%d:", i)
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity score: %v", scoredPoint.Score)
+		//if scoredPoint.Score >= maxScore{
 		dbResponse, err := qdrant_utils.QdrantPayloadToType[sharedtypes.DbResponse](scoredPoint.GetPayload())
+		//logging.Log.Debugf(&logging.ContextMap{}, "Similarity name: %v", dbResponse.Name)
+                // Add the result to the list
 		if err != nil {
-			errMsg := fmt.Sprintf("error converting qdrant payload to dbResponse: %q", err)
-			logging.Log.Errorf(logCtx, "%s", errMsg)
-			panic(errMsg)
 		}
+		dbResponses[i] = dbResponse
+		        // Kaumudi: Get name of function with highest scorePoint and latest version
+		        /// Pass this to get examples and dependencies 
+		        // Get examples
 
-		logging.Log.Debugf(&logging.ContextMap{}, "Similarity file id: %v", dbResponse.DocumentId)
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity file name: %v", dbResponse.DocumentName)
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity summary: %v", dbResponse.Summary)
-
-		// Add the result to the list
-		dbResponses[i] = dbResponse
+                //logging.Log.Debugf(&logging.ContextMap{}, "Similarity summary: %v", dbResponse.Name)
 	}
 	return dbResponses
 }

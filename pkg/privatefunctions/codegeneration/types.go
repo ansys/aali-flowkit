@@ -51,6 +51,9 @@ type AssemblyMember struct {
 	EnumValues       string                       `xml:"enumValues,omitempty" json:"enum_values"`
 	VectorDBMetadata any                          `xml:"vectorDBMetadata,omitempty" json:"vector_db_metadata"` // Optional <vectorDBMetadata> element
 	GraphDBMetadata  any                          `xml:"graphDBMetadata,omitempty" json:"graph_db_metadata"`   // Optional <graphDBMetadata> element
+	//PyaedtClass string                          `xml:"pyClass,omitempty" json:"pyaedt_class"` // Optional functions will not have class
+	//PyaedtParents []sharedtypes.XMLMember
+	PyaedtGroup string                            `xml:"typeOf,omitempty" json:"typeof"`   // Optional only for classes
 }
 
 type CodeGenerationPseudocodeResponse struct {
@@ -67,6 +70,7 @@ type VectorDatabaseElement struct {
 	NamePseudocode string           `json:"name_pseudocode"`
 	NameFormatted  string           `json:"name_formatted"`
 	ParentClass    string           `json:"parent_class"`
+	PyaedtGroup    string           `json:"typeof"`
 }
 
 type VectorDatabaseExample struct {

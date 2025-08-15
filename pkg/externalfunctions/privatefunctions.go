@@ -322,6 +322,7 @@ func sendChatRequestNoStreaming(data string, chatRequestType string, history []s
 	go shutdownHandler(c)
 	go listener(c, responseChannel, true)
 	go writer(c, requestChannelChat, responseChannel)
+	//logging.Log.Debugf(&logging.ContextMap{}, "kapatil: send request : chat, data :%s, with max keyword search %d, ", data, maxKeywordsSearch)
 	go sendRequest("chat", data, requestChannelChat, chatRequestType, "false", false, history, maxKeywordsSearch, systemPrompt, responseChannel, modelIds, options, images)
 
 	// receive single answer from the response channel
@@ -611,6 +612,7 @@ func sendRequest(adapter string, data interface{}, RequestChannel chan []byte, c
 	}
 
 	requestJSON, err := json.Marshal(request)
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: request Json %s", requestJSON)
 	if err != nil {
 		errMessage := fmt.Sprintf("failed to marshal request to aali-llm: %v", err)
 		logging.Log.Error(&logging.ContextMap{}, errMessage)

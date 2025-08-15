@@ -319,6 +319,10 @@ func PerformKeywordExtractionRequest(input string, maxKeywordsSearch uint32) (ke
 		panic(errMessage)
 	}
 
+	for words := range keywords {
+		logging.Log.Debugf(&logging.ContextMap{},"kapatil: Keyword %s ", words)
+	}
+
 	// Return the response
 	return keywords
 }
@@ -1098,6 +1102,19 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 	return finalQuery
 }
 
+
+func RephraseRequest_kapatil(request string) (result string) {
+        input := strings.ToLower(request)
+        bef, after, found := strings.Cut(input, "launch aedt")
+        if found {
+            result = bef + "create desktop instance" + after
+        } else {
+                result = input
+            }
+
+        return result
+
+}
 // BuildFinalQueryForCodeLLMRequest builds the final query for a code generation
 // request to LLM. The final query is a markdown string that contains the
 // original request and the code examples from the KnowledgeDB.
@@ -1143,19 +1160,28 @@ func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []shar
 	// If there is no response from the KnowledgeDB, return the original request
 	if len(knowledgedbResponse) > 0 {
 		// Initial request
+
 		finalQuery = "Based on the following examples:\n\n"
 
 		for i, element := range knowledgedbResponse {
 			// Add the example number
+			logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Reading knowledge DB response")
 			finalQuery += "--- START EXAMPLE " + fmt.Sprint(i+1) + "---\n"
 			finalQuery += ">>> Summary:\n" + element.Summary + "\n\n"
 			finalQuery += ">>> Code snippet:\n```python\n" + element.Text + "\n```\n"
 			finalQuery += "--- END EXAMPLE " + fmt.Sprint(i+1) + "---\n\n"
+			logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Initial Query %s", finalQuery)
 		}
+
+	} else {
+		logging.Log.Debugf(&logging.ContextMap{}, "Zero knowledge DB reponse found")
 	}
 
+	// Kaumudi: Rephrase
+	new_request := RephraseRequest_kapatil(request)
+
 	// Pass in the original request
-	finalQuery += "Generate the Python code for the following request:\n>>> Request:\n" + request + "\n"
+	finalQuery += "Generate the Python code for the following request:\n>>> Request:\n" + new_request + "\n"
 
 	// Return the final query
 	return finalQuery

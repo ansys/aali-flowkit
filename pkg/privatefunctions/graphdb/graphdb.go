@@ -171,7 +171,10 @@ func (graphdb_context *graphDbContext) CreateSchema() error {
 		"CREATE REL TABLE IF NOT EXISTS NextSibling(FROM UserGuide TO UserGuide)",
 		"CREATE REL TABLE IF NOT EXISTS NextParent(FROM UserGuide TO UserGuide)",
 		"CREATE REL TABLE IF NOT EXISTS HasFirstChild(FROM UserGuide TO UserGuide)",
-		"CREATE REL TABLE IF NOT EXISTS HasChild(FROM UserGuide TO UserGuide)"}
+		"CREATE REL TABLE IF NOT EXISTS HasChild(FROM UserGuide TO UserGuide)",
+		"CREATE REL TABLE IF NOT EXISTS IsAPyaedtGroup(FROM Element TO Element)",
+		"CREATE REL TABLE IF NOT EXISTS Calls(FROM Element TO Element)",
+	}
 
 	for _, stmt := range stmts {
 		_, err := graphdb_context.client.CypherQueryWrite(graphdb_context.dbname, stmt, nil)
@@ -285,6 +288,90 @@ func (graphdb_context *graphDbContext) AddCodeGenerationElementNodes(nodes []sha
 	}
 
 	log.Printf("Added %v documents to graphdb", len(nodes))
+	return nil
+}
+
+
+// AddPyaedtGroupElementNodes adds pyaedt group nodes to graphdb database.
+//
+// Parameters:
+//   - nodes: List of pyaedt group nodes to be added.
+//
+// Returns:
+//   - funcError: Error object.
+func (graphdb_context *graphDbContext) AddPyaedtGroupElementNodes(pynodes []sharedtypes.CodeGenerationElement) (funcError error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			logging.Log.Errorf(&logging.ContextMap{}, "Panic AddPyaedtElementNodes: %v", r)
+			funcError = r.(error)
+			return
+		}
+	}()
+
+	// Add nodes
+	// Note: These are GraphDB specific elements only
+	// Vector DB will not have any details, so populate only
+	// graphDB essential data
+	var applicationNode sharedtypes.CodeGenerationElement
+	for _, node := range pynodes {
+		if node.Name == "Pyaedt_Application" {
+			applicationNode = node
+		}
+		queryParams := aali_graphdb.ParameterMap{
+			"type":                aali_graphdb.StringValue(node.Type),
+			"guid":                aali_graphdb.UUIDValue(node.Guid),
+			//"name_pseudocode":     aali_graphdb.StringValue(node.NamePseudocode), // these are not required
+			//"name_formatted":      aali_graphdb.StringValue(node.NameFormatted),
+			//"description":         aali_graphdb.StringValue(node.Description),
+			"name":                aali_graphdb.StringValue(node.Name),
+			"summary":             aali_graphdb.StringValue(node.Summary),
+			//"return_type":         aali_graphdb.StringValue(node.ReturnType),
+		}
+
+		// build up the query
+		query := `MERGE (n:Element {type: $type, name: $name}) SET n.guid = $guid, n.summary = $summary`
+
+		// Create node dynamically using the map
+		_, err := graphdb_context.client.CypherQueryWrite(
+			graphdb_context.dbname,
+			query,
+			queryParams,
+		)
+		if err != nil {
+			logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
+			return err
+		}
+	}
+
+	// Add relationships between groups
+	// Application, Module, Method, Configuration
+	if applicationNode.Name == "Pyaedt_Application" {
+		for _ ,node := range pynodes {
+         		if node.Name != "Pyaedt_Application" {
+				logging.Log.Debugf(&logging.ContextMap{}, "Updating %s with group", node.Name)
+				_, err := graphdb_context.client.CypherQueryWrite(
+				         	graphdb_context.dbname,
+						"MERGE (a:Element {name: $a}) MERGE (b:Element {name: $b}) MERGE (a)-[:Calls]->(b)",
+			 		aali_graphdb.ParameterMap{
+						"a": aali_graphdb.StringValue(applicationNode.Name),
+						"b": aali_graphdb.StringValue(node.Name),
+					},
+				)
+				if err != nil {
+					errMsg := fmt.Sprintf("Error during cypher query adding IsAPyaedtGroup relationships: %v", err)
+					logging.Log.Errorf(&logging.ContextMap{}, errMsg)
+					return errors.New(errMsg)
+				}
+
+			}
+		}
+		log.Printf("Added %v entries to graphdb", len(pynodes))
+        } else {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error creating Calls relation between pyaedt groups : could not find application node group")
+	}
+
+
 	return nil
 }
 
@@ -454,6 +541,52 @@ func (graphdb_context *graphDbContext) CreateCodeGenerationExampleRelationships(
 	logging.Log.Debugf(&logging.ContextMap{}, "Created relationships for %v nodes", len(nodes))
 	return nil
 }
+
+// CreatePyaedtGroupsCodeGenRelationships creates relationships between nodes and pyaedt groups in graph database.
+//
+// Parameters:
+//   - relationships: List of relationships to be created.
+//
+// Returns:
+//   - funcError: Error object.
+func (graphdb_context *graphDbContext) CreatePyaedtGroupsCodeGenRelationships(nodes []sharedtypes.CodeGenerationElement, pyaedtGroups []sharedtypes.CodeGenerationElement) (funcError error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			logging.Log.Errorf(&logging.ContextMap{}, "Panic CreatePyaedtGroupsCodeGenRelationships: %v", r)
+			funcError = r.(error)
+			return
+		}
+	}()
+	// Create relationships
+	logging.Log.Debugf(&logging.ContextMap{}, "Create relationship IsAPyaedtGroup")
+	for _, node := range nodes {
+		// Create relationships between the node and its pyaedt Group
+		// Note: Only Class type elements have pyaedtGroup attribute
+		// and Not all classes have pyaedtGroup populated
+		if node.Type == sharedtypes.Class && len(node.PyaedtGroup) != 0 {
+			logging.Log.Debugf(&logging.ContextMap{}, "Updating %s with group %s", node.Name, node.PyaedtGroup)
+			_, err := graphdb_context.client.CypherQueryWrite(
+				graphdb_context.dbname,
+				"MERGE (a:Element {name: $a}) MERGE (b:Element {name: $b}) MERGE (a)-[:IsAPyaedtGroup]->(b)",
+				aali_graphdb.ParameterMap{
+					"a": aali_graphdb.StringValue(node.Name),
+					"b": aali_graphdb.StringValue(node.PyaedtGroup),
+				},
+			)
+			if err != nil {
+				errMsg := fmt.Sprintf("Error during cypher query adding IsAPyaedtGroup relationships: %v", err)
+				logging.Log.Errorf(&logging.ContextMap{}, errMsg)
+				return errors.New(errMsg)
+			}
+		}
+
+	}
+
+	log.Printf("Created %v relationships in graph db", len(nodes))
+	return nil
+}
+
 
 // CreateCodeGenerationRelationships creates relationships between nodes in graph database.
 //
@@ -726,6 +859,7 @@ func (graphdb_context *graphDbContext) GetExamplesFromCodeGenerationElement(elem
 	}
 
 	// Get examples
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil:GetExamplesFrom element: %s: %s", elementName, elementType)
 	query := fmt.Sprintf("MATCH (a:%v {Name: $name})<-[:Uses]-(b:Example) RETURN b.Name", elementType)
 	examples, err := aali_graphdb.CypherQueryReadGeneric[exampleName](
 		graphdb_context.client,
@@ -739,10 +873,12 @@ func (graphdb_context *graphDbContext) GetExamplesFromCodeGenerationElement(elem
 		logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
 		return nil, err
 	}
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Results = %d, Query:  %s", len(examples), query)
 
 	exampleNames = make([]string, len(examples))
 	for i, example := range examples {
 		exampleNames[i] = example.Name
+		logging.Log.Debugf(&logging.ContextMap{}, "kapatil: example name = %v", example.Name)
 	}
 
 	return exampleNames, nil
@@ -790,7 +926,8 @@ func (graphdb_context *graphDbContext) GetCodeGenerationElementAndDependencies(e
 		logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
 		return nil, err
 	}
-
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: GetCodeGen Elements and dep")
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Element %d", len(elements))
 	return elements, nil
 }
 

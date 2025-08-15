@@ -155,6 +155,45 @@ func GetLocalFilesToExtract(localPath string, localFileExtensions []string,
 	return *localFiles
 }
 
+// OutputAppendedStringSlice creates a new string by appending all elements of a  provided slice.
+//
+// Tags:
+//   - @displayName: Output Appended String Slice
+//
+// Parameters:
+//   - slice1 : slice to append.
+//
+// Returns:
+//   - result: a new string with all elements appended.
+func OutputAppendedStringSlices(slice1 []string) string {
+	var result string
+
+	// Append all elements from each slice to the result slice
+	result = strings.Join(slice1[:], " ")
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: appended str : %s", result)
+	
+	return result
+}
+
+// OutputStringAsArray creates a new string[] by appending input string.
+//
+// Tags:
+//   - @displayName: output String as an Array
+//
+// Parameters:
+//   - istring: Input string to convert.
+//
+// Returns:
+//   - result: a new string slicewith all elements appended.
+func OutputStringAsArray(istring string) (sslice []string) {
+
+	sslice = append(sslice, istring) 
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Done.")
+
+	return sslice
+}
+
+
 // AppendStringSlices creates a new slice by appending all elements of the provided slices.
 //
 // Tags:
@@ -663,6 +702,8 @@ func LoadCodeGenerationElements(content []byte, elementsFilePath string) (elemen
 			ReturnDescription: objectDefinition.Returns,
 			VectorDBMetadata:  objectDefinition.VectorDBMetadata,
 			GraphDBMetadata:   objectDefinition.GraphDBMetadata,
+			//PyaedtParents:     objectDefinition.PyaedtParents, // class inheritance
+			PyaedtGroup:       objectDefinition.PyaedtGroup,   // class typeof - modules,methods, configs
 		}
 
 		// Create a list with all the return types of the element.
@@ -811,6 +852,7 @@ func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement,
 				"type":            string(element.Type),
 				"parent_class":    strings.Join(element.Dependencies, "."),
 				"metadata":        element.VectorDBMetadata,
+				"pyaedt_group":    string(element.PyaedtGroup),
 			}),
 		}
 	}
@@ -881,6 +923,143 @@ func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement,
 	}
 }
 
+// CreatePyaedtGroupsCodeGenerationElement
+// Tags:
+//   - @displayName: Create Pyaedt Groups/Categories code generation elements to be added to GraphDB later
+//
+// Parameters:
+//
+//   - returns elements: code generation elements.
+func CreatePyaedtGroupsCodeGenerationElements() (elements []sharedtypes.CodeGenerationElement) {
+	// Create the code generation element
+	// append PyAEDT to categories to avoid conflicts with other nodes
+	
+	var pyaedtGroupNames = [...] string{"Pyaedt_Application", "Pyaedt_Module", "Pyaedt_Method", "Pyaedt_Configuration"}
+	var pyaedtGroupSummaries = [...]string{"Belongs to PyAEDT Application or solver", 
+                                 "Belongs to PyAEDT Modules",
+	                         "Belongs to PyAEDT Method",
+	                         "Belongs to PyAEDT Configuration" }
+
+	// name and summary are required fields
+        for index,groupName := range pyaedtGroupNames {
+		element := sharedtypes.CodeGenerationElement{
+			Guid:              uuid.New(),
+			Name:              groupName,
+			Summary:           pyaedtGroupSummaries[index],
+			//ReturnType:        "",
+			//Example:           ,
+			//Parameters:        [],
+			//Remarks:           "",
+			//ReturnDescription: objectDefinition.Returns,
+			//PyaedtParents:     objectDefinition.PyaedtParents, // class inheritance
+			//PyaedtGroup:        "",   // class typeof - not applicable here
+		}
+		element.Type = sharedtypes.CodeGenerationType(sharedtypes.Class)
+                elements = append(elements, element)
+	}
+
+	logging.Log.Debugf(&logging.ContextMap{}, "Created elements %d", len(elements))
+	// TODO: This function is not necessarily required. Or is it? Possibly omitted
+	// and hard code these values to JSON/prameterMaps at AddPyaedtGroupElementsInGraphDataBase
+
+        return elements
+}
+
+// UpdatePyaedtGroupElementsInGraphDatabase creates and stores pyaedt group elements in the graph database.
+//
+// Tags:
+//   - @displayName: Update PyAEDT Group Element to Graph DB
+//
+// Parameters:
+//   - elements: code generation elements. 
+// We are assuming pyaedt API code gen elements have already been added to graphDB
+// Here we are just updating graphDBs.
+// If graph DB is not already populated, use AddPyaedtGroupElementsInGraphDatabase.
+func UpdatePyaedtGroupElementsInGraphDatabase() {
+	ctx := &logging.ContextMap{}
+
+	// Initialize the graph database.
+	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
+	if err != nil {
+		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
+	}
+
+	// Add the elements to the graph database.
+	//err = graphdb.GraphDbDriver.AddCodeGenerationElementNodes(elements)
+	//if err != nil {
+	//	errMsg := fmt.Sprintf("error adding code gen element nodes to graphdb: %v", err)
+        //	logging.Log.Error(ctx, errMsg)
+	//	panic(errMsg)
+	//}
+
+	pyaedtGroups := CreatePyaedtGroupsCodeGenerationElements()
+
+        err = graphdb.GraphDbDriver.AddPyaedtGroupElementNodes(pyaedtGroups)
+	if err != nil {
+		errMsg := fmt.Sprintf("error adding pyaedt groups code gen relationships to graphdb: %v", err)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
+	}
+	// Add relationships
+	//err = nil //graphdb.GraphDbDriver.CreatePyaedtGroupsCodeGenRelationships(pyaedtGroups)
+	//if err != nil {
+//		errMsg := fmt.Sprintf("error adding pyaedt groups code gen relationships to graphdb: %v", err)
+//		logging.Log.Error(ctx, errMsg)
+//		panic(errMsg)
+//	}
+	
+}
+
+
+// AddPyaedtGroupElementsInGraphDatabase creates and stores pyaedt group elements in the graph database.
+//
+// Tags:
+//   - @displayName: Add PyAEDT Group Element to Graph DB
+//
+// Parameters:
+//   - elements: code generation elements. 
+// We are assuming pyaedt API code gen elements have already been added to graphDB
+// Here we are just updating graphDBs.
+// If graph DB is not already populated, run StoreElementsInGraphDB before this call.
+func AddPyaedtGroupElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement) {
+	ctx := &logging.ContextMap{}
+
+	// Initialize the graph database.
+	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
+	if err != nil {
+		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
+	}
+
+	// Add the elements to the graph database.
+	//err = graphdb.GraphDbDriver.AddCodeGenerationElementNodes(elements)
+	//if err != nil {
+	//	errMsg := fmt.Sprintf("error adding code gen element nodes to graphdb: %v", err)
+        //	logging.Log.Error(ctx, errMsg)
+	//	panic(errMsg)
+	//}
+
+	pyaedtGroups := CreatePyaedtGroupsCodeGenerationElements()
+
+        err = graphdb.GraphDbDriver.AddPyaedtGroupElementNodes(pyaedtGroups)
+	if err != nil {
+		errMsg := fmt.Sprintf("error adding pyaedt groups code gen relationships to graphdb: %v", err)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
+	}
+	// Add relationships
+	err = graphdb.GraphDbDriver.CreatePyaedtGroupsCodeGenRelationships(elements, pyaedtGroups)
+	if err != nil {
+		errMsg := fmt.Sprintf("error adding pyaedt groups code gen relationships to graphdb: %v", err)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
+	}
+	
+}
+
 // StoreElementsInGraphDatabase stores elements in the graph database.
 //
 // Tags:
@@ -912,6 +1091,7 @@ func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement) 
 		panic(errMsg)
 	}
 
+   
 	// Add the dependencies to the graph database.
 	err = graphdb.GraphDbDriver.CreateCodeGenerationRelationships(elements)
 	if err != nil {

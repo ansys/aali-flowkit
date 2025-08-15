@@ -13,8 +13,11 @@ RUN chown -R appuser:appgroup /app
 # Switch to the non-root user
 USER appuser
 
+
 # Copy the Go module files and download dependencies
 COPY --chown=appuser:appgroup go.mod go.sum ./
+# RUN go mod tidy
+# RUN go get -u ./...
 RUN go mod download
 
 # Copy the rest of the source code and build the Go service

@@ -726,6 +726,8 @@ func (graphdb_context *graphDbContext) GetExamplesFromCodeGenerationElement(elem
 	}
 
 	// Get examples
+	logging.Log.Debugf(&logging.ContextMap{}, "================ kapatil:GetExamplesFrom element: %s: %s", elementName, elementType)
+
 	query := fmt.Sprintf("MATCH (a:%v {Name: $name})<-[:Uses]-(b:Example) RETURN b.Name", elementType)
 	examples, err := aali_graphdb.CypherQueryReadGeneric[exampleName](
 		graphdb_context.client,
@@ -740,6 +742,7 @@ func (graphdb_context *graphDbContext) GetExamplesFromCodeGenerationElement(elem
 		return nil, err
 	}
 
+	logging.Log.Debugf(&logging.ContextMap{}, "=========== kapatil: Results = %d, Query:  %s", len(examples), query)
 	exampleNames = make([]string, len(examples))
 	for i, example := range examples {
 		exampleNames[i] = example.Name
@@ -790,6 +793,9 @@ func (graphdb_context *graphDbContext) GetCodeGenerationElementAndDependencies(e
 		logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
 		return nil, err
 	}
+
+	logging.Log.Debugf(&logging.ContextMap{}, "============= kapatil: GetCodeGen Elements and dep")
+	logging.Log.Debugf(&logging.ContextMap{}, "=============== kapatil: Element %d", len(elements))
 
 	return elements, nil
 }

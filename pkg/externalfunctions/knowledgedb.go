@@ -65,28 +65,59 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		logPanic(logCtx, "unable to create qdrant client: %q", err)
 	}
 
+	logging.Log.Debugf(
+		&logging.ContextMap{},
+		`********** SendVectorsToKnowledgeDB inputs: 
+			****** keywords: %v ******; 
+			****** keywordsSearch: %v ******; 
+			****** collection: %v ******; 
+			****** similaritySearchResults: %v ******; 
+			****** similaritySearchMinScore: %v ******;
+			**********`, keywords, keywordsSearch, collection, similaritySearchResults, similaritySearchMinScore)
+
 	// perform the qdrant query
-	filter := qdrant.Filter{
-		Must: []*qdrant.Condition{
-			qdrant.NewMatch("level", "leaf"),
-		},
+	// filter := qdrant.Filter{
+	// 	Must: []*qdrant.Condition{
+	// 		qdrant.NewMatch("level", "1"),
+	// 	},
+	// }
+	// if keywordsSearch {
+	// 	filter.Must = append(filter.Must, qdrant.NewMatchKeywords("keywords", keywords...))
+	// }
+
+	filter:= qdrant.Filter{
+		Should: []*qdrant.Condition{},
 	}
 	if keywordsSearch {
-		filter.Must = append(filter.Must, qdrant.NewMatchKeywords("keywords", keywords...))
-
+		filter.Should = append(filter.Should, qdrant.NewMatchPhrase("name", keywords...)) 
 	}
+
+	logging.Log.Debugf(logCtx, "********** Filter Should: %s\n", filter.Should)
+
+	logging.Log.Debugf(logCtx, "********** Filter: %s\n", filter)
+
 	limit := uint64(similaritySearchResults)
 	scoreThreshold := float32(similaritySearchMinScore)
+
+	
 	query := qdrant.QueryPoints{
 		CollectionName: collection,
 		Query:          qdrant.NewQueryDense(vector),
 		Limit:          &limit,
 		ScoreThreshold: &scoreThreshold,
 		Filter:         &filter,
+		// Filter: nil,
 		WithVectors:    qdrant.NewWithVectorsEnable(false),
 		WithPayload:    qdrant.NewWithPayloadInclude("guid", "document_id", "document_name", "summary", "keywords", "text"),
 	}
+
+	// logging.Log.Debugf(&logging.ContextMap{}, "********** Similarity search Query to Qdrant %s", query)
 	scoredPoints, err := client.Query(context.TODO(), &query)
+
+	// logging.Log.Debugf(&logging.ContextMap{}, "********** Similarity search Query to Qdrant %s **********", query)
+	logging.Log.Debugf(logCtx, "********** Querying Qdrant with collection %q, limit %d, score threshold %f\n", collection, limit, scoreThreshold)
+	logging.Log.Debugf(logCtx, "********** Found points: %s\n", scoredPoints)
+
 	if err != nil {
 		logPanic(logCtx, "error in qdrant query: %q", err)
 	}
@@ -95,14 +126,15 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	// transform qdrant result into aali type
 	dbResponses := make([]sharedtypes.DbResponse, len(scoredPoints))
 	for i, scoredPoint := range scoredPoints {
-		logging.Log.Debugf(&logging.ContextMap{}, "Result #%d:", i)
+		logging.Log.Debugf(&logging.ContextMap{}, "Result #%d:", i + 1)
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity score: %v", scoredPoint.Score)
-		dbResponse, err := qdrant_utils.QdrantPayloadToType[sharedtypes.DbResponse](scoredPoint.GetPayload())
+		dbResponse, err := qdrant_utils.QdrantPayloadToType[sharedtypes.DbResponse](scoredPoint.GetPayload())		
 		if err != nil {
 			errMsg := fmt.Sprintf("error converting qdrant payload to dbResponse: %q", err)
 			logging.Log.Errorf(logCtx, "%s", errMsg)
 			panic(errMsg)
 		}
+
 
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity file id: %v", dbResponse.DocumentId)
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity file name: %v", dbResponse.DocumentName)

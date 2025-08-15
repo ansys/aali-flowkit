@@ -267,6 +267,10 @@ func sendTokenCountToEndpoint(jwtToken string, tokenCountEndpoint string, inputT
 // Returns:
 //   - chan sharedtypes.HandlerResponse: the response channel
 func sendChatRequestNoHistory(data string, chatRequestType string, maxKeywordsSearch uint32, llmHandlerEndpoint string, modelIds []string, options *sharedtypes.ModelOptions) chan sharedtypes.HandlerResponse {
+	if chatRequestType == "keywords" {
+		data = "You are a keyword extractor, return only keywords from the following text: " + data
+	}
+
 	return sendChatRequest(data, chatRequestType, nil, maxKeywordsSearch, "", llmHandlerEndpoint, modelIds, options, nil)
 }
 
@@ -609,6 +613,8 @@ func sendRequest(adapter string, data interface{}, RequestChannel chan []byte, c
 			request.ModelOptions = *options
 		}
 	}
+
+	logging.Log.Debugf(&logging.ContextMap{}, "****** Query Request -- %s: %v********", request.ChatRequestType, request)
 
 	requestJSON, err := json.Marshal(request)
 	if err != nil {

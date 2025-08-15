@@ -73,10 +73,16 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 			****** similaritySearchMinScore: %v ******;
 			**********`, keywords, keywordsSearch, collection, similaritySearchResults, similaritySearchMinScore)
 
-
 	// Pure vector similarity search across all collection types
-	filter := qdrant.Filter{}
-	// Note: Keyword search disabled for now to ensure broad compatibility
+	filter := qdrant.Filter{
+		Should: []*qdrant.Condition{},
+	}
+	// perform the qdrant query: Phrase match on keywords
+	if keywordsSearch {
+		for _, keyword := range keywords {
+			filter.Should = append(filter.Should, qdrant.NewMatchPhrase("name", keyword))
+		}
+	}
 
 	limit := uint64(similaritySearchResults)
 	scoreThreshold := float32(similaritySearchMinScore)
@@ -128,11 +134,6 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 
 	// Execute query
 	scoredPoints, err := client.Query(context.TODO(), &query)
-
-	// logging.Log.Debugf(&logging.ContextMap{}, "********** Similarity search Query to Qdrant %s **********", query)
-	// logging.Log.Debugf(logCtx, "********** Querying Qdrant with collection %q, limit %d, score threshold %f\n", collection, limit, scoreThreshold)
-	// logging.Log.Debugf(logCtx, "********** Found points: %s\n", scoredPoints)
-
 	if err != nil {
 		logPanic(logCtx, "error in qdrant query: %q", err)
 	}
@@ -140,15 +141,14 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	// Transform results
 	dbResponses := make([]sharedtypes.DbResponse, len(scoredPoints))
 	for i, scoredPoint := range scoredPoints {
-		logging.Log.Debugf(&logging.ContextMap{}, "Result #%d:", i + 1)
+		logging.Log.Debugf(&logging.ContextMap{}, "Result #%d:", i+1)
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity score: %v", scoredPoint.Score)
-		dbResponse, err := qdrant_utils.QdrantPayloadToType[sharedtypes.DbResponse](scoredPoint.GetPayload())		
+		dbResponse, err := qdrant_utils.QdrantPayloadToType[sharedtypes.DbResponse](scoredPoint.GetPayload())
 		if err != nil {
 			errMsg := fmt.Sprintf("error converting qdrant payload to dbResponse: %q", err)
 			logging.Log.Errorf(logCtx, "%s", errMsg)
 			panic(errMsg)
 		}
-
 
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity file id: %v", dbResponse.DocumentId)
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity file name: %v", dbResponse.DocumentName)

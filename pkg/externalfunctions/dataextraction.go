@@ -723,6 +723,7 @@ func LoadCodeGenerationElements(content []byte, elementsFilePath string) (elemen
 			dependencies = strings.Split(dependencies[0], ".")
 			dependencies = dependencies[:len(dependencies)-1]
 			element.Dependencies = dependencies
+			logging.Log.Debugf(&logging.ContextMap{}, "kapatil: reading pyaedtgroup %s",element.PyaedtGroup)
 
 		case "P":
 			element.Type = sharedtypes.CodeGenerationType(sharedtypes.Parameter)

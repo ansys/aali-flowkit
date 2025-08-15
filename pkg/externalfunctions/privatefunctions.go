@@ -612,7 +612,7 @@ func sendRequest(adapter string, data interface{}, RequestChannel chan []byte, c
 	}
 
 	requestJSON, err := json.Marshal(request)
-	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: request Json %s", requestJSON)
+	//logging.Log.Debugf(&logging.ContextMap{}, "kapatil: request Json %s", requestJSON)
 	if err != nil {
 		errMessage := fmt.Sprintf("failed to marshal request to aali-llm: %v", err)
 		logging.Log.Error(&logging.ContextMap{}, errMessage)

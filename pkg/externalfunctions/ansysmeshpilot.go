@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/ansys/aali-sharedtypes/pkg/config"
@@ -802,7 +803,7 @@ func SynthesizeActionsTool17(content string) (result string) {
 	}
 
 	result = string(resultStream)
-	logging.Log.Infof(ctx, "SynthesizeActionsTool14 result: %s", result)
+	logging.Log.Infof(ctx, "SynthesizeActionsTool17 result: %s", result)
 	logging.Log.Infof(ctx, "successfully synthesized actions for tool 17")
 
 	return result
@@ -1701,6 +1702,116 @@ func ParseHistoryToHistoricMessages(historyJson string) (history []sharedtypes.H
 		})
 	}
 	return history
+}
+
+// ParseSlashCommand retrieves the Slash Input from the input string.
+//
+// Tags:
+//   - @displayName: ParseSlashCommand
+//
+// Parameters:
+//   - userInput: the input string containing the Slash Input message in JSON format
+//
+// Returns:
+//   - slashCmd: the slash command if found, otherwise an empty string
+//   - targetCmd: the target command if found, otherwise an empty string
+//   - hasCmd: boolean indicating if a slash command or target command was found
+func ParseSlashCommand(userInput string) (slashCmd, targetCmd string, hasCmd bool) {
+
+	targetRe := regexp.MustCompile(`@[A-Za-z][\w]*`)
+	slashRe := regexp.MustCompile(`/[A-Za-z][\w]*`)
+
+	target := targetRe.FindString(userInput)
+	slash := slashRe.FindString(userInput)
+
+	if target != "" {
+		target = target[1:]
+	}
+	if slash != "" {
+		slash = slash[1:]
+	}
+
+	switch {
+	case slash != "" && target != "":
+		hasCmd = true
+	case slash != "" && target == "":
+		hasCmd = true
+	default:
+		hasCmd = false
+	}
+
+	logging.Log.Debugf(&logging.ContextMap{}, "User Command: Slash: %s, Target: %s, Has Command: %t", slash, target, hasCmd)
+
+	return slash, target, hasCmd
+}
+
+// SynthesizeSlashCommand synthesize actions based on user instruction
+//
+// Tags:
+//   - @displayName: SynthesizeSlashCommand
+//
+// Parameters:
+//   - slashCmd: the slash command
+//   - targetCmd: the target command
+//
+// Returns:
+//   - result: the synthesized string
+func SynthesizeSlashCommand(slashCmd, targetCmd string) (result string) {
+	ctx := &logging.ContextMap{}
+
+	message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_17_SUCCESS_MESSAGE"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_ACTION_TOOL_17_SUCCESS_MESSAGE from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actionKey1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_KEY_1"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_KEY_1 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actionKey2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_KEY_2"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_KEY_2 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actionValue2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_TARGET_1"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_TARGET_1 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actions := []map[string]string{
+		{
+			actionKey1: targetCmd,
+			actionKey2: actionValue2,
+			"Argument": slashCmd,
+		},
+	}
+
+	finalMessage := map[string]interface{}{
+		"Message": message,
+		"Actions": actions,
+	}
+
+	resultStream, err := json.Marshal(finalMessage)
+	if err != nil {
+		errorMessage := fmt.Sprintf("failed to marshal final message for tool 17: %v", err)
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	result = string(resultStream)
+	logging.Log.Infof(ctx, "SynthesizeSlashCommand result: %s", result)
+	logging.Log.Infof(ctx, "successfully synthesized slash command")
+
+	return result
 }
 
 // GenerateActionsSubWorkflowPrompt generates system and user prompts for subworkflow identification.

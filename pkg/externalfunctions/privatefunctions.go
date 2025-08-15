@@ -28,6 +28,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -37,7 +38,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -2511,17 +2511,32 @@ func mongoDbGetCreateCustomerByUserId(mongoDbContext *MongoDbContext, userId str
 	// get current timestamp in seconds
 	timestamp := time.Now().Unix()
 
+	// get model id
+	var modelIdString string
+	if len(modelId) == 1 {
+		modelIdString = modelId[0]
+	} else {
+		return false, customer, errors.New("none or multiple modelIds provided; only one modelId is allowed")
+	}
+
 	// if customer does not exist, create it
 	if !existingUser {
+		// create model id token count dict
+		modelIdTokenCountDict := map[string]MongoDbTokenCountObjectDisco{
+			modelIdString: {
+				InputTokenCount:     0,
+				OutputTokenCount:    0,
+				TokenLimit:          temporaryTokenLimit,
+				TokenLimitTimestamp: timestamp,
+			},
+		}
+
+		// create customer
 		customer = &MongoDbCustomerObjectDisco{
-			UserId:              userId,
-			AccessDenied:        false,
-			ModelId:             modelId,
-			InputTokenCount:     0,
-			OutputTokenCount:    0,
-			TokenLimit:          temporaryTokenLimit,
-			TokenLimitTimestamp: timestamp,
-			WarningSent:         false,
+			UserId:                userId,
+			AccessDenied:          false,
+			ModelIdTokenCountDict: modelIdTokenCountDict,
+			WarningSent:           false,
 		}
 
 		// Insert the new customer document
@@ -2530,35 +2545,39 @@ func mongoDbGetCreateCustomerByUserId(mongoDbContext *MongoDbContext, userId str
 			return false, customer, fmt.Errorf("failed to insert new customer: %v", err)
 		}
 	} else {
-		// check if model Id needs to be updated
-		if !slices.Equal(customer.ModelId, modelId) {
-			// update model Id
-			update := bson.M{
-				"$set": bson.M{
-					"model_id": modelId,
-				},
+		var updateNeeded bool
+		// check if model id already exists in model id token count dict
+		tokenCountObject, exists := customer.ModelIdTokenCountDict[modelIdString]
+		if exists {
+			// check if token limit timestamp needs to be reset
+			if time.Since(time.Unix(tokenCountObject.TokenLimitTimestamp, 0)) > time.Duration(hoursUntilTokenLimitReset)*time.Hour {
+				updateNeeded = true
+				// update exiting token count object
+				tokenCountObject.InputTokenCount = 0
+				tokenCountObject.OutputTokenCount = 0
+				tokenCountObject.TokenLimitTimestamp = timestamp
+				customer.ModelIdTokenCountDict[modelIdString] = tokenCountObject
 			}
-
-			// Update the document
-			result, err := mongoDbContext.Collection.UpdateOne(context.Background(), filter, update)
-			if err != nil {
-				return false, customer, fmt.Errorf("failed to update token usage: %v", err)
+		} else {
+			updateNeeded = true
+			if customer.ModelIdTokenCountDict == nil {
+				customer.ModelIdTokenCountDict = make(map[string]MongoDbTokenCountObjectDisco, 1)
 			}
-
-			// Check if the document was updated
-			if result.MatchedCount == 0 {
-				return false, customer, fmt.Errorf("no customer found with id: %s", userId)
+			// add token count object
+			customer.ModelIdTokenCountDict[modelIdString] = MongoDbTokenCountObjectDisco{
+				InputTokenCount:     0,
+				OutputTokenCount:    0,
+				TokenLimit:          temporaryTokenLimit,
+				TokenLimitTimestamp: timestamp,
 			}
 		}
 
-		// check if token limit timestamp needs to be reset
-		if time.Since(time.Unix(customer.TokenLimitTimestamp, 0)) > time.Duration(hoursUntilTokenLimitReset)*time.Hour {
-			// update timestamp and reset token counts
+		// check if model Id needs to be updated
+		if updateNeeded {
+			// update model id token count dict
 			update := bson.M{
 				"$set": bson.M{
-					"token_limit_timestamp": timestamp,
-					"input_token_count":     0,
-					"output_token_count":    0,
+					"model_id_token_count_dict": customer.ModelIdTokenCountDict,
 				},
 			}
 
@@ -2620,7 +2639,7 @@ func mongoDbAddToTotalTokenCount(mongoDbContext *MongoDbContext, indetificationK
 //
 // Returns:
 //   - err: An error if any.
-func mongoDbAddToInputOutputTokenCountAndCheckLimit(mongoDbContext *MongoDbContext, userId string, additionalInputTokenCount int, additionalOutputTokenCount int, hoursUntilTokenLimitReset int) (tokenLimitReached bool, err error) {
+func mongoDbAddToInputOutputTokenCountAndCheckLimit(mongoDbContext *MongoDbContext, userId string, additionalInputTokenCount int, additionalOutputTokenCount int, hoursUntilTokenLimitReset int, modelId []string) (tokenLimitReached bool, err error) {
 	// Create filter for API key
 	filter := bson.M{"user_id": userId}
 
@@ -2631,34 +2650,36 @@ func mongoDbAddToInputOutputTokenCountAndCheckLimit(mongoDbContext *MongoDbConte
 		return false, fmt.Errorf("error in finding mongoDb document: %v", err)
 	}
 
-	// check if token limit timestamp needs to be reset
-	if time.Since(time.Unix(customer.TokenLimitTimestamp, 0)) > time.Duration(hoursUntilTokenLimitReset)*time.Hour {
-		// update timestamp and reset token counts
-		update := bson.M{
-			"$set": bson.M{
-				"token_limit_timestamp": time.Now().Unix(),
-				"input_token_count":     0,
-				"output_token_count":    0,
-			},
-		}
-
-		// Update the document
-		result, err := mongoDbContext.Collection.UpdateOne(context.Background(), filter, update)
-		if err != nil {
-			return false, fmt.Errorf("failed to update token usage: %v", err)
-		}
-
-		// Check if the document was updated
-		if result.MatchedCount == 0 {
-			return false, fmt.Errorf("no customer found with id: %s", userId)
-		}
+	// get model id
+	var modelIdString string
+	if len(modelId) == 1 {
+		modelIdString = modelId[0]
+	} else {
+		return false, errors.New("none or multiple modelIds provided; only one modelId is allowed")
 	}
 
-	// Create filter for API key & update for total token count
+	// check if model id already exists in model id token count dict
+	tokenCountObject, exists := customer.ModelIdTokenCountDict[modelIdString]
+	if !exists {
+		return false, fmt.Errorf("modelId '%v' not found for customer '%v'", modelIdString, customer.UserId)
+	}
+	// check if token limit timestamp needs to be reset
+	if time.Since(time.Unix(tokenCountObject.TokenLimitTimestamp, 0)) > time.Duration(hoursUntilTokenLimitReset)*time.Hour {
+		// reset exiting token count object
+		tokenCountObject.InputTokenCount = 0
+		tokenCountObject.OutputTokenCount = 0
+		tokenCountObject.TokenLimitTimestamp = time.Now().Unix()
+	}
+
+	// add input and output tokens
+	tokenCountObject.InputTokenCount += additionalInputTokenCount
+	tokenCountObject.OutputTokenCount += additionalOutputTokenCount
+	customer.ModelIdTokenCountDict[modelIdString] = tokenCountObject
+
+	// update model id token count dict
 	update := bson.M{
-		"$inc": bson.M{
-			"input_token_count":  additionalInputTokenCount,
-			"output_token_count": additionalOutputTokenCount,
+		"$set": bson.M{
+			"model_id_token_count_dict": customer.ModelIdTokenCountDict,
 		},
 	}
 
@@ -2673,7 +2694,8 @@ func mongoDbAddToInputOutputTokenCountAndCheckLimit(mongoDbContext *MongoDbConte
 		return false, fmt.Errorf("no customer found with id: %s", userId)
 	}
 
-	if (customer.InputTokenCount + customer.OutputTokenCount) >= customer.TokenLimit {
+	// check if token limit was reached
+	if (tokenCountObject.InputTokenCount + tokenCountObject.OutputTokenCount) >= tokenCountObject.TokenLimit {
 		return true, nil
 	}
 

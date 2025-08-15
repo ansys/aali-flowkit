@@ -26,7 +26,9 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"reflect"
+	"strings"
 
 	"github.com/ansys/aali-flowkit/pkg/externalfunctions"
 	"github.com/ansys/aali-sharedtypes/pkg/aaliflowkitgrpc"
@@ -125,6 +127,46 @@ func apiKeyAuthInterceptor(apiKey string) grpc.UnaryServerInterceptor {
 	}
 }
 
+// HealthCheck checks the health of the gRPC server
+//
+// Parameters:
+// - ctx: the context of the request
+// - req: the request to check the health of the server
+//
+// Returns:
+// - aaliflowkitgrpc.HealthCheckResponse: a response indicating the health of the server
+// - error: an error if the health check fails
+func (s *server) HealthCheck(ctx context.Context, req *aaliflowkitgrpc.HealthRequest) (*aaliflowkitgrpc.HealthResponse, error) {
+	// return a successful health check response
+	return &aaliflowkitgrpc.HealthResponse{
+		Status: "OK",
+	}, nil
+}
+
+// GetVersion returns the version of the Aali FlowKit server
+//
+// Parameters:
+// - ctx: the context of the request
+// - req: the request to get the version of the server
+//
+// Returns:
+// - aaliflowkitgrpc.VersionResponse: a response containing the version of the server
+// - error: an error if the version retrieval fails
+func (s *server) GetVersion(ctx context.Context, req *aaliflowkitgrpc.VersionRequest) (*aaliflowkitgrpc.VersionResponse, error) {
+	// Get the version from the file
+	version := getAaliFlowktiVersion(&logging.ContextMap{})
+
+	// If the version is empty, return an error
+	if version == "" {
+		return nil, status.Errorf(codes.Internal, "failed to retrieve version")
+	}
+
+	// Return the version response
+	return &aaliflowkitgrpc.VersionResponse{
+		Version: version,
+	}, nil
+}
+
 // ListFunctions lists all available function from the external functions package
 //
 // Parameters:
@@ -198,8 +240,28 @@ func (s *server) RunFunction(ctx context.Context, req *aaliflowkitgrpc.FunctionI
 
 	// Prepare arguments for the function
 	args := []reflect.Value{}
-	for _, input := range inputs {
-		args = append(args, reflect.ValueOf(input))
+	for i, input := range inputs {
+		if input == nil && i < len(functionDefinition.Input) {
+			// Handle missing parameters with standard datatype defaults
+			expectedType := functionDefinition.Input[i].GoType
+			switch expectedType {
+			case "bool":
+				args = append(args, reflect.ValueOf(false))
+			case "int":
+				args = append(args, reflect.ValueOf(0))
+			case "string":
+				args = append(args, reflect.ValueOf(""))
+			case "float64":
+				args = append(args, reflect.ValueOf(0.0))
+			case "map[uint]float32":
+				args = append(args, reflect.ValueOf(make(map[uint]float32)))
+			default:
+				// Catch-all default for other types
+				args = append(args, reflect.Zero(reflect.TypeOf(input)))
+			}
+		} else {
+			args = append(args, reflect.ValueOf(input))
+		}
 	}
 
 	// Call the function
@@ -283,8 +345,28 @@ func (s *server) StreamFunction(req *aaliflowkitgrpc.FunctionInputs, stream aali
 
 	// Prepare arguments for the function
 	args := []reflect.Value{}
-	for _, input := range inputs {
-		args = append(args, reflect.ValueOf(input))
+	for i, input := range inputs {
+		if input == nil && i < len(functionDefinition.Input) {
+			// Handle missing parameters with standard datatype defaults
+			expectedType := functionDefinition.Input[i].GoType
+			switch expectedType {
+			case "bool":
+				args = append(args, reflect.ValueOf(false))
+			case "int":
+				args = append(args, reflect.ValueOf(0))
+			case "string":
+				args = append(args, reflect.ValueOf(""))
+			case "float64":
+				args = append(args, reflect.ValueOf(0.0))
+			case "map[uint]float32":
+				args = append(args, reflect.ValueOf(make(map[uint]float32)))
+			default:
+				// Catch-all default for other types
+				args = append(args, reflect.Zero(reflect.TypeOf(input)))
+			}
+		} else {
+			args = append(args, reflect.ValueOf(input))
+		}
 	}
 
 	// Call the function
@@ -371,4 +453,21 @@ func convertOptionSetValues(functionName string, inputName string, inputValue in
 	}
 
 	return nil, fmt.Errorf("unsupported function: '%s'", functionName)
+}
+
+// getAaliFlowktiVersion reads the agent's version from a file and returns the value.
+//
+// Returns:
+//   - string: Version
+func getAaliFlowktiVersion(ctx *logging.ContextMap) string {
+	// Read the version from a file; the file is expected to be at ROOT level and called VERSION
+	file := "VERSION"
+	versionFile, err := os.ReadFile(file)
+	if err != nil {
+		logging.Log.Errorf(ctx, "Error reading version file: %s\n", err)
+		return ""
+	}
+
+	version := strings.TrimSpace(string(versionFile))
+	return version
 }

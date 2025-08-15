@@ -614,7 +614,7 @@ func sendRequest(adapter string, data interface{}, RequestChannel chan []byte, c
 		}
 	}
 
-	logging.Log.Debugf(&logging.ContextMap{}, "****** Query Request -- %s: %v********", request.ChatRequestType, request)
+	// logging.Log.Debugf(&logging.ContextMap{}, "****** Query Request -- %s: %v********", request.ChatRequestType, request)
 
 	requestJSON, err := json.Marshal(request)
 	if err != nil {

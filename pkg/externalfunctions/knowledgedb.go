@@ -85,16 +85,17 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	// 	filter.Must = append(filter.Must, qdrant.NewMatchKeywords("keywords", keywords...))
 	// }
 
-	filter:= qdrant.Filter{
-		Should: []*qdrant.Condition{},
-	}
-	if keywordsSearch {
-		filter.Should = append(filter.Should, qdrant.NewMatchPhrase("name", keywords...)) 
-	}
+	// // perform the qdrant query: Phrase match on keywords
+	// filter:= qdrant.Filter{
+	// 	Should: []*qdrant.Condition{},
+	// }
+	// if keywordsSearch {
+	// 	filter.Should = append(filter.Should, qdrant.NewMatchPhrase("name", keywords...)) 
+	// }
 
-	logging.Log.Debugf(logCtx, "********** Filter Should: %s\n", filter.Should)
+	// logging.Log.Debugf(logCtx, "********** Filter Should: %s\n", filter.Should)
 
-	logging.Log.Debugf(logCtx, "********** Filter: %s\n", filter)
+	// logging.Log.Debugf(logCtx, "********** Filter: %s\n", filter)
 
 	limit := uint64(similaritySearchResults)
 	scoreThreshold := float32(similaritySearchMinScore)
@@ -105,8 +106,8 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		Query:          qdrant.NewQueryDense(vector),
 		Limit:          &limit,
 		ScoreThreshold: &scoreThreshold,
-		Filter:         &filter,
-		// Filter: nil,
+		// Filter:         &filter,
+		Filter: nil,
 		WithVectors:    qdrant.NewWithVectorsEnable(false),
 		WithPayload:    qdrant.NewWithPayloadInclude("guid", "document_id", "document_name", "summary", "keywords", "text"),
 	}
@@ -115,8 +116,8 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	scoredPoints, err := client.Query(context.TODO(), &query)
 
 	// logging.Log.Debugf(&logging.ContextMap{}, "********** Similarity search Query to Qdrant %s **********", query)
-	logging.Log.Debugf(logCtx, "********** Querying Qdrant with collection %q, limit %d, score threshold %f\n", collection, limit, scoreThreshold)
-	logging.Log.Debugf(logCtx, "********** Found points: %s\n", scoredPoints)
+	// logging.Log.Debugf(logCtx, "********** Querying Qdrant with collection %q, limit %d, score threshold %f\n", collection, limit, scoreThreshold)
+	// logging.Log.Debugf(logCtx, "********** Found points: %s\n", scoredPoints)
 
 	if err != nil {
 		logPanic(logCtx, "error in qdrant query: %q", err)

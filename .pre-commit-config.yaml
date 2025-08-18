@@ -1,4 +1,4 @@
-exclude: ^(pkg/grpcdefinition)
+exclude: ^(pkg/grpcdefinition|VERSION)$
 
 repos:
 - repo: https://github.com/ansys/pre-commit-hooks

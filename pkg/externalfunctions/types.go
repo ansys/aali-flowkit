@@ -205,6 +205,8 @@ type AnsysGPTRetrieverModuleRequest struct {
 	UserInput     string `json:"user_input"`
 	DataSource    string `json:"data_source"`
 	FilterPhysics string `json:"filter_physics"`
+	FilterVersion string `json:"filter_version,omitempty"`
+	FilterProduct string `json:"filter_product,omitempty"`
 	NumDocs       int    `json:"num_docs"`
 	Platform      string `json:"platform"`
 }
@@ -275,14 +277,17 @@ type MongoDbCustomerObject struct {
 }
 
 type MongoDbCustomerObjectDisco struct {
-	UserId              string   `bson:"user_id"`
-	AccessDenied        bool     `bson:"access_denied"`
-	ModelId             []string `bson:"model_id"`
-	InputTokenCount     int      `bson:"input_token_count"`
-	OutputTokenCount    int      `bson:"output_token_count"`
-	TokenLimit          int      `bson:"token_limit"`
-	TokenLimitTimestamp int64    `bson:"token_limit_timestamp"`
-	WarningSent         bool     `bson:"warning_sent"`
+	UserId                string                                  `bson:"user_id"`
+	AccessDenied          bool                                    `bson:"access_denied"`
+	ModelIdTokenCountDict map[string]MongoDbTokenCountObjectDisco `bson:"model_id_token_count_dict"`
+	WarningSent           bool                                    `bson:"warning_sent"`
+}
+
+type MongoDbTokenCountObjectDisco struct {
+	InputTokenCount     int   `bson:"input_token_count"`
+	OutputTokenCount    int   `bson:"output_token_count"`
+	TokenLimit          int   `bson:"token_limit"`
+	TokenLimitTimestamp int64 `bson:"token_limit_timestamp"`
 }
 
 // EmailRequest represents the structure of the POST request body

@@ -1716,7 +1716,7 @@ func ParseHistoryToHistoricMessages(historyJson string) (history []sharedtypes.H
 //   - slashCmd: the slash command if found, otherwise an empty string
 //   - targetCmd: the target command if found, otherwise an empty string
 //   - hasCmd: boolean indicating if a slash command or target command was found
-func ParseSlashCommand(userInput string) (slashCmd, targetCmd string, hasCmd bool) {
+func ParseSlashCommand(userInput string) (slashCmd, targetCmd string, hasCmd bool, hasContext bool) {
 
 	targetRe := regexp.MustCompile(`@[A-Za-z][\w]*`)
 	slashRe := regexp.MustCompile(`/[A-Za-z][\w]*`)
@@ -1740,9 +1740,12 @@ func ParseSlashCommand(userInput string) (slashCmd, targetCmd string, hasCmd boo
 		hasCmd = false
 	}
 
-	logging.Log.Debugf(&logging.ContextMap{}, "User Command: Slash: %s, Target: %s, Has Command: %t", slash, target, hasCmd)
+	remaining := strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(userInput, "/"+slash, ""), "@"+target, ""))
+	hasContext = remaining != ""
 
-	return slash, target, hasCmd
+	logging.Log.Debugf(&logging.ContextMap{}, "User Command: Slash: %s, Target: %s, Has Command: %t, Has Context: %t, Remaining: %s", slash, target, hasCmd, hasContext, remaining)
+
+	return slash, target, hasCmd, hasContext
 }
 
 // SynthesizeSlashCommand synthesize actions based on user instruction
@@ -1756,7 +1759,7 @@ func ParseSlashCommand(userInput string) (slashCmd, targetCmd string, hasCmd boo
 //
 // Returns:
 //   - result: the synthesized string
-func SynthesizeSlashCommand(slashCmd, targetCmd string) (result string) {
+func SynthesizeSlashCommand(slashCmd, targetCmd, finalizeResult string) (result string) {
 	ctx := &logging.ContextMap{}
 
 	message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_17_SUCCESS_MESSAGE"]
@@ -1787,12 +1790,41 @@ func SynthesizeSlashCommand(slashCmd, targetCmd string) (result string) {
 		panic(errorMessage)
 	}
 
-	actions := []map[string]string{
-		{
-			actionKey1: targetCmd,
-			actionKey2: actionValue2,
-			"Argument": slashCmd,
-		},
+	var actions []map[string]string
+
+	if finalizeResult != "" {
+		var parsedResult map[string]interface{}
+		err := json.Unmarshal([]byte(finalizeResult), &parsedResult)
+		if err != nil {
+			errorMessage := fmt.Sprintf("failed to unmarshal finalizeResult: %v", err)
+			logging.Log.Error(ctx, errorMessage)
+			panic(errorMessage)
+		}
+
+		if parsedActions, ok := parsedResult["Actions"].([]interface{}); ok {
+			for _, action := range parsedActions {
+				if actionMap, ok := action.(map[string]interface{}); ok {
+					updatedAction := map[string]string{}
+					for k, v := range actionMap {
+						if strVal, ok := v.(string); ok {
+							updatedAction[k] = strVal
+						}
+					}
+					updatedAction[actionKey1] = targetCmd
+					updatedAction[actionKey2] = actionValue2
+					updatedAction["Argument"] = slashCmd
+					actions = append(actions, updatedAction)
+				}
+			}
+		}
+	} else {
+		actions = []map[string]string{
+			{
+				actionKey1: targetCmd,
+				actionKey2: actionValue2,
+				"Argument": slashCmd,
+			},
+		}
 	}
 
 	finalMessage := map[string]interface{}{
@@ -1802,7 +1834,7 @@ func SynthesizeSlashCommand(slashCmd, targetCmd string) (result string) {
 
 	resultStream, err := json.Marshal(finalMessage)
 	if err != nil {
-		errorMessage := fmt.Sprintf("failed to marshal final message for tool 17: %v", err)
+		errorMessage := fmt.Sprintf("failed to marshal final message: %v", err)
 		logging.Log.Error(ctx, errorMessage)
 		panic(errorMessage)
 	}

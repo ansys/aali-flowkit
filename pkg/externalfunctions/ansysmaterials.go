@@ -785,3 +785,21 @@ func AddAvailableAttributesToSystemPrompt(userDesignRequirements string, systemP
 	logging.Log.Debugf(ctx, "Successfully created system prompt with %d attributes", len(filteredAttributes))
 	return fullSystemPrompt, childSpanID
 }
+
+// SendLogicAppNotificationEmailToMultipleEmails sends the same email to multiple email addresses
+//
+// Tags:
+//   - @displayName: Send Email to multiple email addresses
+//
+// Parameters:
+//   - logicAppEndpoint: The Logic App email service endpoint
+//   - emails: Array of email addresses to send to
+//   - subject: The email subject
+//   - content: The email content
+func SendLogicAppNotificationEmailToMultipleEmails(logicAppEndpoint string, emails []string, subject string, content string) {
+	for _, email := range emails {
+		if email != "" {
+			SendLogicAppNotificationEmail(logicAppEndpoint, email, subject, content)
+		}
+	}
+}

@@ -322,7 +322,7 @@ func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(inp
 
 	// Helper function to send a request and get the response as string
 	sendRequest := func() string {
-		responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil)
+		responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil, nil)
 		defer close(responseChannel)
 
 		var responseStr string

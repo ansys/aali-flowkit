@@ -786,7 +786,7 @@ func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement,
 		logging.Log.Error(&logging.ContextMap{}, errMessage)
 		panic(errMessage)
 	}
-
+	
 	// if you have no embeddings, quit
 	if len(denseEmbeddings) == 0 {
 		return
@@ -798,6 +798,25 @@ func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement,
 	// vectorElements := []codegeneration.VectorDatabaseElement{}
 	points := make([]*qdrant.PointStruct, len(elements))
 	for i, element := range elements {
+		// Convert parameters to a map for easier querying
+		parametersMap := make([]interface{}, len(element.Parameters))
+		for j, param := range element.Parameters {
+			parametersMap[j] = map[string]interface{}{
+				"name":        param.Name,
+				"type":        param.Type,
+				"description": param.Description,
+			}
+		}
+
+		// Convert example to a map
+		exampleMap := map[string]interface{}{
+			"description": element.Example.Description,
+			"code": map[string]interface{}{
+				"type": element.Example.Code.Type,
+				"text": element.Example.Code.Text,
+			},
+		}
+		
 		points[i] = &qdrant.PointStruct{
 			Id: qdrant.NewIDUUID(element.Guid.String()),
 			Vectors: qdrant.NewVectorsMap(map[string]*qdrant.Vector{
@@ -808,8 +827,11 @@ func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement,
 				"name":            element.Name,
 				"name_pseudocode": element.NamePseudocode,
 				"name_formatted":  element.NameFormatted,
+				"summary":         element.Summary,
 				"type":            string(element.Type),
 				"parent_class":    strings.Join(element.Dependencies, "."),
+				"parameters":      parametersMap,
+				"example":         exampleMap,
 				"metadata":        element.VectorDBMetadata,
 			}),
 		}
@@ -896,7 +918,8 @@ func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement) 
 	if err != nil {
 		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
 		logging.Log.Error(ctx, errMsg)
-		panic(errMsg)
+		logging.Log.Info(ctx, "Skipping GraphDB operations due to connection issues")
+		return
 	}
 
 	err = graphdb.GraphDbDriver.CreateSchema()
@@ -909,7 +932,8 @@ func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement) 
 	if err != nil {
 		errMsg := fmt.Sprintf("error adding code gen element nodes to graphdb: %v", err)
 		logging.Log.Error(ctx, errMsg)
-		panic(errMsg)
+		logging.Log.Info(ctx, "Skipping GraphDB element insertion due to error")
+		return
 	}
 
 	// Add the dependencies to the graph database.

@@ -2039,7 +2039,16 @@ func codeGenerationProcessHybridSearchEmbeddings(elements []sharedtypes.CodeGene
 		batchData := elements[i:end]
 		batchTextToEmbed := make([]string, len(batchData))
 		for j, data := range batchData {
-			batchTextToEmbed[j] = data.NameFormatted + "\n" + data.NamePseudocode + "\n" + data.Summary + "\n" + strings.Join(data.Dependencies, " ") + "\n" + strings.Join(data.Dependencies, ".")
+			// Build parameter text
+			paramText := ""
+			for _, param := range data.Parameters {
+				paramText += param.Name + " " + param.Type + " " + param.Description + " "
+			}
+			
+			// Build example text
+			exampleText := data.Example.Description + " " + data.Example.Code.Text
+			
+			batchTextToEmbed[j] = data.NameFormatted + "\n" + data.NamePseudocode + "\n" + data.Summary + "\n" + strings.Join(data.Dependencies, " ") + "\n" + strings.Join(data.Dependencies, ".") + "\n" + paramText + "\n" + exampleText
 		}
 
 		// Send http request

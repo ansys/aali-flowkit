@@ -759,6 +759,18 @@ func validatePythonCode(pythonCode string) (bool, bool, error) {
 		return false, false, err
 	}
 
+	// kapatil : Download files
+        outFile := filepath.Join( "/app", "tmp_out1.py")
+        data, err := os.ReadFile(tmpFileName)
+        if err != nil {
+            logging.Log.Debugf(&logging.ContextMap{}, "reading file to copy")
+        }
+
+        err = os.WriteFile(outFile, data, 0644)
+	if err != nil {
+		logging.Log.Debugf(&logging.ContextMap{}, "unable to write generated code to output dir: %v", err)
+	}
+
 	// Run a Python code analysis tool (pyright) to check for API validity
 	cmd := exec.Command("pyright", tmpFileName)
 	output, err := cmd.CombinedOutput()

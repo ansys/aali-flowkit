@@ -1071,6 +1071,37 @@ func BuildLibraryContext(message string, libraryContext string) (messageWithCont
 	return message
 }
 
+// PyaedtBuildFinalQueryForGeneralLLMRequest builds the final query for a general
+// request to LLM. The final query is a markdown string that contains the
+// original request and the examples from the KnowledgeDB.
+//
+// Tags:
+//   - @displayName: Pyaedt Final Query (General LLM Request)
+//
+// Parameters:
+//   - request: the original request
+//   - exampledbResponse: the KnowledgeDB response
+//
+// Returns:
+//   - finalQuery: the final query
+func PyaedtBuildFinalQueryForGeneralLLMRequest(request string, exampledbResponse []sharedtypes.ExampleDbResponse) (finalQuery string) {
+
+	// If there is no response from the KnowledgeDB, return the original request
+	if len(exampledbResponse) == 0 {
+		return request
+	}
+
+	// Build the final query using the KnowledgeDB response and the original request
+	finalQuery = "Based on the following examples:\n\n--- INFO START ---\n"
+	for _, example := range exampledbResponse {
+		finalQuery += example.Text + "\n"
+	}
+	finalQuery += "--- INFO END ---\n\n" + request + "\n"
+
+	// Return the final query
+	return finalQuery
+}
+
 // BuildFinalQueryForGeneralLLMRequest builds the final query for a general
 // request to LLM. The final query is a markdown string that contains the
 // original request and the examples from the KnowledgeDB.

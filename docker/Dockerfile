@@ -14,9 +14,6 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 # Copy the Go module files and download dependencies
-RUN go clean -modcache # uncomment after the first run
-RUN go mod tidy
-RUN go get -u ./...
 COPY --chown=appuser:appgroup go.mod go.sum ./
 RUN go mod download
 

@@ -192,7 +192,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,
 	//"MaterialsTestFunc": MaterialsTestFunc,
 
-	//pyaedt
-	//"GetExamplesForElement": GetExamplesForElement,
+	// pyaedt
+	"GetElementContextFromGraphDb": GetElementContextFromGraphDb, 
 
 }

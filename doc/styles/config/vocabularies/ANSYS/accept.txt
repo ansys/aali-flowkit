@@ -69,6 +69,7 @@ mcp
 rhsc
 Systemd
 config
+pyaedt
 
 # API Parameter Names
 collectionName

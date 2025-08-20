@@ -32,6 +32,16 @@ github.com/andybalholm/cascadia v1.3.2 h1:3Xi6Dw5lHF15JtdcmAHD3i1+T8plmv7BQ/nsVi
 github.com/andybalholm/cascadia v1.3.2/go.mod h1:7gtRlve5FxPPgIgX36uWBX58OdBsSS6lUvCFb+h7KvU=
 github.com/ansys/aali-sharedtypes v1.0.4-0.20250812152015-1a2272e3b910 h1:+m3OFXnCZlqSo2jptPpREL3xktmzlqOenu50j/J9f7k=
 github.com/ansys/aali-sharedtypes v1.0.4-0.20250812152015-1a2272e3b910/go.mod h1:cWfGDKNuQQdQzVoRGaz5nLUopFGUME1vHUlgAf8KCxQ=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250815220746-7fdff2c4b6bb h1:eNz18ihgqhZ9QFtZuo8U2fm6k7t4hOXr/vrTOppgw2g=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250815220746-7fdff2c4b6bb/go.mod h1:cWfGDKNuQQdQzVoRGaz5nLUopFGUME1vHUlgAf8KCxQ=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250816043029-c57b31c952d4 h1:lXcqPbpPd+PDf08+2xCawmVg6y/P+RvKr1/CkQk/8Jw=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250816043029-c57b31c952d4/go.mod h1:cWfGDKNuQQdQzVoRGaz5nLUopFGUME1vHUlgAf8KCxQ=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250818175701-1f4480231a88 h1:GTVj5ADdOM2v4zCVN2Fbk6nObvsViS8dWj1Yu1gPIjw=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250818175701-1f4480231a88/go.mod h1:cWfGDKNuQQdQzVoRGaz5nLUopFGUME1vHUlgAf8KCxQ=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250819081505-2e3ccce5d4ad h1:DPf02KKYu6k8nIy4YYmEccjgHC4H8enh6+tzUv/sgtU=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250819081505-2e3ccce5d4ad/go.mod h1:cWfGDKNuQQdQzVoRGaz5nLUopFGUME1vHUlgAf8KCxQ=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250820113216-e3023df3caf4 h1:sUjwaRTFi28gg7mOHK/jr9AdGyz1zcO3Brak6dVQKuk=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250820113216-e3023df3caf4/go.mod h1:cWfGDKNuQQdQzVoRGaz5nLUopFGUME1vHUlgAf8KCxQ=
 github.com/aymerick/douceur v0.2.0 h1:Mv+mAeH1Q+n9Fr+oyamOlAkUNPWPlA8PPGR0QAaYuPk=
 github.com/aymerick/douceur v0.2.0/go.mod h1:wlT5vV2O3h55X9m7iVYN0TBM0NH/MmbLnd30/FjWUq4=
 github.com/cenkalti/backoff v2.2.1+incompatible h1:tNowT99t7UNflLxfYYSlKYsBpXdEet03Pg2g16Swow4=
@@ -158,6 +168,8 @@ github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c h1:ncq/mPwQF
 github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c/go.mod h1:OmDBASR4679mdNQnz2pUhc2G8CO2JrUAVFDRBDP/hJE=
 github.com/qdrant/go-client v1.14.0 h1:cyz9OOooAexudw5w69LRe9vKCQFYJvaFvt9icOciI1U=
 github.com/qdrant/go-client v1.14.0/go.mod h1:iO8ts78jL4x6LDHFOViyYWELVtIBDTjOykBmiOTHLnQ=
+github.com/qdrant/go-client v1.15.1 h1:iB5jDFRWNDA04O4cvOHjvZafVLJs+p/4WW+MdYJmtlk=
+github.com/qdrant/go-client v1.15.1/go.mod h1:iO8ts78jL4x6LDHFOViyYWELVtIBDTjOykBmiOTHLnQ=
 github.com/redis/go-redis/v9 v9.7.0 h1:HhLSs+B6O021gwzl+locl0zEDnyNkxMtf/Z3NNBMa9E=
 github.com/redis/go-redis/v9 v9.7.0/go.mod h1:f6zhXITC7JUJIlPEiBOTXxJgPLdZcA93GewI7inzyWw=
 github.com/rogpeppe/go-internal v1.13.1 h1:KvO1DLK/DRN07sQ1LQKScxyZJuNnedQ5/wKSR38lUII=

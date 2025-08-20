@@ -52,8 +52,8 @@ type AssemblyMember struct {
 	VectorDBMetadata any                          `xml:"vectorDBMetadata,omitempty" json:"vector_db_metadata"` // Optional <vectorDBMetadata> element
 	GraphDBMetadata  any                          `xml:"graphDBMetadata,omitempty" json:"graph_db_metadata"`   // Optional <graphDBMetadata> element
 	//PyaedtClass string                          `xml:"pyClass,omitempty" json:"pyaedt_class"` // Optional functions will not have class
-	//PyaedtParents []sharedtypes.XMLMember
-	PyaedtGroup string                            `xml:"typeOf,omitempty" json:"typeof"`   // Optional only for classes
+	PyaedtParents    []string                     `xml:"inheritsfrom",omitempty json:"inheritsfrom"` // Optional class inheritance
+	PyaedtGroup       string                      `xml:"typeOf,omitempty" json:"typeof"`   // Optional, only for pyadet classes
 }
 
 type CodeGenerationPseudocodeResponse struct {

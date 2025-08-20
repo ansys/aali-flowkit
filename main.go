@@ -69,6 +69,9 @@ var mcpFile string
 //go:embed pkg/externalfunctions/rhsc.go
 var rhscFile string
 
+//go: embed pkg/externalfunctions/pyaedt.go
+//var pyaedtFile string
+
 func init() {
 	// initialize config
 	config.InitConfig([]string{}, map[string]interface{}{
@@ -103,6 +106,7 @@ func main() {
 		"auth":             authFile,
 		"mcp":              mcpFile,
 		"rhsc":             rhscFile,
+		//"pyaedt":           pyaedtFile,
 	}
 
 	// Load function definitions

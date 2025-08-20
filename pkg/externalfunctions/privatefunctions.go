@@ -271,7 +271,7 @@ func sendChatRequestNoHistory(data string, chatRequestType string, maxKeywordsSe
 		data = "You are a keyword extractor, return only keywords from the following text: " + data
 	}
 
-	return sendChatRequest(data, chatRequestType, nil, maxKeywordsSearch, "", llmHandlerEndpoint, modelIds, options, nil)
+	return sendChatRequest(data, chatRequestType, nil, maxKeywordsSearch, "", llmHandlerEndpoint, modelIds, nil, options, nil)
 }
 
 // sendChatRequest sends a chat request to LLM
@@ -288,7 +288,7 @@ func sendChatRequestNoHistory(data string, chatRequestType string, maxKeywordsSe
 //
 // Returns:
 //   - chan sharedtypes.HandlerResponse: the response channel
-func sendChatRequest(data string, chatRequestType string, history []sharedtypes.HistoricMessage, maxKeywordsSearch uint32, systemPrompt interface{}, llmHandlerEndpoint string, modelIds []string, options *sharedtypes.ModelOptions, images []string) chan sharedtypes.HandlerResponse {
+func sendChatRequest(data string, chatRequestType string, history []sharedtypes.HistoricMessage, maxKeywordsSearch uint32, systemPrompt interface{}, llmHandlerEndpoint string, modelIds []string, modelCategory []string, options *sharedtypes.ModelOptions, images []string) chan sharedtypes.HandlerResponse {
 	// Initiate the channels
 	requestChannelChat := make(chan []byte, 400)
 	responseChannel := make(chan sharedtypes.HandlerResponse) // Create a channel for responses
@@ -297,7 +297,7 @@ func sendChatRequest(data string, chatRequestType string, history []sharedtypes.
 	go shutdownHandler(c)
 	go listener(c, responseChannel, false)
 	go writer(c, requestChannelChat, responseChannel)
-	go sendRequest("chat", data, requestChannelChat, chatRequestType, "true", false, history, maxKeywordsSearch, systemPrompt, responseChannel, modelIds, options, images)
+	go sendRequest("chat", data, requestChannelChat, chatRequestType, "true", false, history, maxKeywordsSearch, systemPrompt, responseChannel, modelIds, modelCategory, options, images)
 
 	return responseChannel // Return the response channel
 }
@@ -316,7 +316,7 @@ func sendChatRequest(data string, chatRequestType string, history []sharedtypes.
 //
 // Returns:
 //   - string: the response
-func sendChatRequestNoStreaming(data string, chatRequestType string, history []sharedtypes.HistoricMessage, maxKeywordsSearch uint32, systemPrompt string, llmHandlerEndpoint string, modelIds []string, options *sharedtypes.ModelOptions, images []string) string {
+func sendChatRequestNoStreaming(data string, chatRequestType string, history []sharedtypes.HistoricMessage, maxKeywordsSearch uint32, systemPrompt string, llmHandlerEndpoint string, modelIds []string, modelCategory []string, options *sharedtypes.ModelOptions, images []string) string {
 	// Initiate the channels
 	requestChannelChat := make(chan []byte, 400)
 	responseChannel := make(chan sharedtypes.HandlerResponse) // Create a channel for responses
@@ -326,7 +326,7 @@ func sendChatRequestNoStreaming(data string, chatRequestType string, history []s
 	go shutdownHandler(c)
 	go listener(c, responseChannel, true)
 	go writer(c, requestChannelChat, responseChannel)
-	go sendRequest("chat", data, requestChannelChat, chatRequestType, "false", false, history, maxKeywordsSearch, systemPrompt, responseChannel, modelIds, options, images)
+	go sendRequest("chat", data, requestChannelChat, chatRequestType, "false", false, history, maxKeywordsSearch, systemPrompt, responseChannel, modelIds, modelCategory, options, images)
 
 	// receive single answer from the response channel
 	response := <-responseChannel
@@ -360,7 +360,7 @@ func sendEmbeddingsRequest(data interface{}, llmHandlerEndpoint string, getSpars
 	go listener(c, responseChannel, false)
 	go writer(c, requestChannelEmbeddings, responseChannel)
 
-	go sendRequest("embeddings", data, requestChannelEmbeddings, "", "", getSparseEmbeddings, nil, 0, "", responseChannel, modelIds, nil, nil)
+	go sendRequest("embeddings", data, requestChannelEmbeddings, "", "", getSparseEmbeddings, nil, 0, "", responseChannel, modelIds, nil, nil, nil)
 	return responseChannel // Return the response channel
 }
 
@@ -542,7 +542,7 @@ func writer(c *websocket.Conn, RequestChannel chan []byte, responseChannel chan 
 //   - dataStream: the data stream flag
 //   - history: the conversation history
 //   - sc: the session context
-func sendRequest(adapter string, data interface{}, RequestChannel chan []byte, chatRequestType string, dataStream string, getSparseEmbeddings bool, history []sharedtypes.HistoricMessage, maxKeywordsSearch uint32, systemPrompt interface{}, responseChannel chan sharedtypes.HandlerResponse, modelIds []string, options *sharedtypes.ModelOptions, images []string) {
+func sendRequest(adapter string, data interface{}, RequestChannel chan []byte, chatRequestType string, dataStream string, getSparseEmbeddings bool, history []sharedtypes.HistoricMessage, maxKeywordsSearch uint32, systemPrompt interface{}, responseChannel chan sharedtypes.HandlerResponse, modelIds []string, modelCategory []string, options *sharedtypes.ModelOptions, images []string) {
 	request := sharedtypes.HandlerRequest{
 		Adapter:         adapter,
 		InstructionGuid: strings.Replace(uuid.New().String(), "-", "", -1),
@@ -556,6 +556,11 @@ func sendRequest(adapter string, data interface{}, RequestChannel chan []byte, c
 	// check for modelId
 	if len(modelIds) > 0 {
 		request.ModelIds = modelIds
+	}
+
+	// check for model category
+	if len(modelCategory) > 0 {
+		request.ModelCategory = modelCategory
 	}
 
 	// If history is not empty, set the IsConversation flag to true
@@ -1742,7 +1747,7 @@ func performGeneralRequest(input string, history []sharedtypes.HistoricMessage, 
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request.
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, options, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, options, nil)
 
 	// If isStream is true, create a stream channel and return asap.
 	if isStream {

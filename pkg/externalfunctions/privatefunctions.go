@@ -2745,55 +2745,182 @@ func logPanic(ctx *logging.ContextMap, msg string, args ...any) {
 	panic(errMsg)
 }
 
-// connectToMCP establishes a WebSocket connection to the MCP server.
+// connectToMCP establishes a connection to an MCP server with optional authentication.
 //
 // Parameters:
 //   - ctx: The context for managing connection timeout and cancellation.
-//   - serverURL: The WebSocket URL of the MCP server.
+//   - config: The MCP configuration including server URL, transport, and authentication.
 //
 // Returns:
 //   - conn: The established WebSocket connection.
 //   - err: An error if the connection fails.
-func connectToMCP(ctx context.Context, serverURL string) (*websocket.Conn, error) {
-	conn, _, err := websocket.Dial(ctx, serverURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to WebSocket server: %w", err)
+func connectToMCP(ctx context.Context, config MCPConfig) (*websocket.Conn, error) {
+	// Set default transport if not specified
+	if config.Transport == "" {
+		config.Transport = "websocket"
 	}
+
+	// Set default timeout if not specified (30 seconds)
+	if config.Timeout == 0 {
+		config.Timeout = 30
+	}
+
+	// Apply timeout to context
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(config.Timeout)*time.Second)
+	defer cancel()
+
+	// Handle different transport types
+	switch config.Transport {
+	case "websocket":
+		return connectWebSocket(ctx, config)
+	case "sse":
+		return nil, fmt.Errorf("SSE transport not yet implemented")
+	case "stdio":
+		return nil, fmt.Errorf("STDIO transport not yet implemented")
+	default:
+		return nil, fmt.Errorf("unsupported transport type: %s", config.Transport)
+	}
+}
+
+// connectWebSocket establishes a WebSocket connection with authentication support.
+func connectWebSocket(ctx context.Context, config MCPConfig) (*websocket.Conn, error) {
+	// Prepare dial options with optional authentication token
+	options := &websocket.DialOptions{}
+
+	// Apply authentication token if provided (as requested by Gotham)
+	if token := config.GetAuthToken(); token != "" {
+		// Validate token for security (CRLF injection protection)
+		if err := validateToken(token); err != nil {
+			return nil, fmt.Errorf("invalid authentication token: %w", err)
+		}
+
+		// Set Bearer token in Authorization header
+		options.HTTPHeader = http.Header{}
+		options.HTTPHeader.Set("Authorization", "Bearer "+token)
+	}
+
+	// Establish WebSocket connection with authentication
+	conn, _, err := websocket.Dial(ctx, config.ServerURL, options)
+	if err != nil {
+		// Sanitize error to prevent token leakage
+		sanitizedErr := sanitizeError(err, config.GetAuthToken())
+
+		// Check if it's an authentication error
+		if strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "403") {
+			return nil, fmt.Errorf("authentication failed for MCP server at %s: %w", config.ServerURL, sanitizedErr)
+		}
+		return nil, fmt.Errorf("WebSocket connection failed - ensure MCP server is running at %s: %w", config.ServerURL, sanitizedErr)
+	}
+
 	return conn, nil
 }
 
-// sendMCPRequest sends a JSON request over the WebSocket connection and returns the parsed response.
+// sendMCPRequest sends a JSON-RPC request to the MCP server and returns the response.
 //
 // Parameters:
-//   - ctx: The context for sending and receiving messages.
-//   - conn: The active WebSocket connection.
-//   - request: The request object to be marshaled and sent.
+//   - ctx: The context for the request
+//   - conn: The active WebSocket connection
+//   - method: The JSON-RPC method to call
+//   - params: The parameters for the method (can be nil)
 //
 // Returns:
-//   - response: The parsed response from the MCP server as a map.
-//   - err: An error if marshaling, sending, or receiving fails.
-func sendMCPRequest(ctx context.Context, conn *websocket.Conn, request interface{}) (map[string]interface{}, error) {
+//   - response: The result field from the JSON-RPC response
+//   - err: An error if the request fails
+func sendMCPRequest(ctx context.Context, conn *websocket.Conn, method string, params interface{}) (interface{}, error) {
+	// Generate a unique request ID
+	requestID := uuid.New().String()
+
+	// Build JSON-RPC request
+	request := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      requestID,
+		"method":  method,
+	}
+
+	// Add params if provided
+	if params != nil {
+		request["params"] = params
+	}
+
+	// Marshal request to JSON
 	data, err := json.Marshal(request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
+	// Send request
 	err = conn.Write(ctx, websocket.MessageText, data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 
+	// Read response
 	_, msg, err := conn.Read(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
+	// Parse response
 	var response map[string]interface{}
 	if err := json.Unmarshal(msg, &response); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
+	// Check for JSON-RPC error
+	if errField, exists := response["error"]; exists {
+		if errMap, ok := errField.(map[string]interface{}); ok {
+			errMsg := "MCP server error"
+			if msg, ok := errMap["message"].(string); ok {
+				errMsg = msg
+			}
+			return nil, fmt.Errorf("%s", errMsg)
+		}
+	}
+
+	// Return result field
+	if result, exists := response["result"]; exists {
+		return result, nil
+	}
+
+	// If no result field, return the entire response for compatibility
 	return response, nil
+}
+
+// sendMCPNotification sends a JSON-RPC notification to the MCP server (no response expected).
+//
+// Parameters:
+//   - ctx: The context for the notification
+//   - conn: The active WebSocket connection
+//   - method: The notification method to send
+//   - params: The parameters for the notification (can be nil)
+//
+// Returns:
+//   - err: An error if sending fails
+func sendMCPNotification(ctx context.Context, conn *websocket.Conn, method string, params interface{}) error {
+	// Build JSON-RPC notification (no ID field for notifications)
+	notification := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"method":  method,
+	}
+
+	// Add params if provided
+	if params != nil {
+		notification["params"] = params
+	}
+
+	// Marshal notification to JSON
+	data, err := json.Marshal(notification)
+	if err != nil {
+		return fmt.Errorf("failed to marshal notification: %w", err)
+	}
+
+	// Send notification (fire and forget)
+	err = conn.Write(ctx, websocket.MessageText, data)
+	if err != nil {
+		return fmt.Errorf("failed to send notification: %w", err)
+	}
+
+	return nil
 }
 
 // kvdbGetEntry retrieves the value from a specific key from the KVDB

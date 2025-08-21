@@ -164,10 +164,17 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"CreateMessageWithVariable":                     CreateMessageWithVariable,
 
 	// mcp
-	"ListAll":         ListAll,
-	"ExecuteTool":     ExecuteTool,
-	"GetResource":     GetResource,
-	"GetSystemPrompt": GetSystemPrompt,
+	"ListAll":              ListAll,
+	"InitializeMCP":        InitializeMCP,
+	"ValidateMCPServerURL": ValidateMCPServerURL,
+	"ListTools":            ListTools,
+	"ListResources":        ListResources,
+	"ListPrompts":          ListPrompts,
+	"CallTool":             CallTool,
+	"ReadResource":         ReadResource,
+	"GetPrompt":            GetPrompt,
+	"HealthCheck":          HealthCheck,
+	"Status":               Status,
 
 	// materials
 	"StartTrace":                       StartTrace,

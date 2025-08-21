@@ -23,6 +23,8 @@
 package externalfunctions
 
 import (
+	"os"
+	"strings"
 	"sync"
 
 	"github.com/ansys/aali-sharedtypes/pkg/sharedtypes"
@@ -198,6 +200,52 @@ type ACSSearchResponseCrtech struct {
 	SearchScore         float64 `json:"@search.score"`
 	SearchRerankerScore float64 `json:"@search.rerankerScore"`
 	IndexName           string  `json:"indexName"`
+}
+
+// TransportType represents the MCP transport protocol options as requested by Gautam
+// This enables dropdown/checkbox selection in the workflow configurator
+type TransportType string
+
+// MCP transport protocol constants
+const (
+	TransportWebSocket TransportType = "websocket" // Default - for remote MCP servers over WebSocket
+	TransportSSE       TransportType = "sse"       // Server-Side Events for HTTP-based streaming
+	TransportSTDIO     TransportType = "stdio"     // Standard I/O for local MCP servers
+)
+
+// MCPConfig represents the configuration for MCP (Model Context Protocol) connections.
+// It includes transport selection, authentication, and connection options.
+type MCPConfig struct {
+	// ServerURL is the URL of the MCP server (required)
+	// Examples: "ws://localhost:3000", "wss://mcp.example.com", "http://localhost:8080" (for SSE)
+	ServerURL string `json:"serverURL" description:"The URL of the MCP server" required:"true"`
+
+	// Transport specifies the transport protocol to use
+	// Options: "websocket" (default), "sse", "stdio"
+	// Currently only "websocket" is implemented
+	Transport string `json:"transport" description:"Transport protocol: websocket, sse, or stdio" required:"false"`
+
+	// AuthToken is an optional authentication token (as requested by Gautam)
+	// Can be a direct value or environment variable reference like ${MCP_TOKEN}
+	// When provided, it will be sent as a Bearer token in the Authorization header
+	AuthToken string `json:"authToken" description:"Optional authentication token" required:"false"`
+
+	// Timeout specifies the connection timeout in seconds
+	// Default: 30 seconds if not specified
+	Timeout int `json:"timeout" description:"Connection timeout in seconds (default: 30)" required:"false"`
+}
+
+// GetAuthToken returns the authentication token, resolving environment variables if needed.
+// If the token starts with ${ and ends with }, it's treated as an environment variable reference.
+// Example: ${MCP_TOKEN} will return the value of the MCP_TOKEN environment variable.
+func (config *MCPConfig) GetAuthToken() string {
+	if len(config.AuthToken) > 3 &&
+		strings.HasPrefix(config.AuthToken, "${") &&
+		strings.HasSuffix(config.AuthToken, "}") {
+		envVar := config.AuthToken[2 : len(config.AuthToken)-1]
+		return os.Getenv(envVar)
+	}
+	return config.AuthToken
 }
 
 // AnsysGPTRetrieverModuleRequest represents the request structure for the Ansys GPT Retriever Module.

@@ -884,6 +884,106 @@ func (graphdb_context *graphDbContext) GetExamplesFromCodeGenerationElement(elem
 	return exampleNames, nil
 }
 
+
+// GetReturnTypeFromCodeGenerationElement gets return type from a code generation element.
+//
+// Parameters:
+//   - elementType: Type of the code generation element.
+//   - elementName: Name of the code generation element.
+//
+// Returns:
+//   - returnTypes: List of return types
+//   - funcError: Error object.
+func (graphdb_context *graphDbContext) GetReturnTypeFromCodeGenerationElement(elementType string, elementName string) (returnTypes []string, funcError error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			logging.Log.Errorf(&logging.ContextMap{}, "Panic GetReturnTypeFromCodeGenerationElement: %v", r)
+			funcError = r.(error)
+			return
+		}
+	}()
+
+	type returnType struct {
+		Name string `json:"b.Name"`
+	}
+
+	// Get parameters
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil:GetReturnTypeFrom element: %s: %s", elementName, elementType)
+	query := fmt.Sprintf("MATCH (a:%v {Name: $name})-[:Returns]->(b:Element) RETURN b.Name", elementType)
+	retTypes, err := aali_graphdb.CypherQueryReadGeneric[returnType](
+		graphdb_context.client,
+		graphdb_context.dbname,
+		query,
+		aali_graphdb.ParameterMap{
+			"name": aali_graphdb.StringValue(elementName),
+		},
+	)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
+		return nil, err
+	}
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Results returntypes= %d, Query:  %s", len(retTypes), query)
+
+	returnTypes = make([]string, len(retTypes))
+	for i, ret := range retTypes {
+		returnTypes[i] = ret.Name
+		logging.Log.Debugf(&logging.ContextMap{}, "kapatil: return type = %v", ret.Name)
+	}
+
+	return returnTypes, nil
+}
+
+
+// GetPrametersFromCodeGenerationElement gets parameters from a code generation element.
+//
+// Parameters:
+//   - elementType: Type of the code generation element.
+//   - elementName: Name of the code generation element.
+//
+// Returns:
+//   - paramNames: List of pram names.
+//   - funcError: Error object.
+func (graphdb_context *graphDbContext) GetParametersFromCodeGenerationElement(elementType string, elementName string) (paramNames []string, funcError error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			logging.Log.Errorf(&logging.ContextMap{}, "Panic GetParametersFromCodeGenerationElement: %v", r)
+			funcError = r.(error)
+			return
+		}
+	}()
+
+	type paramName struct {
+		Name string `json:"b.Name"`
+	}
+
+	// Get parameters
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil:GetParamsFrom element: %s: %s", elementName, elementType)
+	query := fmt.Sprintf("MATCH (a:%v {Name: $name})<-[:UsesParameter]-(b:Element) RETURN b.Name", elementType)
+	parameters, err := aali_graphdb.CypherQueryReadGeneric[paramName](
+		graphdb_context.client,
+		graphdb_context.dbname,
+		query,
+		aali_graphdb.ParameterMap{
+			"name": aali_graphdb.StringValue(elementName),
+		},
+	)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
+		return nil, err
+	}
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Results = %d, Query:  %s", len(parameters), query)
+
+	paramNames = make([]string, len(parameters))
+	for i, param := range parameters {
+		paramNames[i] = param.Name
+		logging.Log.Debugf(&logging.ContextMap{}, "kapatil: param name = %v", param.Name)
+	}
+
+	return paramNames, nil
+}
+
 // GetCodeGenerationElementAndDependencies gets a code generation element and its dependencies.
 //
 // Parameters:

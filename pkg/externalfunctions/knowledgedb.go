@@ -48,21 +48,23 @@ import (
 // TODO: Move to pyaedt.go file 
 func PyaedtGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse) {
 	ctx := &logging.ContextMap{}
-	var exampleName []string
-	var err error
 	//graphdb.Initialize()
 	// kapatil : instead of element names, can we use GUID ?
         // Assuming this is a single entry point 
 	if len(dbResponses) > 0 {
 		elementType := dbResponses[0].Type
 		elementName := dbResponses[0].Name
-		exampleName, err = graphdb.GraphDbDriver.GetExamplesFromCodeGenerationElement(elementType, elementName)
+		exampleNames, err := graphdb.GraphDbDriver.GetExamplesFromCodeGenerationElement(elementType, elementName)
 		if err != nil {
 			logPanic(ctx, "error Getting examples from code generation element: %v", err)
 		}
-		for ex, _ := range exampleName {
-			logging.Log.Debugf(ctx, "Reading examples %s", ex)
-	        }   
+		if len(exampleNames) > 0 {
+			for ex, _ := range exampleNames {
+				logging.Log.Debugf(ctx, "Reading examples %s", ex)
+	        	}   
+	        } else {
+			logging.Log.Debugf(ctx, "No db points for this entry point")
+		}
 	} else {
 		logging.Log.Debugf(ctx, "Graph DB no entry point found!!!")
 	}
@@ -177,7 +179,15 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity element name: %v", dbResponse.Name)
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity pyaedt_group: %v", dbResponse.PyaedtGroup)
 	}
+        
+	//var exampledbResponse []sharedtypes.ExampleDbResponse
+	//exampledbResponse = SendVectorsToExampleDB(vector, keywords, keywordsSearch, "", similaritySearchResults, similaritySearchMinScore, sparseVector)
+        //PyaedtGetElementContextFromGraphDb(dbResponses) 
+
+        //logging.Log.Debugf(&logging.ContextMap{}, "examples: %d", len(exampledbResponse))
+
 	return dbResponses
+
 }
 
 
@@ -200,6 +210,11 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 func SendVectorsToExampleDB(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64, sparseVector map[uint]float32) (databaseResponse []sharedtypes.ExampleDbResponse) {
 	// Use the provided sparse vector directly (will be empty map if not provided)
 	sparse := sparseVector
+	qclient, err := qdrant_utils.QdrantClient()
+	collExists, err := qclient.CollectionExists(context.TODO(), "examples")
+	if collExists {
+		logging.Log.Debugf(&logging.ContextMap{}, "Found example collection")
+	}
 	collection = "examples" // TODO: Your examples collection name  here"
 	logCtx := &logging.ContextMap{}
 	client, err := qdrant_utils.QdrantClient()
@@ -288,7 +303,6 @@ func SendVectorsToExampleDB(vector []float32, keywords []string, keywordsSearch 
 		dbResponses[i] = dbResponse
 		//logging.Log.Debugf(&logging.ContextMap{}, "Similarity element name: %v", dbResponse.Name)
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity text: %v", dbResponse.Text)
-		logging.Log.Debugf(&logging.ContextMap{}, "Similarity Summary: %v", dbResponse.Summary)
 	}
 	return dbResponses
 }

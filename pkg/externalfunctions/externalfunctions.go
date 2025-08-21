@@ -59,6 +59,9 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"CreateTagsDbFilter":       CreateTagsDbFilter,
 	"CreateMetadataDbFilter":   CreateMetadataDbFilter,
 	"CreateDbFilter":           CreateDbFilter,
+        "SendVectorsToExampleDB":   SendVectorsToExampleDB,
+	"PyaedtGetElementContextFromGraphDb": PyaedtGetElementContextFromGraphDb,
+	
 
 	// ansys gpt
 	"AnsysGPTCheckProhibitedWords":                   AnsysGPTCheckProhibitedWords,

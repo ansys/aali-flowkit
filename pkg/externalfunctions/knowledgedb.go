@@ -46,15 +46,22 @@ import (
 //   - elementName - string
 //   - elementType - string
 // TODO: Move to pyaedt.go file 
-func PyaedtGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse) {
+func PyaedtGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse) ( exampleNames []string , parameters []string, returnTypes []string){
 	ctx := &logging.ContextMap{}
-	//graphdb.Initialize()
+	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
+	if err != nil {
+		logPanic(nil, "error initializing graphdb: %v", err)
+	}
 	// kapatil : instead of element names, can we use GUID ?
         // Assuming this is a single entry point 
 	if len(dbResponses) > 0 {
 		elementType := dbResponses[0].Type
 		elementName := dbResponses[0].Name
-		exampleNames, err := graphdb.GraphDbDriver.GetExamplesFromCodeGenerationElement(elementType, elementName)
+		logging.Log.Debugf(ctx, "reading entry points %s of type %s", elementName, elementType)
+		// Get pyaedt group
+		// if element type = method -> go to class -> check isPyaedtGroup
+		// if element type = class -> check isPyaedtGroup
+		//exampleNames, err := graphdb.GraphDbDriver.GetExamplesFromCodeGenerationElement(elementType, elementName)
 		if err != nil {
 			logPanic(ctx, "error Getting examples from code generation element: %v", err)
 		}
@@ -65,9 +72,36 @@ func PyaedtGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse)
 	        } else {
 			logging.Log.Debugf(ctx, "No db points for this entry point")
 		}
+		// Get Parameters
+		//parameters, err := graphdb.GraphDbDriver.GetParametersFromCodeGenerationElement(elementType, elementName)
+		if err != nil {
+			logPanic(ctx, "error Getting parameters from code generation element: %v", err)
+		}
+		if len(parameters) > 0 {
+			for ex, _ := range parameters {
+				logging.Log.Debugf(ctx, "Reading parameters %s", ex)
+	        	}   
+	        } else {
+			logging.Log.Debugf(ctx, "No db points for this entry point")
+		}
+	
+		// Get Return types
+		//returnTypes, err := graphdb.GraphDbDriver.GetReturnTypesFromCodeGenerationElement(elementType, elementName)
+		if err != nil {
+			logPanic(ctx, "error Getting return types  from code generation element: %v", err)
+		}
+		if len(returnTypes) > 0 {
+			for ex, _ := range returnTypes {
+				logging.Log.Debugf(ctx, "Reading returnTypes %s", ex)
+	        	}   
+	        } else {
+			logging.Log.Debugf(ctx, "No db points for this entry point")
+		}
+	
 	} else {
 		logging.Log.Debugf(ctx, "Graph DB no entry point found!!!")
 	}
+	return exampleNames, parameters, returnTypes
 
 }
 

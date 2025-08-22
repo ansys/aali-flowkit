@@ -1071,36 +1071,6 @@ func BuildLibraryContext(message string, libraryContext string) (messageWithCont
 	return message
 }
 
-// PyaedtBuildFinalQueryForGeneralLLMRequest builds the final query for a general
-// request to LLM. The final query is a markdown string that contains the
-// original request and the examples from the KnowledgeDB.
-//
-// Tags:
-//   - @displayName: Pyaedt Final Query (General LLM Request)
-//
-// Parameters:
-//   - request: the original request
-//   - exampledbResponse: the KnowledgeDB response
-//
-// Returns:
-//   - finalQuery: the final query
-func PyaedtBuildFinalQueryForGeneralLLMRequest(request string, exampledbResponse []sharedtypes.ExampleDbResponse) (finalQuery string) {
-
-	// If there is no response from the KnowledgeDB, return the original request
-	if len(exampledbResponse) == 0 {
-		return request
-	}
-
-	// Build the final query using the KnowledgeDB response and the original request
-	finalQuery = "Based on the following examples:\n\n--- INFO START ---\n"
-	for _, example := range exampledbResponse {
-		finalQuery += example.Text + "\n"
-	}
-	finalQuery += "--- INFO END ---\n\n" + request + "\n"
-
-	// Return the final query
-	return finalQuery
-}
 
 // BuildFinalQueryForGeneralLLMRequest builds the final query for a general
 // request to LLM. The final query is a markdown string that contains the
@@ -1133,6 +1103,79 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 	return finalQuery
 }
 
+// PyaedtBuildFinalQueryForCodeLLMRequest builds the final query for a code generation
+// request to LLM. The final query is a markdown string that contains the
+// original request and the code examples from the KnowledgeDB.
+//
+// Tags:
+//   - @displayName: Pyaedt Final Query (Code LLM Request)
+//
+// Parameters:
+//   - request: the original request
+//   - knowledgedbResponse: the KnowledgeDB response
+//
+// Returns:
+//   - finalQuery: the final query
+func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse) (finalQuery string) {
+	// Build the final query using the KnowledgeDB response and the original request
+	// We have to use the text from the DB response and the original request.
+	//
+	// The prompt should be in the following format:
+	//
+	// ******************************************************************************
+	// Based on the following examples:
+	//
+	// --- START EXAMPLE {response_n}---
+	// >>> Summary:
+	// {knowledge_db_response_n_summary}
+	//
+	// >>> Code snippet:
+	// ```python
+	// {knowledge_db_response_n_text}
+	// ```
+	// --- END EXAMPLE {response_n}---
+	//
+	// --- START EXAMPLE {response_n}---
+	// ...
+	// --- END EXAMPLE {response_n}---
+	//
+	// Generate the Python code for the following request:
+	//
+	// >>> Request:
+	// {original_request}
+	// ******************************************************************************
+
+	// If there is no response from the KnowledgeDB, return the original request
+	if len(knowledgedbResponse) > 0 {
+		// Initial request
+
+		finalQuery = "Based on the following examples:\n\n"
+
+		for i, element := range knowledgedbResponse {
+			// Add the example number
+			logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Reading knowledge DB response")
+			finalQuery += "--- START EXAMPLE " + fmt.Sprint(i+1) + "---\n"
+			finalQuery += ">>> Summary:\n" + element.Summary + "\n\n"
+			finalQuery += ">>> Code snippet:\n```python\n" + element.Text + "\n```\n"
+			finalQuery += "--- END EXAMPLE " + fmt.Sprint(i+1) + "---\n\n"
+			logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Initial Query %s", finalQuery)
+		}
+
+	} else {
+		logging.Log.Debugf(&logging.ContextMap{}, "Zero knowledge DB reponse found")
+	}
+
+	// Kaumudi: Rephrase
+	new_request := RephraseRequest_kapatil(request)
+
+	// Pass in the original request
+	finalQuery += "Generate the Python code for the following request:\n>>> Request:\n" + new_request + "\n"
+
+	// Return the final query
+	return finalQuery
+}
+
+
 
 func RephraseRequest_kapatil(request string) (result string) {
         input := strings.ToLower(request)
@@ -1146,6 +1189,7 @@ func RephraseRequest_kapatil(request string) (result string) {
         return result
 
 }
+
 // BuildFinalQueryForCodeLLMRequest builds the final query for a code generation
 // request to LLM. The final query is a markdown string that contains the
 // original request and the code examples from the KnowledgeDB.

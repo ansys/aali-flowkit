@@ -935,7 +935,7 @@ func (graphdb_context *graphDbContext) GetReturnTypeFromCodeGenerationElement(el
 }
 
 
-// GetPrametersFromCodeGenerationElement gets parameters from a code generation element.
+// GetParametersFromCodeGenerationElement gets parameters from a code generation element.
 //
 // Parameters:
 //   - elementType: Type of the code generation element.

@@ -387,7 +387,7 @@ func PerformGeneralRequest(input string, history []sharedtypes.HistoricMessage, 
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, nil, nil)
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
 		// Create a stream channel
@@ -444,7 +444,7 @@ func PerformGeneralRequestWithImages(input string, history []sharedtypes.Histori
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, images)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, nil, images)
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
 		// Create a stream channel
@@ -503,7 +503,7 @@ func PerformGeneralModelSpecificationRequest(input string, history []sharedtypes
 
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil, nil)
 
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
@@ -561,7 +561,7 @@ func PerformGeneralRequestSpecificModel(input string, history []sharedtypes.Hist
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil, nil)
 
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
@@ -620,7 +620,7 @@ func PerformGeneralRequestSpecificModelAndModelOptions(input string, history []s
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, &modelOptions, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, &modelOptions, nil)
 
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
@@ -675,12 +675,12 @@ func PerformGeneralRequestSpecificModelAndModelOptions(input string, history []s
 // Returns:
 //   - message: the response message
 //   - stream: the stream channel
-func PerformGeneralRequestSpecificModelModelOptionsAndImages(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt string, modelIds []string, modelOptions sharedtypes.ModelOptions, images []string) (message string, stream *chan string) {
+func PerformGeneralRequestSpecificModelModelOptionsAndImages(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt string, modelIds []string, modelOptions sharedtypes.ModelOptions, images []string, modelCategory []string) (message string, stream *chan string) {
 	// get the LLM handler endpoint
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, &modelOptions, images)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, modelCategory, &modelOptions, images)
 
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
@@ -739,7 +739,7 @@ func PerformGeneralRequestSpecificModelNoStreamWithOpenAiTokenOutput(input strin
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil, nil)
 	defer close(responseChannel)
 
 	// else Process all responses
@@ -816,7 +816,7 @@ func PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiTokenOut
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, &modelOptions, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, &modelOptions, nil)
 	defer close(responseChannel)
 
 	// else Process all responses
@@ -894,7 +894,7 @@ func PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOut
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, &modelOptions, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, &modelOptions, nil)
 	defer close(responseChannel)
 
 	// else Process all responses
@@ -965,7 +965,7 @@ func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, 
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
+	responseChannel := sendChatRequest(input, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil, nil)
 
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
@@ -1047,7 +1047,7 @@ func PerformGeneralRequestNoStreaming(input string, history []sharedtypes.Histor
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseString := sendChatRequestNoStreaming(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, nil)
+	responseString := sendChatRequestNoStreaming(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, nil, nil)
 
 	// Return the response
 	return responseString

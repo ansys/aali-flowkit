@@ -24,6 +24,7 @@ package main
 
 import (
 	_ "embed"
+	"strings"
 
 	"github.com/ansys/aali-sharedtypes/pkg/config"
 	"github.com/ansys/aali-sharedtypes/pkg/logging"
@@ -32,6 +33,9 @@ import (
 	"github.com/ansys/aali-flowkit/pkg/grpcserver"
 	"github.com/ansys/aali-flowkit/pkg/internalstates"
 )
+
+//go:embed VERSION
+var version string
 
 //go:embed pkg/externalfunctions/dataextraction.go
 var dataExtractionFile string
@@ -86,6 +90,9 @@ func init() {
 
 	// initialize logging
 	logging.InitLogger(config.GlobalConfig)
+
+	// assign the version from the embedded file
+	internalstates.FlowkitVersion = strings.TrimSpace(version)
 }
 
 func main() {

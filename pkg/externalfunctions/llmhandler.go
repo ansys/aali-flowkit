@@ -320,7 +320,7 @@ func PerformKeywordExtractionRequest(input string, maxKeywordsSearch uint32) (ke
 	}
 
 	for words := range keywords {
-		logging.Log.Debugf(&logging.ContextMap{},"kapatil: Keyword %s ", words)
+		logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Keyword %v ", words)
 	}
 
 	// Return the response
@@ -1071,7 +1071,6 @@ func BuildLibraryContext(message string, libraryContext string) (messageWithCont
 	return message
 }
 
-
 // BuildFinalQueryForGeneralLLMRequest builds the final query for a general
 // request to LLM. The final query is a markdown string that contains the
 // original request and the examples from the KnowledgeDB.
@@ -1175,18 +1174,16 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	return finalQuery
 }
 
-
-
 func RephraseRequest_kapatil(request string) (result string) {
-        input := strings.ToLower(request)
-        bef, after, found := strings.Cut(input, "launch aedt")
-        if found {
-            result = bef + "create desktop instance" + after
-        } else {
-                result = input
-            }
+	input := strings.ToLower(request)
+	bef, after, found := strings.Cut(input, "launch aedt")
+	if found {
+		result = bef + "create desktop instance" + after
+	} else {
+		result = input
+	}
 
-        return result
+	return result
 
 }
 

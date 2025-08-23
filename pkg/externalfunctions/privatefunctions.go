@@ -267,6 +267,10 @@ func sendTokenCountToEndpoint(jwtToken string, tokenCountEndpoint string, inputT
 // Returns:
 //   - chan sharedtypes.HandlerResponse: the response channel
 func sendChatRequestNoHistory(data string, chatRequestType string, maxKeywordsSearch uint32, llmHandlerEndpoint string, modelIds []string, options *sharedtypes.ModelOptions) chan sharedtypes.HandlerResponse {
+	if chatRequestType == "keywords" {
+		data = "You are a keyword extractor, return only keywords with original input format from the following text: " + data
+	}
+
 	return sendChatRequest(data, chatRequestType, nil, maxKeywordsSearch, "", llmHandlerEndpoint, modelIds, options, nil)
 }
 
@@ -760,13 +764,13 @@ func validatePythonCode(pythonCode string) (bool, bool, error) {
 	}
 
 	// kapatil : Download files
-        outFile := filepath.Join( "/app", "tmp_out1.py")
-        data, err := os.ReadFile(tmpFileName)
-        if err != nil {
-            logging.Log.Debugf(&logging.ContextMap{}, "reading file to copy")
-        }
+	outFile := filepath.Join("/app", "tmp_out1.py")
+	data, err := os.ReadFile(tmpFileName)
+	if err != nil {
+		logging.Log.Debugf(&logging.ContextMap{}, "reading file to copy")
+	}
 
-        err = os.WriteFile(outFile, data, 0644)
+	err = os.WriteFile(outFile, data, 0644)
 	if err != nil {
 		logging.Log.Debugf(&logging.ContextMap{}, "unable to write generated code to output dir: %v", err)
 	}

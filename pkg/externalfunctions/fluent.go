@@ -91,4 +91,3 @@ func FluentCodeGen(message string) (response string) {
 	
 	// Fallback to raw response if parsing fails
 	return string(body)
-}

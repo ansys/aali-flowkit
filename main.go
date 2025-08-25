@@ -73,6 +73,10 @@ var mcpFile string
 //go:embed pkg/externalfunctions/rhsc.go
 var rhscFile string
 
+//go:embed pkg/externalfunctions/fluent.go
+var fluentFile string
+
+
 func init() {
 	// initialize config
 	config.InitConfig([]string{}, map[string]interface{}{
@@ -110,6 +114,7 @@ func main() {
 		"auth":             authFile,
 		"mcp":              mcpFile,
 		"rhsc":             rhscFile,
+		"fluent":           fluentFile,
 	}
 
 	// Load function definitions

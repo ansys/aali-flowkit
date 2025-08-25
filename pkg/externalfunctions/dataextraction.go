@@ -761,6 +761,15 @@ func mapToSparseVec(m map[uint]float32) *qdrant.Vector {
 	return qdrant.NewVectorSparse(keys, vals)
 }
 
+// Helper function
+func jsonMarshal(v interface{}) string {
+	bytes, err := json.Marshal(v)
+	if err != nil {
+		return "{}"
+	}
+	return string(bytes)
+}
+
 // StoreElementsInVectorDatabase stores elements in the vector database.
 //
 // Tags:
@@ -786,7 +795,7 @@ func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement,
 		logging.Log.Error(&logging.ContextMap{}, errMessage)
 		panic(errMessage)
 	}
-	
+
 	// if you have no embeddings, quit
 	if len(denseEmbeddings) == 0 {
 		return
@@ -816,7 +825,7 @@ func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement,
 				"text": element.Example.Code.Text,
 			},
 		}
-		
+
 		points[i] = &qdrant.PointStruct{
 			Id: qdrant.NewIDUUID(element.Guid.String()),
 			Vectors: qdrant.NewVectorsMap(map[string]*qdrant.Vector{
@@ -830,8 +839,8 @@ func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement,
 				"summary":         element.Summary,
 				"type":            string(element.Type),
 				"parent_class":    strings.Join(element.Dependencies, "."),
-				"parameters":      parametersMap,
-				"example":         exampleMap,
+				"parameters":      jsonMarshal(parametersMap),
+				"example":         jsonMarshal(exampleMap),
 				"metadata":        element.VectorDBMetadata,
 			}),
 		}

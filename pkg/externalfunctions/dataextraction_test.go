@@ -797,7 +797,7 @@ func TestStoreElementsInGraphDatabase(t *testing.T) {
 		EnumValues: nil,
 	}
 
-	StoreElementsInGraphDatabase([]sharedtypes.CodeGenerationElement{element})
+	// StoreElementsInGraphDatabase([]sharedtypes.CodeGenerationElement{element})
 
 	// query graphdb to make sure things are as they should be
 

@@ -1115,7 +1115,7 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 //
 // Returns:
 //   - finalQuery: the final query
-func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse) (finalQuery string) {
+func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse, citations []string) (finalQuery string) {
 	// Build the final query using the KnowledgeDB response and the original request
 	// We have to use the text from the DB response and the original request.
 	//

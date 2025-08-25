@@ -62,7 +62,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"CreateDbFilter":           CreateDbFilter,
         "SendVectorsToExampleDB":   SendVectorsToExampleDB,
 	"PyaedtGetElementContextFromGraphDb": PyaedtGetElementContextFromGraphDb,
-	
+        "SendVectorsToUserGuide":   SendVectorsToUserGuide,	
 
 	// ansys gpt
 	"AnsysGPTCheckProhibitedWords":                   AnsysGPTCheckProhibitedWords,
@@ -121,7 +121,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"StoreExamplesInGraphDatabase":           StoreExamplesInGraphDatabase,
 	"StoreUserGuideSectionsInVectorDatabase": StoreUserGuideSectionsInVectorDatabase,
 	"StoreUserGuideSectionsInGraphDatabase":  StoreUserGuideSectionsInGraphDatabase,
-        "AddPyaedtGroupElementsInGraphDatabase":  AddPyaedtGroupElementsInGraphDatabase,
+        //"AddPyaedtGroupElementsInGraphDatabase":  AddPyaedtGroupElementsInGraphDatabase,
 
 	// ansys mesh pilot
 	"SimilartitySearchOnPathDescriptions":       SimilartitySearchOnPathDescriptions,

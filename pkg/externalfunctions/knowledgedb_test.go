@@ -554,7 +554,7 @@ func TestRetrieveDependencies(t *testing.T) {
 	config.GlobalConfig = &setup.config
 	logging.InitLogger(&setup.config)
 
-	require.NoError(graphdb.Initialize(setup.config.GRAPHDB_ADDRESS))
+	require.NoError(graphdb.Initialize(setup.config.GRAPHDB_ADDRESS, "aali"))
 	require.NoError(graphdb.GraphDbDriver.CreateSchema())
 	driver := graphdb.GraphDbDriver
 
@@ -615,7 +615,7 @@ func TestGeneralGraphDbQuery(t *testing.T) {
 	config.GlobalConfig = &setup.config
 	logging.InitLogger(&setup.config)
 
-	require.NoError(graphdb.Initialize(setup.config.GRAPHDB_ADDRESS))
+	require.NoError(graphdb.Initialize(setup.config.GRAPHDB_ADDRESS, "aali"))
 	require.NoError(graphdb.GraphDbDriver.CreateSchema())
 	driver := graphdb.GraphDbDriver
 
@@ -640,7 +640,7 @@ func TestGeneralGraphDbQuery(t *testing.T) {
 	require.NoError(driver.CreateUserGuideSectionRelationships(data))
 
 	// now make a query
-	res := GeneralGraphDbQuery("MATCH (n {parent:'1'}) RETURN n.name AS name", nil)
+	res := GeneralGraphDbQuery("MATCH (n {parent:'1'}) RETURN n.name AS name", nil, "aali")
 	expected := []string{"1a", "1b"}
 	require.Len(res, len(expected))
 	for _, r := range res {
@@ -669,7 +669,7 @@ func TestGeneralGraphDbQueryWithParameters(t *testing.T) {
 	config.GlobalConfig = &setup.config
 	logging.InitLogger(&setup.config)
 
-	require.NoError(graphdb.Initialize(setup.config.GRAPHDB_ADDRESS))
+	require.NoError(graphdb.Initialize(setup.config.GRAPHDB_ADDRESS, "aali"))
 	require.NoError(graphdb.GraphDbDriver.CreateSchema())
 	driver := graphdb.GraphDbDriver
 
@@ -698,7 +698,7 @@ func TestGeneralGraphDbQueryWithParameters(t *testing.T) {
 	AddGraphDbParameter(paramMap, "parent", "1", "string")
 
 	// now make a query
-	res := GeneralGraphDbQuery("MATCH (n {parent:$parent}) RETURN n.name AS name", paramMap)
+	res := GeneralGraphDbQuery("MATCH (n {parent:$parent}) RETURN n.name AS name", paramMap, "aali")
 	expected := []string{"1a", "1b"}
 	require.Len(res, len(expected))
 	for _, r := range res {

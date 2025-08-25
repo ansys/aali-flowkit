@@ -26,6 +26,12 @@ import (
 	"github.com/qdrant/go-client/qdrant"
 )
 
+// variable for pyansys product
+var pyansysProduct = map[string]string{
+	"pyfluent": "Ansys Fluent-Pyfluent",
+	"pyaedt":   "Ansys Electronics Desktop-PyAEDT",
+}
+
 // checkWhetherOneOfTheMethodsFits checks whether one of the provided methods is unambiguously the right one
 func checkWhetherOneOfTheMethodsFits(collectionName string, historyMessage []sharedtypes.HistoricMessage, ansysProduct string, denseWeight float64, sparseWeight float64, maxRetrievalCount int, methods string) string {
 
@@ -135,24 +141,6 @@ func countPlaceholders(input string) int {
 	return count
 }
 
-// buildReplacements creates a slice of replacement values based on the count needed
-func buildReplacements(count int, args StringReplacementArgs) []any {
-	switch count {
-	case 1:
-		return []any{args.Placeholder1}
-	case 2:
-		return []any{args.Placeholder1, args.Placeholder2}
-	case 3:
-		return []any{args.Placeholder1, args.Placeholder2, args.Placeholder3}
-	case 4:
-		return []any{args.Placeholder1, args.Placeholder2, args.Placeholder3, args.Placeholder4}
-	case 5:
-		return []any{args.Placeholder1, args.Placeholder2, args.Placeholder3, args.Placeholder4, args.Placeholder5}
-	default:
-		return []any{}
-	}
-}
-
 // convertJSONToCustomizeHelper processes the query result to generate hierarchical table of contents
 func convertJSONToCustomizeHelper(object []map[string]any, level int, currentIndex string) string {
 	var nodeBuilder strings.Builder
@@ -260,7 +248,7 @@ func getExampleReferences(baseSearchNodeComplete string, db string) (string, []i
 	escapedName := strings.ReplaceAll(baseSearchNodeComplete, `"`, `\"`)
 	query := fmt.Sprintf(`MATCH (root:Example {name: "%s"})-[r]-(neighbor) RETURN root.name AS rootName, label(r) AS relationshipType, r AS relationshipProps, neighbor.name AS neighborName, label(neighbor) AS neighborLabel, neighbor.parameters AS neighborParameters, neighbor.remarks AS neighborRemarks, neighbor.return_type AS neighborReturn, neighbor.summary AS neighborSummary`, escapedName)
 	parameters := aali_graphdb.ParameterMap{}
-	result := GeneralGraphDbQuery(query, parameters)
+	result := GeneralGraphDbQuery(query, parameters, db)
 	for _, relationship := range result {
 		element := relationship["neighborName"]
 		elementType := relationship["neighborLabel"]
@@ -299,7 +287,7 @@ func getExampleReferences(baseSearchNodeComplete string, db string) (string, []i
 }
 
 // getExampleNodesFromElement retrieves example nodes from an element
-func getExampleNodesFromElement(baseSearchType string, baseSearchNodeComplete string, collectionName string) []map[string]interface{} {
+func getExampleNodesFromElement(baseSearchType string, baseSearchNodeComplete string, collectionName string, dbname string) []map[string]interface{} {
 
 	// Escape the string parameters properly for Cypher
 	escapedNodeComplete := strings.ReplaceAll(baseSearchNodeComplete, `"`, `\"`)
@@ -311,7 +299,7 @@ func getExampleNodesFromElement(baseSearchType string, baseSearchNodeComplete st
 
 	parameters := aali_graphdb.ParameterMap{}
 
-	result := GeneralGraphDbQuery(query, parameters)
+	result := GeneralGraphDbQuery(query, parameters, dbname)
 	preparedExample := []map[string]interface{}{}
 	for _, relationship := range result {
 		element := relationship["example"]
@@ -441,7 +429,7 @@ func getDocumentation(baseSearchNodeComplete string, db string) (string, []inter
 	parameters := aali_graphdb.ParameterMap{}
 
 	// Time the graph database query
-	result := GeneralGraphDbQuery(query, parameters)
+	result := GeneralGraphDbQuery(query, parameters, db)
 	for _, relationship := range result {
 		element := relationship["neighborName"]
 		elementType := relationship["neighborLabel"]
@@ -925,7 +913,7 @@ func doHybridQuery(
 }
 
 // getElementByName retrieves an element by name and type from the graph database
-func getElementByName(nodeName string, nodeType string) []map[string]interface{} {
+func getElementByName(nodeName string, nodeType string, dbname string) []map[string]interface{} {
 
 	// Escape the string parameters properly for Cypher
 	escapedNodeName := strings.ReplaceAll(nodeName, `'`, `\'`)
@@ -933,11 +921,11 @@ func getElementByName(nodeName string, nodeType string) []map[string]interface{}
 	query := fmt.Sprintf("MATCH (n:Element) WHERE n.name = '%s' AND n.type = '%s' RETURN n", escapedNodeName, escapedNodeType)
 	logging.Log.Infof(&logging.ContextMap{}, "Executing query to get element by name: %s", query)
 
-	result := GeneralGraphDbQuery(query, aali_graphdb.ParameterMap{})
+	result := GeneralGraphDbQuery(query, aali_graphdb.ParameterMap{}, dbname)
 	return result
 }
 
-func searchExamplesForMethod(collectionName string, ansysProduct string, historyMessage []sharedtypes.HistoricMessage, methodNames string, maxExamples int) string {
+func searchExamplesForMethod(collectionName string, ansysProduct string, historyMessage []sharedtypes.HistoricMessage, methodNames string, maxExamples int, dbname string) string {
 	startTime := time.Now()
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod STARTED - methodName: %s, collectionName: %s, maxExamples: %d", methodNames, collectionName, maxExamples)
 	defer func() {
@@ -951,7 +939,7 @@ func searchExamplesForMethod(collectionName string, ansysProduct string, history
 		// Time the method lookup
 		methodDbStartTime := time.Now()
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (method lookup) STARTED for: %s", methodName)
-		nresult := getElementByName(methodName, "Method")
+		nresult := getElementByName(methodName, "Method", dbname)
 		methodDbDuration := time.Since(methodDbStartTime)
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (method lookup) COMPLETED - duration: %v, results count: %d", methodDbDuration, len(nresult))
 
@@ -975,7 +963,7 @@ func searchExamplesForMethod(collectionName string, ansysProduct string, history
 		// Time the examples lookup
 		examplesDbStartTime := time.Now()
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (examples lookup) STARTED for method: %s", methodName)
-		examples := getExampleNodesFromElement("Method", methodName, collectionName)
+		examples := getExampleNodesFromElement("Method", methodName, collectionName, dbname)
 		examplesDbDuration := time.Since(examplesDbStartTime)
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (examples lookup) COMPLETED - duration: %v, results count: %d", examplesDbDuration, len(examples))
 		outputBuilder.WriteString(methodName)
@@ -990,7 +978,7 @@ func searchExamplesForMethod(collectionName string, ansysProduct string, history
 				}
 				outputBuilder.WriteString(fmt.Sprintf("Example: %s\n%s\n\n", example["name"], example["text"]))
 
-				exampleRefs, _ := getExampleReferences(example["name"].(string), "aali") //example_refs_info
+				exampleRefs, _ := getExampleReferences(example["name"].(string), dbname) //example_refs_info
 				outputBuilder.WriteString(fmt.Sprintf("%s-------------------\n\n", exampleRefs))
 			}
 		}

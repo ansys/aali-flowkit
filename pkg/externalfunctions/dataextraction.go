@@ -888,11 +888,12 @@ func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement,
 //
 // Parameters:
 //   - elements: code generation elements.
-func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement) {
+//   - dbname: name of the graph database.
+func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement, dbname string) {
 	ctx := &logging.ContextMap{}
 
 	// Initialize the graph database.
-	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
+	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS, dbname)
 	if err != nil {
 		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
 		logging.Log.Error(ctx, errMsg)
@@ -1318,11 +1319,12 @@ func StoreExamplesInVectorDatabase(examples []sharedtypes.CodeGenerationExample,
 //
 // Parameters:
 //   - examples: code generation examples.
-func StoreExamplesInGraphDatabase(examples []sharedtypes.CodeGenerationExample) {
+//   - dbname: name of the graph database.
+func StoreExamplesInGraphDatabase(examples []sharedtypes.CodeGenerationExample, dbname string) {
 	ctx := &logging.ContextMap{}
 
 	// Initialize the graph database.
-	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
+	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS, dbname)
 	if err != nil {
 		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
 		logging.Log.Error(ctx, errMsg)
@@ -1595,11 +1597,11 @@ func StoreUserGuideSectionsInVectorDatabase(sections []sharedtypes.CodeGeneratio
 // Parameters:
 //   - elements: user guide sections.
 //   - label: label for the sections (UserGuide by default).
-func StoreUserGuideSectionsInGraphDatabase(sections []sharedtypes.CodeGenerationUserGuideSection) {
+func StoreUserGuideSectionsInGraphDatabase(sections []sharedtypes.CodeGenerationUserGuideSection, dbname string) {
 	ctx := &logging.ContextMap{}
 
 	// Initialize the graph database.
-	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
+	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS, dbname)
 	if err != nil {
 		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
 		logging.Log.Error(ctx, errMsg)

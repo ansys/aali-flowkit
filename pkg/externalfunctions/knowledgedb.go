@@ -257,13 +257,14 @@ func AddGraphDbParameter(parameters aali_graphdb.ParameterMap, name string, valu
 // Parameters:
 //   - query: the Cypher query to be executed.
 //   - parameters: parameters to pass to the query during execution
+//   - dbname: the name of the graph database to use (optional, defaults to "aali")
 //
 // Returns:
 //   - databaseResponse: the graph db response
-func GeneralGraphDbQuery(query string, parameters aali_graphdb.ParameterMap) []map[string]any {
+func GeneralGraphDbQuery(query string, parameters aali_graphdb.ParameterMap, dbname string) []map[string]any {
 	// Initialize the graph database.
 	logging.Log.Infof(nil, "starting of the flow time %v", time.Now().Format(time.RFC3339))
-	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
+	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS, dbname)
 	if err != nil {
 		logPanic(nil, "error initializing graphdb: %v", err)
 	}

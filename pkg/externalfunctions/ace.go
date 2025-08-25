@@ -55,8 +55,7 @@ func RewriteQueryWithHistory(historyMessage []sharedtypes.HistoricMessage, userQ
 //   - @displayName: Search Examples
 //
 // Parameters:
-//   - ansysProduct: the name of the Ansys product to be used in the system message
-//   - collectionName: the name of the collection to which the data objects will be added.
+//   - libraryName: the name of the library to be used in the system message
 //   - maxRetrievalCount: the maximum number of results to be retrieved.
 //   - denseWeight: the weight for the dense vector. (default: 0.9)
 //   - sparseWeight: the weight for the sparse vector. (default: 0.1)
@@ -64,8 +63,9 @@ func RewriteQueryWithHistory(historyMessage []sharedtypes.HistoricMessage, userQ
 //
 // Returns:
 //   - generatedCode: the generated code as a string
-func SearchExamples(ansysProduct string, collectionName string, maxRetrievalCount int, denseWeight float64, sparseWeight float64, userQuery string) string {
+func SearchExamples(libraryName string, maxRetrievalCount int, denseWeight float64, sparseWeight float64, userQuery string) string {
 	startTime := time.Now()
+	ansysProduct := pyansysProduct[libraryName]
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchExamples - started %v", time.Now())
 	defer func() {
 		duration := time.Since(startTime)
@@ -90,6 +90,8 @@ func SearchExamples(ansysProduct string, collectionName string, maxRetrievalCoun
 	// Time the database query
 	dbStartTime := time.Now()
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchExamples - preprocess ended %v", time.Now())
+	collectionName := fmt.Sprintf("%s_examples", libraryName)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamples - Database query STARTED for user query: %s", collectionName)
 	scoredPoints := doHybridQuery(collectionName, maxRetrievalCount, outputFields, userQuery, denseWeight, sparseWeight, "")
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchExamples - hybrid ended %v", time.Now())
 	dbDuration := time.Since(dbStartTime)
@@ -105,7 +107,7 @@ func SearchExamples(ansysProduct string, collectionName string, maxRetrievalCoun
 		entry := scoredPoint.Payload
 		exampleName := entry["document_name"].GetStringValue()
 		exampleText := entry["text"].GetStringValue()
-		exampleRefs, _ := getExampleReferences(exampleName, "aali") //example_refs_info
+		exampleRefs, _ := getExampleReferences(exampleName, libraryName) //example_refs_info
 
 		exampleBuilder.WriteString(fmt.Sprintf("Example: {%s}\n{%s}\n\n", exampleName, exampleText))
 		exampleBuilder.WriteString(fmt.Sprintf("Example {%s} References: {%s}\n\n", exampleName, exampleRefs))
@@ -142,8 +144,7 @@ func SearchExamples(ansysProduct string, collectionName string, maxRetrievalCoun
 //
 // Parameters:
 //   - tableOfContents: the table of contents to be used in the system message
-//   - ansysProduct: the name of the Ansys product to be used in the system message
-//   - collectionName: the name of the collection to which the data objects will be added.
+//   - libraryName: the name of the library to be used in the system message
 //   - maxRetrievalCount: the maximum number of results to be retrieved.
 //   - denseWeight: the weight for the dense vector. (default: 0.9)
 //   - sparseWeight: the weight for the sparse vector. (default: 0.1)
@@ -151,8 +152,9 @@ func SearchExamples(ansysProduct string, collectionName string, maxRetrievalCoun
 //
 // Returns:
 //   - examplesString: the formatted examples string containing the method examples and references
-func SearchMethods(tableOfContents string, ansysProduct string, collectionName string, maxRetrievalCount int, denseWeight float64, sparseWeight float64, userQuery string) string {
+func SearchMethods(tableOfContents string, libraryName string, maxRetrievalCount int, denseWeight float64, sparseWeight float64, userQuery string) string {
 	startTime := time.Now()
+	ansysProduct := pyansysProduct[libraryName]
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchMethods - started %v", startTime)
 	defer func() {
 		duration := time.Since(startTime)
@@ -266,6 +268,7 @@ func SearchMethods(tableOfContents string, ansysProduct string, collectionName s
 	dbStartTime := time.Now()
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchMethods - preprocess ended %v", time.Now())
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchMethods - Database query STARTED for best query: %s", bestQuery)
+	collectionName := fmt.Sprintf("%s_elements", libraryName)
 	scoredPoints := doHybridQuery(collectionName, maxRetrievalCount, outputFields, bestQuery, denseWeight, sparseWeight, "")
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchMethods - hybridsearch ended %v", time.Now())
 	dbDuration := time.Since(dbStartTime)
@@ -276,7 +279,7 @@ func SearchMethods(tableOfContents string, ansysProduct string, collectionName s
 	for _, scoredPoint := range scoredPoints {
 		entry := scoredPoint.Payload
 		name := entry["document_name"].GetStringValue()
-		exampleRefs, _ := getExampleReferences(name, "aali") //example_refs_info
+		exampleRefs, _ := getExampleReferences(name, libraryName) //example_refs_info
 		if exampleRefs != "" || entry["text"] != nil {
 			// Format the examples as a string
 			exampleBuilder.WriteString(fmt.Sprintf("Example: {%s}\n{%s}\n\n", entry["document_name"], entry["text"]))
@@ -299,20 +302,19 @@ func SearchMethods(tableOfContents string, ansysProduct string, collectionName s
 //   - @displayName: Search Documentation
 //
 // Parameters:
-//   - collectionName: the name of the collection to which the data objects will be added.
+//   - libraryName: the name of the library to be used in the system message
 //   - maxRetrievalCount: the maximum number of results to be retrieved.
 //   - userQuery: the query string to be used for the query.
 //   - denseWeight: the weight for the dense vector. (default: 0.9)
 //   - sparseWeight: the weight for the sparse vector. (default: 0.1)
-//   - ansysProduct: the name of the Ansys product to be used in the system message
 //   - historyMessage: the history of messages to be used in the query
 //   - tableOfContentsString: the table of contents string to be used in the query
-//   - exampleCollectionName: the name of the example collection to be used in the query
 //
 // Returns:
 //   - userResponse: the formatted user response string
-func SearchDocumentation(collectionName string, exampleCollectionName string, maxRetrievalCount int, userQuery string, denseWeight float64, sparseWeight float64, ansysProduct string, historyMessage []sharedtypes.HistoricMessage, tableOfContentsString string) string {
+func SearchDocumentation(libraryName string, maxRetrievalCount int, userQuery string, denseWeight float64, sparseWeight float64, historyMessage []sharedtypes.HistoricMessage, tableOfContentsString string) string {
 	startTime := time.Now()
+	ansysProduct := pyansysProduct[libraryName]
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - started %v", time.Now())
 	defer func() {
 		duration := time.Since(startTime)
@@ -420,6 +422,8 @@ func SearchDocumentation(collectionName string, exampleCollectionName string, ma
 
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - preprocess ended %v", time.Now())
 
+		collectionName := fmt.Sprintf("%s_user_guide", libraryName)
+
 		scoredPoints := queryUserGuideName(sectionName, uint64(3), collectionName) // changed this to 3 from 5
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - db query ended %v", time.Now())
 		for j, scoredPoint := range scoredPoints {
@@ -439,7 +443,7 @@ func SearchDocumentation(collectionName string, exampleCollectionName string, ma
 			escapedSectionName = strings.ReplaceAll(escapedSectionName, `"`, `\"`)
 			query := fmt.Sprintf("MATCH (n:UserGuide {name: \"%s\"})-[:References]->(reference) RETURN reference.name AS section_name LIMIT 5", escapedSectionName)
 			parameters := aali_graphdb.ParameterMap{}
-			result := GeneralGraphDbQuery(query, parameters)
+			result := GeneralGraphDbQuery(query, parameters, libraryName)
 			logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - references query ended %v", time.Now())
 
 			for refIdx, reference := range result {
@@ -476,7 +480,8 @@ func SearchDocumentation(collectionName string, exampleCollectionName string, ma
 		return unambiguousMethodPath
 	} else if queryToApiReference != "" {
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - example search started %v", time.Now())
-		methods := searchExamplesForMethod(exampleCollectionName, ansysProduct, historyMessage, queryToApiReference, maxRetrievalCount)
+		exampleCollectionName := fmt.Sprintf("%s_examples", libraryName)
+		methods := searchExamplesForMethod(exampleCollectionName, ansysProduct, historyMessage, queryToApiReference, maxRetrievalCount, libraryName)
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND SearchDocumentation - example search ended %v", time.Now())
 		return methods
 	} else {
@@ -494,16 +499,17 @@ func SearchDocumentation(collectionName string, exampleCollectionName string, ma
 //   - @displayName: Generate Code
 //
 // Parameters:
-//   - ansysProduct: the name of the Ansys product to be used in the system message
 //   - methodName: the name of the method to be used in the query
 //   - examples : the examples to be used in the query
 //   - historyMessages: the history of messages to be used in the query
 //   - userQuery: the user query to be used for the query
+//   - libraryName: the name of the library to be used in the query
 //
 // Returns:
 //   - Code as a string
-func GenerateCode(ansysProduct string, methods string, examples string, methods_from_user_guide string, historyMessages []sharedtypes.HistoricMessage, userQuery string) string {
+func GenerateCode(methods string, examples string, methods_from_user_guide string, historyMessages []sharedtypes.HistoricMessage, userQuery string, libraryName string) string {
 	startTime := time.Now()
+	ansysProduct := pyansysProduct[libraryName]
 	defer func() {
 		duration := time.Since(startTime)
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GenerateCode COMPLETED - duration: %v", duration)
@@ -546,33 +552,23 @@ func GenerateCode(ansysProduct string, methods string, examples string, methods_
 
 }
 
-// StringReplacementArgs holds the arguments for string replacement
-type StringReplacementArgs struct {
-	Input        string
-	Placeholder1 string
-	Placeholder2 string
-	Placeholder3 string
-	Placeholder4 string
-	Placeholder5 string
-}
-
 // QueryUserGuideAndFormat converts JSON to customize format
 //
 // Tags:
 //   - @displayName: Query the UserGuide and convert it to customize format
 //
 // Parameters:
-//   - object: the object
+//   - libraryName: the name of the library to be used in the system message
 //
 // Returns:
 //   - the value of the field as a string
 //
 // Example output:
 // 01.
-func QueryUserGuideAndFormat() string {
+func QueryUserGuideAndFormat(libraryName string) string {
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: QueryUserGuideAndFormat called")
 	startTime := time.Now()
-	object := GeneralGraphDbQuery("MATCH (chapter:UserGuide {level:1}) WHERE chapter.parent = 'index.md' OPTIONAL MATCH (section:UserGuide {level:2}) WHERE section.parent = chapter.document_name OPTIONAL MATCH (subsection:UserGuide {level:3}) WHERE subsection.parent = section.document_name RETURN chapter.title AS chapter_title, chapter.document_name AS chapter_doc, section.title AS section_title, section.document_name AS section_doc, subsection.title AS subsection_title, subsection.document_name AS subsection_doc ORDER BY chapter.title, section.title, subsection.title", aali_graphdb.ParameterMap{})
+	object := GeneralGraphDbQuery("MATCH (chapter:UserGuide {level:1}) WHERE chapter.parent = 'index.md' OPTIONAL MATCH (section:UserGuide {level:2}) WHERE section.parent = chapter.document_name OPTIONAL MATCH (subsection:UserGuide {level:3}) WHERE subsection.parent = section.document_name RETURN chapter.title AS chapter_title, chapter.document_name AS chapter_doc, section.title AS section_title, section.document_name AS section_doc, subsection.title AS subsection_title, subsection.document_name AS subsection_doc ORDER BY chapter.title, section.title, subsection.title", aali_graphdb.ParameterMap{}, libraryName)
 
 	defer func() {
 		duration := time.Since(startTime)

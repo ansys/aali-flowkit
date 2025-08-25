@@ -131,55 +131,9 @@ func SendVectorsToUserGuide(vector []float32, keywords []string, keywordsSearch 
 	if err != nil {
 		logPanic(logCtx, "unable to create qdrant client: %q", err)
 	}
-
-	resp, err := client.GetCollectionInfo(context.TODO(), collection)
-	logging.Log.Infof(&logging.ContextMap{}, "******* Collection info: %+v", resp)
-
-	// logging.Log.Debugf(
-	// 	&logging.ContextMap{},
-	// 	`********** SendVectorsToKnowledgeDB inputs:
-	// 		****** keywords: %v ******;
-	// 		****** keywordsSearch: %v ******;
-	// 		****** collection: %v ******;
-	// 		****** similaritySearchResults: %v ******;
-	// 		****** similaritySearchMinScore: %v ******;
-	// 		**********`, keywords, keywordsSearch, collection, similaritySearchResults, similaritySearchMinScore)
-
-	// Example inputs 1: Create HFSS design / launch hfss
-	// Example keywords: ["hfss design", "launch hfss"]
-	// Example inputs 2: Using existing desktop session, create HFSS instance with new project "abc" and aedt version 2025 R1 in non-graphical mode
-	// Example keywords: ["ansys.aedt.core","HFSS","Project","aedt version","non-graphical mode"]
-
-	// keywords = []string{"ansys.aedt.core", "HFSS", "project", "aedt version", "non-graphical mode"}
-	// keywords = []string{"hfss design", "launch hfss"}
-
 	// Pure vector similarity search across all collection types
-	filter := qdrant.Filter{
-		Should: []*qdrant.Condition{},
-	}
-
-	// perform the qdrant query: Phrase match on keywords
-	if keywordsSearch && len(keywords) > 0 {
-		exclude_keywords := map[string]struct{}{
-			"ansys":           {},
-			"aedt":            {},
-			"core":            {},
-			"ansys.aedt.core": {},
-			"ansys.aedt":      {},
-			"aedt.core":       {},
-		}
-
-		for _, keyword := range keywords {
-			// Exclude keywords that will always in the library context, including it in the 'Should' clause
-			// would lead to all results being returned, which is not desired.
-			if _, found := exclude_keywords[strings.ToLower(keyword)]; !found {
-				filter.Should = append(filter.Should, qdrant.NewMatchText("name", keyword))
-
-			}
-		}
-	}
-
-	logging.Log.Debugf(logCtx, "********* Filter %v *********\n", filter)
+	filter := qdrant.Filter{}
+	// Note: Keyword search disabled for now to ensure broad compatibility
 
 	limit := uint64(similaritySearchResults)
 	scoreThreshold := float32(similaritySearchMinScore)
@@ -188,8 +142,6 @@ func SendVectorsToUserGuide(vector []float32, keywords []string, keywordsSearch 
 
 	// Use fusion if both dense and sparse vectors are available
 	if sparse != nil && len(sparse) > 0 {
-		logging.Log.Debugf(&logging.ContextMap{}, "*********** Sparse query ***********")
-
 		// Create prefetch queries for hybrid search using RRF (Reciprocal Rank Fusion)
 		prefetchQueries := []*qdrant.PrefetchQuery{
 			// Dense vector search prefetch
@@ -219,7 +171,6 @@ func SendVectorsToUserGuide(vector []float32, keywords []string, keywordsSearch 
 			WithPayload:    qdrant.NewWithPayloadEnable(true),
 		}
 	} else {
-		logging.Log.Debugf(&logging.ContextMap{}, "*********** Dense query ***********")
 		// DENSE-ONLY SEARCH: Simplified approach
 		query = qdrant.QueryPoints{
 			CollectionName: collection,
@@ -249,82 +200,8 @@ func SendVectorsToUserGuide(vector []float32, keywords []string, keywordsSearch 
 		logPanic(logCtx, "error in qdrant query: %q", err)
 	}
 
-	logging.Log.Debugf(&logging.ContextMap{}, "**************** 1st query: Got %d points from qdrant query**************", len(scoredPoints))
-	// If no similar points are found from the keywords filtering query, we return results without filtering.
-	if len(scoredPoints) == 0 {
-		logging.Log.Warnf(logCtx, "No similar points found with the keywords (%v) filtering query. Returning points without keywords filtering from collections.", keywords)
-
-		// perform the qdrant query without the keywords filtering
-		filter = qdrant.Filter{
-			Should: []*qdrant.Condition{},
-		}
-
-		// Use fusion if both dense and sparse vectors are available
-		if sparse != nil && len(sparse) > 0 {
-			// Create prefetch queries for hybrid search using RRF (Reciprocal Rank Fusion)
-			prefetchQueries := []*qdrant.PrefetchQuery{
-				// Dense vector search prefetch
-				{
-					Query: qdrant.NewQueryDense(vector),
-					Using: nil, // Use default (unnamed) vector
-					// Filter: &filter,
-					Filter: nil,
-					Limit:  &limit,
-				},
-				// Sparse vector search prefetch
-				{
-					Query: createSparseQuery(sparse),
-					Using: qdrant.PtrOf("sparse_vector"), // Use sparse vector field
-					// Filter: &filter,
-					Filter: nil,
-					Limit:  &limit,
-				},
-			}
-
-			query = qdrant.QueryPoints{
-				CollectionName: collection,
-				Query:          qdrant.NewQueryFusion(qdrant.Fusion_RRF), // Use Reciprocal Rank Fusion
-				Prefetch:       prefetchQueries,
-				Limit:          &limit,
-				ScoreThreshold: &scoreThreshold,
-				// Filter:         &filter,
-				Filter:      nil,
-				WithVectors: qdrant.NewWithVectorsEnable(false),
-				WithPayload: qdrant.NewWithPayloadEnable(true),
-			}
-		} else {
-			// DENSE-ONLY SEARCH: Simplified approach
-			query = qdrant.QueryPoints{
-				CollectionName: collection,
-				Query:          qdrant.NewQueryDense(vector),
-				Limit:          &limit,
-				ScoreThreshold: &scoreThreshold,
-				// Filter:         &filter
-				Filter:      nil,
-				WithVectors: qdrant.NewWithVectorsEnable(false),
-				WithPayload: qdrant.NewWithPayloadEnable(true),
-			}
-		}
-
-		// Execute query
-		scoredPoints, err = client.Query(context.TODO(), &query)
-		if err != nil {
-			logPanic(logCtx, "error in qdrant query: %q", err)
-		}
-
-		if len(scoredPoints) == 0 {
-			logPanic(logCtx, "No valid points found in the collections %s for the given vector and collection. Please check your QdrantDB.", collection)
-		} else {
-			logging.Log.Infof(logCtx, "Found %d similar points without the filtering query.", len(scoredPoints))
-		}
-	} else if !keywordsSearch || len(keywords) == 0 {
-		logging.Log.Infof(logCtx, "Found %d similar points without the filtering query.", len(scoredPoints))
-	} else {
-		logging.Log.Infof(logCtx, "Found %d similar points with the filtering query.", len(scoredPoints))
-	}
-
 	// Transform results
-	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Got %d points from qdrant query", len(scoredPoints))
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Got %f points from qdrant query", len(scoredPoints))
 	citations = make([]string, len(scoredPoints))
 	dbResponses := make([]sharedtypes.DbResponse, len(scoredPoints))
 	for i, scoredPoint := range scoredPoints {

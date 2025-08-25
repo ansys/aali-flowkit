@@ -645,7 +645,7 @@ func GenerateDocumentTree(documentName string, documentId string, documentChunks
 //
 // Returns:
 //   - elements: code generation elements.
-func LoadCodeGenerationElements(content []byte, elementsFilePath string) (elements []sharedtypes.CodeGenerationElement) {
+func LoadCodeGenerationElements(content []byte, elementsFilePath string) (elements []sharedtypes.CodeGenerationElement, pyaedtGroups []sharedtypes.CodeGenerationElement) {
 	// Get the file extension.
 	fileExtension := filepath.Ext(elementsFilePath)
 
@@ -787,8 +787,17 @@ func LoadCodeGenerationElements(content []byte, elementsFilePath string) (elemen
 		elements = append(elements, element)
 	}
 
+	pyaedtGroups = CreatePyaedtGroupsCodeGenerationElements()
+
+        if (len(pyaedtGroups) > 0) {
+		logging.Log.Debugf(&logging.ContextMap{},"Adding pyaedt group to elements")
+		//elements = append(elements, pyaedtGroups...)
+	} else {
+		logging.Log.Debugf(&logging.ContextMap{}, "No pyaedt group node found!")
+	}
+
 	logging.Log.Debugf(&logging.ContextMap{}, "Loaded %v code generation elements from file: %s", len(elements), elementsFilePath)
-	return elements
+	return elements, pyaedtGroups
 }
 
 func mapToSparseVec(m map[uint]float32) *qdrant.Vector {
@@ -966,100 +975,6 @@ func CreatePyaedtGroupsCodeGenerationElements() (elements []sharedtypes.CodeGene
         return elements
 }
 
-// UpdatePyaedtGroupElementsInGraphDatabase creates and stores pyaedt group elements in the graph database.
-//
-// Tags:
-//   - @displayName: Update PyAEDT Group Element to Graph DB
-//
-// Parameters:
-//   - elements: code generation elements. 
-// We are assuming pyaedt API code gen elements have already been added to graphDB
-// Here we are just updating graphDBs.
-// If graph DB is not already populated, use AddPyaedtGroupElementsInGraphDatabase.
-func UpdatePyaedtGroupElementsInGraphDatabase() {
-	ctx := &logging.ContextMap{}
-
-	// Initialize the graph database.
-	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
-	if err != nil {
-		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
-		logging.Log.Error(ctx, errMsg)
-		panic(errMsg)
-	}
-
-	// Add the elements to the graph database.
-	//err = graphdb.GraphDbDriver.AddCodeGenerationElementNodes(elements)
-	//if err != nil {
-	//	errMsg := fmt.Sprintf("error adding code gen element nodes to graphdb: %v", err)
-        //	logging.Log.Error(ctx, errMsg)
-	//	panic(errMsg)
-	//}
-
-	pyaedtGroups := CreatePyaedtGroupsCodeGenerationElements()
-
-        err = graphdb.GraphDbDriver.AddPyaedtGroupElementNodes(pyaedtGroups)
-	if err != nil {
-		errMsg := fmt.Sprintf("error adding pyaedt groups code gen relationships to graphdb: %v", err)
-		logging.Log.Error(ctx, errMsg)
-		panic(errMsg)
-	}
-	// Add relationships
-	//err = nil //graphdb.GraphDbDriver.CreatePyaedtGroupsCodeGenRelationships(pyaedtGroups)
-	//if err != nil {
-//		errMsg := fmt.Sprintf("error adding pyaedt groups code gen relationships to graphdb: %v", err)
-//		logging.Log.Error(ctx, errMsg)
-//		panic(errMsg)
-//	}
-	
-}
-
-
-// AddPyaedtGroupElementsInGraphDatabase creates and stores pyaedt group elements in the graph database.
-//
-// Tags:
-//   - @displayName: Add PyAEDT Group Element to Graph DB
-//
-// Parameters:
-//   - elements: code generation elements. 
-// We are assuming pyaedt API code gen elements have already been added to graphDB
-// Here we are just updating graphDBs.
-// If graph DB is not already populated, run StoreElementsInGraphDB before this call.
-func AddPyaedtGroupElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement) {
-	ctx := &logging.ContextMap{}
-
-	// Initialize the graph database.
-	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
-	if err != nil {
-		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
-		logging.Log.Error(ctx, errMsg)
-		panic(errMsg)
-	}
-
-	// Add the elements to the graph database.
-	//err = graphdb.GraphDbDriver.AddCodeGenerationElementNodes(elements)
-	//if err != nil {
-	//	errMsg := fmt.Sprintf("error adding code gen element nodes to graphdb: %v", err)
-        //	logging.Log.Error(ctx, errMsg)
-	//	panic(errMsg)
-	//}
-
-	pyaedtGroups := CreatePyaedtGroupsCodeGenerationElements()
-
-        err = graphdb.GraphDbDriver.AddPyaedtGroupElementNodes(pyaedtGroups)
-	if err != nil {
-		errMsg := fmt.Sprintf("error adding pyaedt groups code gen relationships to graphdb: %v", err)
-		logging.Log.Error(ctx, errMsg)
-		panic(errMsg)
-	}
-	// Add relationships
-	err = graphdb.GraphDbDriver.CreatePyaedtGroupsCodeGenRelationships(elements, pyaedtGroups)
-	if err != nil {
-		errMsg := fmt.Sprintf("error adding pyaedt groups code gen relationships to graphdb: %v", err)
-		logging.Log.Error(ctx, errMsg)
-		panic(errMsg)
-	}
-	
-}
 
 // StoreElementsInGraphDatabase stores elements in the graph database.
 //
@@ -1068,7 +983,7 @@ func AddPyaedtGroupElementsInGraphDatabase(elements []sharedtypes.CodeGeneration
 //
 // Parameters:
 //   - elements: code generation elements.
-func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement) {
+func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement, pyaedtGroups []sharedtypes.CodeGenerationElement) {
 	ctx := &logging.ContextMap{}
 
 	// Initialize the graph database.
@@ -1091,7 +1006,12 @@ func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement) 
 		logging.Log.Error(ctx, errMsg)
 		panic(errMsg)
 	}
-
+	err = graphdb.GraphDbDriver.AddCodeGenerationElementNodes(pyaedtGroups)
+	if err != nil {
+		errMsg := fmt.Sprintf("error adding code gen element pyaedt group nodes to graphdb: %v", err)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
+	}
    
 	// Add the dependencies to the graph database.
 	err = graphdb.GraphDbDriver.CreateCodeGenerationRelationships(elements)
@@ -1100,6 +1020,13 @@ func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement) 
 		logging.Log.Error(ctx, errMsg)
 		panic(errMsg)
 	}
+	err = graphdb.GraphDbDriver.CreatePyaedtGroupCodeGenRelations(elements, pyaedtGroups)
+	if err != nil {
+		errMsg := fmt.Sprintf("error adding code gen pyaedtgroup relationships to graphdb: %v", err)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
+	}
+
 }
 
 // LoadAndCheckExampleDependencies loads and checks the dependencies of the examples.

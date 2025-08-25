@@ -105,6 +105,123 @@ func PyaedtGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse)
 
 }
 
+// SendVectorsToUserGuide sends the given vector to the user guide  and returns the most relevant data
+//
+// Tags:
+//   - @displayName: User guide Similarity Search
+//
+// Parameters:
+//   - vector: the vector to be sent to the KnowledgeDB
+//   - keywords: the keywords to be used to filter the results
+//   - keywordsSearch: the flag to enable the keywords search
+//   - collection: the collection name
+//   - similaritySearchResults: the number of results to be returned
+//   - similaritySearchMinScore: the minimum score for the results
+//   - sparseVector: optional sparse vector for hybrid search (pass empty map for dense-only search)
+//
+// Returns:
+//   - databaseResponse: an array of the most relevant data
+func SendVectorsToUserGuide(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64, sparseVector map[uint]float32) (citations []string ) {//databaseResponse []sharedtypes.DbResponse) {
+	// Use the provided sparse vector directly (will be empty map if not provided)
+	sparse := sparseVector
+        collection = "user_guide"
+	logCtx := &logging.ContextMap{}
+	client, err := qdrant_utils.QdrantClient()
+	if err != nil {
+		logPanic(logCtx, "unable to create qdrant client: %q", err)
+	}
+	// Pure vector similarity search across all collection types
+	filter := qdrant.Filter{}
+	// Note: Keyword search disabled for now to ensure broad compatibility
+
+	limit := uint64(similaritySearchResults)
+	scoreThreshold := float32(similaritySearchMinScore)
+
+	var query qdrant.QueryPoints
+
+	// Use fusion if both dense and sparse vectors are available
+	if sparse != nil && len(sparse) > 0 {
+		// Create prefetch queries for hybrid search using RRF (Reciprocal Rank Fusion)
+		prefetchQueries := []*qdrant.PrefetchQuery{
+			// Dense vector search prefetch
+			{
+				Query:  qdrant.NewQueryDense(vector),
+				Using:  nil, // Use default (unnamed) vector
+				Filter: &filter,
+				Limit:  &limit,
+			},
+			// Sparse vector search prefetch
+			{
+				Query:  createSparseQuery(sparse),
+				Using:  qdrant.PtrOf("sparse_vector"), // Use sparse vector field
+				Filter: &filter,
+				Limit:  &limit,
+			},
+		}
+
+		query = qdrant.QueryPoints{
+			CollectionName: collection,
+			Query:          qdrant.NewQueryFusion(qdrant.Fusion_RRF), // Use Reciprocal Rank Fusion
+			Prefetch:       prefetchQueries,
+			Limit:          &limit,
+			ScoreThreshold: &scoreThreshold,
+			Filter:         &filter,
+			WithVectors:    qdrant.NewWithVectorsEnable(false),
+			WithPayload:    qdrant.NewWithPayloadEnable(true),
+		}
+	} else {
+		// DENSE-ONLY SEARCH: Simplified approach
+		query = qdrant.QueryPoints{
+			CollectionName: collection,
+			Query:          qdrant.NewQueryDense(vector),
+			Limit:          &limit,
+			ScoreThreshold: &scoreThreshold,
+			Filter:         &filter,
+			WithVectors:    qdrant.NewWithVectorsEnable(false),
+			WithPayload:    qdrant.NewWithPayloadEnable(true),
+		}
+	}
+
+	// perform the qdrant query
+	// TODO: Check only leaf nodes/pages here ?
+	//filter := qdrant.Filter{
+		//Must: []*qdrant.Condition{
+		//	qdrant.NewMatchInt("level", 2),
+		//},
+	//}
+	//if keywordsSearch {
+	//	filter.Must = append(filter.Must, qdrant.NewMatchKeywords("name_formatted", keywords...)) // filter.Should
+	//	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: keywordsSearch filter added")
+	//}
+	//logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Similarity search Query to Qdrant %s", query)
+	scoredPoints, err := client.Query(context.TODO(), &query)
+	if err != nil {
+		logPanic(logCtx, "error in qdrant query: %q", err)
+	}
+
+	// Transform results
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Got %f points from qdrant query", len(scoredPoints))
+	citations = make([]string, len(scoredPoints))
+	dbResponses := make([]sharedtypes.DbResponse, len(scoredPoints))
+	for i, scoredPoint := range scoredPoints {
+		logging.Log.Debugf(&logging.ContextMap{}, "Result #%d:", i)
+		logging.Log.Debugf(&logging.ContextMap{}, "Similarity score: %v", scoredPoint.Score)
+		dbResponse, err := qdrant_utils.QdrantPayloadToType[sharedtypes.DbResponse](scoredPoint.GetPayload())
+                // Add the result to the list
+		if err != nil {
+		}
+		dbResponses[i] = dbResponse
+		citations = append(citations, dbResponse.DocumentName)
+		//logging.Log.Debugf(&logging.ContextMap{}, "Similarity doc title: %v", dbResponse.Title)
+		logging.Log.Debugf(&logging.ContextMap{}, "Similarity doc path relative: %v", dbResponse.DocumentName)
+
+	}
+	// 
+	return citations
+
+}
+
+
 // SendVectorsToKnowledgeDB sends the given vector to the KnowledgeDB and returns the most relevant data
 //
 // Tags:
@@ -214,10 +331,6 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity pyaedt_group: %v", dbResponse.PyaedtGroup)
 	}
         
-	//var exampledbResponse []sharedtypes.ExampleDbResponse
-	//exampledbResponse = SendVectorsToExampleDB(vector, keywords, keywordsSearch, "", similaritySearchResults, similaritySearchMinScore, sparseVector)
-        //PyaedtGetElementContextFromGraphDb(dbResponses) 
-
         //logging.Log.Debugf(&logging.ContextMap{}, "examples: %d", len(exampledbResponse))
 
 	return dbResponses

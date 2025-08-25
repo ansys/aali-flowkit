@@ -179,7 +179,7 @@ func setupFlowkitTestContainers(t *testing.T, ctx context.Context, testContainer
 	if testContainerConfig.qdrant {
 		// setup qdrant container
 		qdrantReq := testcontainers.ContainerRequest{
-			Image:        "qdrant/qdrant:v1.13.6",
+			Image:        "qdrant/qdrant:v1.15.1",
 			ExposedPorts: []string{"6334/tcp"},
 			WaitingFor: wait.ForAll(
 				wait.ForLog("Qdrant gRPC listening on 6334"),

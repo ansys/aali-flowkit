@@ -132,6 +132,9 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		logPanic(logCtx, "unable to create qdrant client: %q", err)
 	}
 
+	resp, err := client.GetCollectionInfo(context.TODO(), collection)
+	logging.Log.Infof(&logging.ContextMap{}, "******* Collection info: %+v", resp)
+
 	logging.Log.Debugf(
 		&logging.ContextMap{},
 		`********** SendVectorsToKnowledgeDB inputs: 
@@ -156,7 +159,7 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	}
 
 	// perform the qdrant query: Phrase match on keywords
-	if keywordsSearch {
+	if keywordsSearch && len(keywords) > 0 {
 		exclude_keywords := map[string]struct{}{
 			"ansys":           {},
 			"aedt":            {},
@@ -170,7 +173,8 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 			// Exclude keywords that will always in the library context, including it in the 'Should' clause
 			// would lead to all results being returned, which is not desired.
 			if _, found := exclude_keywords[strings.ToLower(keyword)]; !found {
-				filter.Should = append(filter.Should, qdrant.NewMatchPhrase("name", keyword))
+				filter.Should = append(filter.Should, qdrant.NewMatchText("name", keyword))
+
 			}
 		}
 	}
@@ -184,6 +188,8 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 
 	// Use fusion if both dense and sparse vectors are available
 	if sparse != nil && len(sparse) > 0 {
+		logging.Log.Debugf(&logging.ContextMap{}, "*********** Sparse query ***********")
+
 		// Create prefetch queries for hybrid search using RRF (Reciprocal Rank Fusion)
 		prefetchQueries := []*qdrant.PrefetchQuery{
 			// Dense vector search prefetch
@@ -213,6 +219,7 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 			WithPayload:    qdrant.NewWithPayloadEnable(true),
 		}
 	} else {
+		logging.Log.Debugf(&logging.ContextMap{}, "*********** Dense query ***********")
 		// DENSE-ONLY SEARCH: Simplified approach
 		query = qdrant.QueryPoints{
 			CollectionName: collection,
@@ -225,12 +232,13 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		}
 	}
 
-	// logging.Log.Debugf(&logging.ContextMap{}, "*********** query #%s ***********", query)
+	logging.Log.Debugf(&logging.ContextMap{}, "*********** query #%v ***********", query)
 	scoredPoints, err := client.Query(context.TODO(), &query)
 	if err != nil {
 		logPanic(logCtx, "error in qdrant query: %q", err)
 	}
 
+	logging.Log.Debugf(&logging.ContextMap{}, "**************** 1st query: Got %d points from qdrant query**************", len(scoredPoints))
 	// If no similar points are found from the keywords filtering query, we return results without filtering.
 	if len(scoredPoints) == 0 {
 		logging.Log.Warnf(logCtx, "No similar points found with the keywords (%v) filtering query. Returning points without keywords filtering from collections.", keywords)
@@ -288,7 +296,7 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		}
 
 		// Execute query
-		scoredPoints, err := client.Query(context.TODO(), &query)
+		scoredPoints, err = client.Query(context.TODO(), &query)
 		if err != nil {
 			logPanic(logCtx, "error in qdrant query: %q", err)
 		}
@@ -298,12 +306,14 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		} else {
 			logging.Log.Infof(logCtx, "Found %d similar points without the filtering query.", len(scoredPoints))
 		}
+	} else if !keywordsSearch || len(keywords) == 0 {
+		logging.Log.Infof(logCtx, "Found %d similar points without the filtering query.", len(scoredPoints))
 	} else {
 		logging.Log.Infof(logCtx, "Found %d similar points with the filtering query.", len(scoredPoints))
 	}
 
 	// Transform results
-	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Got %d points from qdrant query", len(scoredPoints))
+	logging.Log.Debugf(&logging.ContextMap{}, "**************** 2nd query: Got %d points from qdrant query**************", len(scoredPoints))
 
 	dbResponses := make([]sharedtypes.ApiDbResponse, len(scoredPoints))
 	for i, scoredPoint := range scoredPoints {

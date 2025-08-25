@@ -78,6 +78,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"AisChangeAcsResponsesByFactor":                  AisChangeAcsResponsesByFactor,
 	"AecGetContextFromRetrieverModule":               AecGetContextFromRetrieverModule,
 	"AecPerformLLMFinalRequest":                      AecPerformLLMFinalRequest,
+	"GetContextFromDataPlugin":                       GetContextFromDataPlugin,
 
 	// data extraction
 	"GetGithubFilesToExtract":                    GetGithubFilesToExtract,

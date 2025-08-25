@@ -284,20 +284,20 @@ func StringFormat(data any, format string) string {
 //   - response: the response from the Fluent container as a string
 func FluentCodeGenTest(message string) (response string) {
 	url := "http://aali-fluent:8000/chat"
-	
+
 	// Create the JSON payload directly
 	jsonData := fmt.Sprintf(`{"message": "%s"}`, message)
-	
+
 	// Create HTTP request
 	req, err := http.NewRequest("POST", url, bytes.NewBufferString(jsonData))
 	if err != nil {
 		panic(fmt.Sprintf("Error creating HTTP request: %v", err))
 	}
-	
+
 	// Set headers
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	// Execute the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -305,32 +305,42 @@ func FluentCodeGenTest(message string) (response string) {
 		panic(fmt.Sprintf("Error executing HTTP request: %v", err))
 	}
 	defer resp.Body.Close()
-	
+
 	// Read the response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		panic(fmt.Sprintf("Error reading response body: %v", err))
 	}
-	
+
 	// Check if the response code is successful (2xx)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		panic(fmt.Sprintf("HTTP request failed with status code %d: %s", resp.StatusCode, string(body)))
 	}
-	
+
 	// Parse JSON response to extract just the response content
 	var responseData map[string]interface{}
 	if err := json.Unmarshal(body, &responseData); err != nil {
 		panic(fmt.Sprintf("Error parsing JSON response: %v", err))
 	}
-	
+
 	// Extract the response field
 	if responseField, exists := responseData["response"]; exists {
 		if responseArray, ok := responseField.([]interface{}); ok && len(responseArray) > 0 {
-			// Return the first item in the response array as string
-			return fmt.Sprintf("%v", responseArray[0])
+			// Concatenate all items in the response array with a newline
+			var concatenatedResponse string
+			for _, item := range responseArray {
+				if str, ok := item.(string); ok {
+					concatenatedResponse += str + "\n"
+				} else {
+					concatenatedResponse += fmt.Sprintf("%v\n", item)
+				}
+			}
+			// Remove the trailing newline
+			concatenatedResponse = strings.TrimRight(concatenatedResponse, "\n")
+			return "```python\n" + concatenatedResponse + "```"
 		}
 	}
-	
+
 	// Fallback to raw response if parsing fails
 	return string(body)
 }

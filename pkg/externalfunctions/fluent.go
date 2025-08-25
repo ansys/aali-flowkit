@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 // FluentCodeGen sends a raw user message to the Fluent container and returns the response
@@ -41,7 +42,7 @@ import (
 // Returns:
 //   - response: the response from the Fluent container as a string
 func FluentCodeGen(message string) (response string) {
-	url := "http://localhost:9013/chat"
+	url := "http://aali-fluent:8000/chat"
 
 	// Create the JSON payload directly
 	jsonData := fmt.Sprintf(`{"message": "%s"}`, message)
@@ -84,8 +85,18 @@ func FluentCodeGen(message string) (response string) {
 	// Extract the response field
 	if responseField, exists := responseData["response"]; exists {
 		if responseArray, ok := responseField.([]interface{}); ok && len(responseArray) > 0 {
-			// Return the first item in the response array as string
-			return fmt.Sprintf("%v", responseArray[0])
+			// Concatenate all items in the response array with a newline
+			var concatenatedResponse string
+			for _, item := range responseArray {
+				if str, ok := item.(string); ok {
+					concatenatedResponse += str + "\n"
+				} else {
+					concatenatedResponse += fmt.Sprintf("%v\n", item)
+				}
+			}
+			// Remove the trailing newline
+			concatenatedResponse = strings.TrimRight(concatenatedResponse, "\n")
+			return "```python\n" + concatenatedResponse + "```"
 		}
 	}
 

@@ -121,8 +121,8 @@ func PyaedtGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse)
 //   - sparseVector: optional sparse vector for hybrid search (pass empty map for dense-only search)
 //
 // Returns:
-//   - databaseResponse: an array of the most relevant data
-func SendVectorsToUserGuide(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64, sparseVector map[uint]float32) (citations []string) { //databaseResponse []sharedtypes.DbResponse) {
+//   - citations: an array of the most relevant user guide urls
+func SendVectorsToUserGuide(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64, sparseVector map[uint]float32) (citations []string) {
 	// Use the provided sparse vector directly (will be empty map if not provided)
 	sparse := sparseVector
 	collection = "user_guide"
@@ -142,6 +142,7 @@ func SendVectorsToUserGuide(vector []float32, keywords []string, keywordsSearch 
 
 	// Use fusion if both dense and sparse vectors are available
 	if sparse != nil && len(sparse) > 0 {
+		logging.Log.Debugf(&logging.ContextMap{}, "*********** Hybrid: Sparse + dense query ***********")
 		// Create prefetch queries for hybrid search using RRF (Reciprocal Rank Fusion)
 		prefetchQueries := []*qdrant.PrefetchQuery{
 			// Dense vector search prefetch
@@ -183,43 +184,35 @@ func SendVectorsToUserGuide(vector []float32, keywords []string, keywordsSearch 
 		}
 	}
 
-	// perform the qdrant query
-	// TODO: Check only leaf nodes/pages here ?
-	//filter := qdrant.Filter{
-	//Must: []*qdrant.Condition{
-	//	qdrant.NewMatchInt("level", 2),
-	//},
-	//}
-	//if keywordsSearch {
-	//	filter.Must = append(filter.Must, qdrant.NewMatchKeywords("name_formatted", keywords...)) // filter.Should
-	//	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: keywordsSearch filter added")
-	//}
-	//logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Similarity search Query to Qdrant %s", query)
 	scoredPoints, err := client.Query(context.TODO(), &query)
 	if err != nil {
 		logPanic(logCtx, "error in qdrant query: %q", err)
 	}
 
 	// Transform results
-	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Got %f points from qdrant query", len(scoredPoints))
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Got %d points from qdrant query", len(scoredPoints))
 	citations = make([]string, len(scoredPoints))
 	dbResponses := make([]sharedtypes.DbResponse, len(scoredPoints))
 	for i, scoredPoint := range scoredPoints {
 		logging.Log.Debugf(&logging.ContextMap{}, "Result #%d:", i)
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity score: %v", scoredPoint.Score)
+		logging.Log.Debugf(&logging.ContextMap{}, "Similarity id: %v", scoredPoint.Id)
+
 		dbResponse, err := qdrant_utils.QdrantPayloadToType[sharedtypes.DbResponse](scoredPoint.GetPayload())
 		// Add the result to the list
 		if err != nil {
 		}
 		dbResponses[i] = dbResponse
-		citations = append(citations, dbResponse.DocumentName)
+
+		// Form the user guide url: <base url> + document name
+		citations[i] = "https://github.com/ansys/pyaedt/tree/main/doc/source/User_guide/" + dbResponse.DocumentName
+		// TODO: Add url validation.
+
 		//logging.Log.Debugf(&logging.ContextMap{}, "Similarity doc title: %v", dbResponse.Title)
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity doc path relative: %v", dbResponse.DocumentName)
-
 	}
-	//
-	return citations
 
+	return citations
 }
 
 // SendVectorsToKnowledgeDB sends the given vector to the KnowledgeDB and returns the most relevant data
@@ -260,14 +253,6 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	// 		****** similaritySearchResults: %v ******;
 	// 		****** similaritySearchMinScore: %v ******;
 	// 		**********`, keywords, keywordsSearch, collection, similaritySearchResults, similaritySearchMinScore)
-
-	// Example inputs 1: Create HFSS design / launch hfss
-	// Example keywords: ["hfss design", "launch hfss"]
-	// Example inputs 2: Using existing desktop session, create HFSS instance with new project "abc" and aedt version 2025 R1 in non-graphical mode
-	// Example keywords: ["ansys.aedt.core","HFSS","Project","aedt version","non-graphical mode"]
-
-	// keywords = []string{"ansys.aedt.core", "HFSS", "project", "aedt version", "non-graphical mode"}
-	// keywords = []string{"hfss design", "launch hfss"}
 
 	// Pure vector similarity search across all collection types
 	filter := qdrant.Filter{
@@ -348,7 +333,7 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		}
 	}
 
-	logging.Log.Debugf(&logging.ContextMap{}, "*********** query #%v ***********", query)
+	// logging.Log.Debugf(&logging.ContextMap{}, "*********** query #%v ***********", query)
 	scoredPoints, err := client.Query(context.TODO(), &query)
 	if err != nil {
 		logPanic(logCtx, "error in qdrant query: %q", err)
@@ -444,10 +429,7 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity pyaedt_group: %v", dbResponse.PyaedtGroup)
 	}
 
-	//logging.Log.Debugf(&logging.ContextMap{}, "examples: %d", len(exampledbResponse))
-
 	return dbResponses
-
 }
 
 // SendVectorToExamplesDb sends the given vector to the KnowledgeDB and returns the most relevant data
@@ -487,21 +469,7 @@ func SendVectorsToExampleDB(vector []float32, keywords []string, keywordsSearch 
 	limit := uint64(similaritySearchResults)
 	scoreThreshold := float32(similaritySearchMinScore)
 
-	logging.Log.Debugf(
-		&logging.ContextMap{},
-		`********** SendVectorsToExampleDB inputs: 
-			****** keywords: %v ******; 
-			****** keywordsSearch: %v ******; 
-			****** collection: %v ******; 
-			****** similaritySearchResults: %v ******; 
-			****** similaritySearchMinScore: %v ******;
-			**********`, keywords, keywordsSearch, collection, similaritySearchResults, similaritySearchMinScore)
-	logging.Log.Debugf(logCtx, "********* Filter %v *********\n", filter)
-
 	var query qdrant.QueryPoints
-
-	logging.Log.Debugf(&logging.ContextMap{}, "*********** dense %v ***********", vector)
-	logging.Log.Debugf(&logging.ContextMap{}, "*********** sparse %v, %d***********", sparse, len(sparse))
 
 	// Use fusion if both dense and sparse vectors are available
 	if sparse != nil && len(sparse) > 0 {
@@ -535,10 +503,7 @@ func SendVectorsToExampleDB(vector []float32, keywords []string, keywordsSearch 
 			WithVectors:    qdrant.NewWithVectorsEnable(false),
 			WithPayload:    qdrant.NewWithPayloadEnable(true),
 		}
-		logging.Log.Debugf(&logging.ContextMap{}, "*********** Hybrid: Sparse + dense query %v ***********", query)
-
 	} else {
-		logging.Log.Debugf(&logging.ContextMap{}, "*********** Dense search %v***********", vector)
 		// DENSE-ONLY SEARCH: Simplified approach
 		query = qdrant.QueryPoints{
 			CollectionName: collection,
@@ -572,8 +537,6 @@ func SendVectorsToExampleDB(vector []float32, keywords []string, keywordsSearch 
 		dbResponses[i] = dbResponse
 		//logging.Log.Debugf(&logging.ContextMap{}, "Similarity element name: %v", dbResponse.Name)
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity text: %v", dbResponse.Text)
-		logging.Log.Debugf(&logging.ContextMap{}, "=============================================================================================================================================================================")
-
 	}
 	return dbResponses
 }

@@ -195,4 +195,5 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"SearchMethods":           SearchMethods,
 	"SearchDocumentation":     SearchDocumentation,
 	"RewriteQueryWithHistory": RewriteQueryWithHistory,
+	"MakeAPIRequest":          MakeAPIRequest,
 }

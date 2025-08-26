@@ -577,3 +577,50 @@ func QueryUserGuideAndFormat(libraryName string) string {
 
 	return convertJSONToCustomizeHelper(object, 0, "")
 }
+
+// Make API Request to the URL with given method, headers, and body
+//
+// Tags:
+//   - @displayName: Make API Request
+//
+// Parameters:
+//   - requestType: the type of the request (GET, POST, etc.)
+//   - endpoint: the URL to send the request to
+//   - header: the headers to include in the request
+//   - query: the user query to be used for the query.
+//   - libraryName: the name of the library to be used in the query
+//
+// Returns:
+//   - success: a boolean indicating whether the request was successful
+//   - returnJsonBody: the JSON body of the response as a string
+func MakeAPIRequest(requestType string, endpoint string, header map[string]string, query string, libraryName string) (code string) {
+
+	queryParams := map[string]string{
+		"Content-Type": "application/json",
+	}
+	// Sample json body
+	// `{"key": "value", "number": 123}`
+	jsonBody := fmt.Sprintf(`{"query": "%s", "product": "%s"}`, query)
+	if requestType == "" {
+		requestType = "POST"
+	}
+	if endpoint == "" {
+		endpoint = "http://localhost:8000/code_gen"
+	}
+	success, returnJsonBody := SendRestAPICall(requestType, endpoint, header, queryParams, jsonBody)
+	if !success {
+		logging.Log.Errorf(&logging.ContextMap{}, "API request failed")
+		return ""
+	}
+	// CHeck the returnJsonBody is valid json
+	var result map[string]interface{}
+	err := json.Unmarshal([]byte(returnJsonBody), &result)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error converting response to JSON object: %v", err)
+		return ""
+	}
+	if code, ok := result["code"].(string); ok {
+		return code
+	}
+	return ""
+}

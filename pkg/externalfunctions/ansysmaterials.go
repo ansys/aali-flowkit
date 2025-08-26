@@ -307,6 +307,7 @@ func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID strin
 //   - modelIds: the model IDs of the LLMs to query
 //   - tokenCountModelName: the model name used for token count calculation
 //   - n: number of parallel requests to perform
+//   - temperature: the temperature setting for the LLM requests 
 //   - traceID: the trace ID in decimal format
 //   - spanID: the span ID in decimal format
 //
@@ -314,15 +315,20 @@ func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID strin
 //   - uniqueCriterion: a deduplicated list of extracted attributes (criteria) from all responses
 //   - tokenCount: the total token count (input tokens × n + combined output tokens)
 //   - childSpanID: the child span ID created for this operation
-func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string, n int, traceID string, spanID string) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int, childSpanID string) {
+func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string, n int, temperature float32, traceID string, spanID string) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int, childSpanID string) {
 	ctx := &logging.ContextMap{}
 	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
+	// Create model options with temperature
+	modelOptions := &sharedtypes.ModelOptions{
+		Temperature: &temperature,
+	}
+
 	// Helper function to send a request and get the response as string
 	sendRequest := func() string {
-		responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil)
+		responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, modelOptions, nil)
 		defer close(responseChannel)
 
 		var responseStr string

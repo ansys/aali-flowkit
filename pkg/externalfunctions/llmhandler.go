@@ -1151,12 +1151,12 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// {original_request}
 	// ******************************************************************************
 
-	finalQuery = "You are a Python expert. "
+	finalQuery = "You are a Python expert with experience in writing complete, functional PyAEDT scripts. These scripts typically include python code for tasks such as geometry creation, boundary setup, and analysis setups - especially for HFSS (or other AnsysEM tools as applicable). Your task is to write valid Python code using PyAEDT APIs "
 
 	// If there is no response from the KnowledgeDB, return the original request
 	if len(knowledgedbResponse) > 0 {
 		if userGuideSearch {
-			finalQuery += "Based on the following pyaedt documentation links and examples:\n\n"
+			finalQuery += "based on the following pyaedt documentation links and examples:\n\n"
 
 			for i, citation := range citations {
 				finalQuery += "--- REFERENCE LINKS START " + fmt.Sprint(i+1) + " ---\n"
@@ -1174,7 +1174,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 				// logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Initial Query %s", finalQuery)
 			}
 		} else {
-			finalQuery += "Based on the following examples:\n\n"
+			finalQuery += "based on the following examples:\n\n"
 			for i, element := range knowledgedbResponse {
 				// Add the example number
 				logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Reading knowledge DB response")

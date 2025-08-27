@@ -1113,17 +1113,26 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 // Parameters:
 //   - request: the original request
 //   - knowledgedbResponse: the KnowledgeDB response
+//   - userGuideSearch: include user guide citations
+//   - citations: citations string
+//   - elementContext: String context prompt
 //
 // Returns:
 //   - finalQuery: the final query
-func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse, citations []string) (finalQuery string) {
+func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse, userGuideSearch bool, citations []string, elementContexts []string) (finalQuery string) {
+	finalQuery = "You are a Python expert. "
 	// Build the final query using the KnowledgeDB response and the original request
 	// We have to use the text from the DB response and the original request.
 	//
 	// The prompt should be in the following format:
 	//
 	// ******************************************************************************
-	// Based on the following examples:
+	/// Based on the following reference links and examples:
+	// --- REFERENCE LINKS START ---
+	// {citation_url_1},
+	// {citation_url_2},
+	// {citation_url_3}
+	// --- END REFERENCE LINKS --
 	//
 	// --- START EXAMPLE {response_n}---
 	// >>> Summary:
@@ -1146,11 +1155,20 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// ******************************************************************************
 
 	// If there is no response from the KnowledgeDB, return the original request
-	if len(knowledgedbResponse) > 0 {
-		// Initial request
-
+	// Initial request
+	if userGuideSearch {
+		finalQuery += "Based on the following pyaedt documentation links\n\n"
+		for i, citation := range citations {
+			finalQuery += "--- REFERENCE LINKS START " + fmt.Sprint(i+1) + " ---\n"
+			finalQuery += citation + "\n"
+			finalQuery += "--- END REFERENCE LINKS " + fmt.Sprint(i+1) + " ---\n\n"
+		}
+		finalQuery += "And following examples:\n\n"
+	} else {
 		finalQuery = "Based on the following examples:\n\n"
+	}
 
+	if len(knowledgedbResponse) > 0 {
 		for i, element := range knowledgedbResponse {
 			// Add the example number
 			logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Reading knowledge DB response")
@@ -1162,7 +1180,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		}
 
 	} else {
-		logging.Log.Debugf(&logging.ContextMap{}, "Zero knowledge DB reponse found")
+		logging.Log.Debugf(&logging.ContextMap{}, "No relevant examples found in DB.")
 	}
 
 	// Kaumudi: Rephrase

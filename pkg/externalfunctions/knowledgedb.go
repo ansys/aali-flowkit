@@ -46,7 +46,7 @@ import (
 //   - elementName - string
 //   - elementType - string
 // TODO: Move to pyaedt.go file 
-func PyaedtGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse) ( exampleNames []string , parameters []string, returnTypes []string){
+func PyaedtGetElementContextFromGraphDb(dbResponse sharedtypes.ApiDbResponse) ( exampleNames []string , parameters []string, returnTypes []string){
 	ctx := &logging.ContextMap{}
 	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
 	if err != nil {
@@ -54,9 +54,9 @@ func PyaedtGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse)
 	}
 	// kapatil : instead of element names, can we use GUID ?
         // Assuming this is a single entry point 
-	if len(dbResponses) > 0 {
-		elementType := dbResponses[0].Type
-		elementName := dbResponses[0].Name
+	//if len(dbResponse) > 0 {
+		elementType := dbResponse.Type
+		elementName := dbResponse.Name
 		logging.Log.Debugf(ctx, "reading entry points %s of type %s", elementName, elementType)
 		// Get pyaedt group
 		// if element type = method -> go to class -> check isPyaedtGroup
@@ -73,7 +73,7 @@ func PyaedtGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse)
 			logging.Log.Debugf(ctx, "No db points for this entry point")
 		}
 		// Get Parameters
-		//parameters, err := graphdb.GraphDbDriver.GetParametersFromCodeGenerationElement(elementType, elementName)
+		parameters, err = graphdb.GraphDbDriver.GetParametersFromCodeGenerationElement(elementType, elementName)
 		if err != nil {
 			logPanic(ctx, "error Getting parameters from code generation element: %v", err)
 		}
@@ -86,7 +86,7 @@ func PyaedtGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse)
 		}
 	
 		// Get Return types
-		//returnTypes, err := graphdb.GraphDbDriver.GetReturnTypesFromCodeGenerationElement(elementType, elementName)
+		returnTypes, err = graphdb.GraphDbDriver.GetReturnTypeFromCodeGenerationElement(elementType, elementName)
 		if err != nil {
 			logPanic(ctx, "error Getting return types  from code generation element: %v", err)
 		}
@@ -98,12 +98,56 @@ func PyaedtGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse)
 			logging.Log.Debugf(ctx, "No db points for this entry point")
 		}
 	
-	} else {
-		logging.Log.Debugf(ctx, "Graph DB no entry point found!!!")
-	}
+	//} else {
+	//	logging.Log.Debugf(ctx, "No entry point to graph DB found, Will skip context addition")
+	//}
 	return exampleNames, parameters, returnTypes
-
 }
+
+// PyaedtBatchGetElementContextFromGraphDb  graph database.
+//
+// Tags:
+//   - @displayName: Pyaedt Get element context from graph db
+//
+// Parameters:
+//   - dbResponse - input response from API methods
+// TODO: Move to pyaedt.go file 
+func PyaedtBatchGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse) (elementContexts []string) {
+	ctx := &logging.ContextMap{}
+	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
+	if err != nil {
+		logPanic(nil, "error initializing graphdb: %v", err)
+	}
+        elementParams := make(map[string][]string)
+	elementReturns := make(map[string][]string)
+	// kapatil : instead of element names, can we use GUID ?
+        // Assuming this is a single entry point 
+	for _, dbResponse := range dbResponses {
+		elementType := dbResponse.Type
+		elementName := dbResponse.Name
+		logging.Log.Debugf(ctx, "Reading entry points %s of type %s", elementName, elementType)
+		tempPrompt := "For "
+		tempPrompt += elementName
+        	tempPrompt += " returns "
+	
+		_, parameters, returnTypes := PyaedtGetElementContextFromGraphDb(dbResponses[0])
+		if len(parameters) > 0 {
+			elementParams[elementName] = parameters
+			tempPrompt += elementParams[elementName][0]
+			}
+		if len(returnTypes) > 0 {
+			elementReturns[elementName] = returnTypes
+			tempPrompt += elementReturns[elementName][0]
+		}
+		elementContexts = append(elementContexts, tempPrompt)
+	}
+	if len(dbResponses) == 0 {
+		logging.Log.Debugf(ctx, "No function context found")
+	}
+	// Create prompt for each element information
+	return elementContexts
+}
+
 
 // SendVectorsToUserGuide sends the given vector to the user guide  and returns the most relevant data
 //
@@ -120,7 +164,7 @@ func PyaedtGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse)
 //   - sparseVector: optional sparse vector for hybrid search (pass empty map for dense-only search)
 //
 // Returns:
-//   - databaseResponse: an array of the most relevant data
+//   - citations: an array of the most relevant user guide urls
 func SendVectorsToUserGuide(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64, sparseVector map[uint]float32) (citations []string ) {//databaseResponse []sharedtypes.DbResponse) {
 	// Use the provided sparse vector directly (will be empty map if not provided)
 	sparse := sparseVector
@@ -181,26 +225,13 @@ func SendVectorsToUserGuide(vector []float32, keywords []string, keywordsSearch 
 			WithPayload:    qdrant.NewWithPayloadEnable(true),
 		}
 	}
-
-	// perform the qdrant query
-	// TODO: Check only leaf nodes/pages here ?
-	//filter := qdrant.Filter{
-		//Must: []*qdrant.Condition{
-		//	qdrant.NewMatchInt("level", 2),
-		//},
-	//}
-	//if keywordsSearch {
-	//	filter.Must = append(filter.Must, qdrant.NewMatchKeywords("name_formatted", keywords...)) // filter.Should
-	//	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: keywordsSearch filter added")
-	//}
-	//logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Similarity search Query to Qdrant %s", query)
 	scoredPoints, err := client.Query(context.TODO(), &query)
 	if err != nil {
 		logPanic(logCtx, "error in qdrant query: %q", err)
 	}
 
 	// Transform results
-	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Got %f points from qdrant query", len(scoredPoints))
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Got %d points from qdrant query", len(scoredPoints))
 	citations = make([]string, len(scoredPoints))
 	dbResponses := make([]sharedtypes.DbResponse, len(scoredPoints))
 	for i, scoredPoint := range scoredPoints {
@@ -211,12 +242,14 @@ func SendVectorsToUserGuide(vector []float32, keywords []string, keywordsSearch 
 		if err != nil {
 		}
 		dbResponses[i] = dbResponse
-		citations = append(citations, dbResponse.DocumentName)
+		/// Form the user guide url: <base url> + document name
+		citations[i] = "https://github.com/ansys/pyaedt/tree/main/doc/source/User_guide/" + dbResponse.DocumentName
+		// TODO: Add url validation
 		//logging.Log.Debugf(&logging.ContextMap{}, "Similarity doc title: %v", dbResponse.Title)
 		logging.Log.Debugf(&logging.ContextMap{}, "Similarity doc path relative: %v", dbResponse.DocumentName)
 
 	}
-	// 
+	
 	return citations
 
 }
@@ -247,8 +280,46 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	if err != nil {
 		logPanic(logCtx, "unable to create qdrant client: %q", err)
 	}
+	
+
+	// Example inputs 1: Create HFSS design / launch hfss
+	// Example keywords: ["hfss design", "launch hfss"]
+	// Example inputs 2: Using existing desktop session, create HFSS instance with new project "abc" and aedt version 2025 R1 in non-graphical mode
+	// Example keywords: ["ansys.aedt.core","HFSS","Project","aedt version","non-graphical mode"]
+
+	// keywords = []string{"ansys.aedt.core", "HFSS", "project", "aedt version", "non-graphical mode"}
+	// keywords = []string{"hfss design", "launch hfss"}	
+	
 	// Pure vector similarity search across all collection types
 	filter := qdrant.Filter{}
+        //filter := qdrant.Filter{
+	//	Should: []*qdrant.Condition{},
+	//}
+
+	// perform the qdrant query: Phrase match on keywords
+	//if keywordsSearch && len(keywords) > 0 {
+		// TODO: Check if keyword extraction failed:
+		// The provided text does not mention anything about ansys.aedt.core Launch AEDT or Desktop objects so I cannot extract keywords from it.
+
+		//exclude_keywords := map[string]struct{}{
+		//	"ansys":           {},
+		//	"aedt":            {},
+	//		"core":            {},
+		//	"ansys.aedt.core": {},
+		//	"ansys.aedt":      {},
+		//	"aedt.core":       {},
+		//}
+
+		//for _, keyword := range keywords {
+			// Exclude keywords that will always in the library context, including it in the 'Should' clause
+			// would lead to all results being returned, which is not desired.
+			//if _, found := exclude_keywords[strings.ToLower(keyword)]; !found {
+			//	filter.Should = append(filter.Should, qdrant.NewMatchText("name", keyword))
+			//}
+		//}
+	//}
+
+	//logging.Log.Debugf(logCtx, "********* Filter %v *********\n", filter)
 	// Note: Keyword search disabled for now to ensure broad compatibility
 
 	limit := uint64(similaritySearchResults)
@@ -300,15 +371,10 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	}
 
 	// perform the qdrant query
-	//filter := qdrant.Filter{
-		//Must: []*qdrant.Condition{
-		//	qdrant.NewMatchInt("level", 2),
-		//},
-	//}
-	//if keywordsSearch {
-	//	filter.Must = append(filter.Must, qdrant.NewMatchKeywords("name_formatted", keywords...)) // filter.Should
-	//	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: keywordsSearch filter added")
-	//}
+	
+
+
+
 	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Similarity search Query to Qdrant %s", query)
 	scoredPoints, err := client.Query(context.TODO(), &query)
 	if err != nil {
@@ -358,11 +424,11 @@ func SendVectorsToExampleDB(vector []float32, keywords []string, keywordsSearch 
 	// Use the provided sparse vector directly (will be empty map if not provided)
 	sparse := sparseVector
 	qclient, err := qdrant_utils.QdrantClient()
-	collExists, err := qclient.CollectionExists(context.TODO(), "examples")
+	collExists, err := qclient.CollectionExists(context.TODO(), "examples") //your collection name here
 	if collExists {
 		logging.Log.Debugf(&logging.ContextMap{}, "Found example collection")
 	}
-	collection = "examples" // TODO: Your examples collection name  here"
+	collection = "examples" // TODO: Your examples collection name  here
 	logCtx := &logging.ContextMap{}
 	client, err := qdrant_utils.QdrantClient()
 	if err != nil {
@@ -376,9 +442,13 @@ func SendVectorsToExampleDB(vector []float32, keywords []string, keywordsSearch 
 	scoreThreshold := float32(similaritySearchMinScore)
 
 	var query qdrant.QueryPoints
+	
+	logging.Log.Debugf(&logging.ContextMap{}, "*********** dense %v ***********", vector)
+	logging.Log.Debugf(&logging.ContextMap{}, "*********** sparse %v, %d***********", sparse, len(sparse))
 
 	// Use fusion if both dense and sparse vectors are available
 	if sparse != nil && len(sparse) > 0 {
+		logging.Log.Debugf(&logging.ContextMap{}, "*********** Hybrid: Sparse + dense query ***********")
 		// Create prefetch queries for hybrid search using RRF (Reciprocal Rank Fusion)
 		prefetchQueries := []*qdrant.PrefetchQuery{
 			// Dense vector search prefetch
@@ -420,16 +490,6 @@ func SendVectorsToExampleDB(vector []float32, keywords []string, keywordsSearch 
 		}
 	}
 
-	// perform the qdrant query
-	//filter := qdrant.Filter{
-		//Must: []*qdrant.Condition{
-		//	qdrant.NewMatchInt("level", 2),
-		//},
-	//}
-	//if keywordsSearch {
-	//	filter.Must = append(filter.Must, qdrant.NewMatchKeywords("name_formatted", keywords...)) // filter.Should
-	//	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: keywordsSearch filter added")
-	//}
 	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Example Similarity search Query to Qdrant %s", query)
 	scoredPoints, err := client.Query(context.TODO(), &query)
 	if err != nil {

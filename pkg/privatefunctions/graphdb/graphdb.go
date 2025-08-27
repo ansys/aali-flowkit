@@ -796,7 +796,7 @@ func (graphdb_context *graphDbContext) GetExamplesFromCodeGenerationElement(elem
 
 	// Get examples
 	logging.Log.Debugf(&logging.ContextMap{}, "kapatil:GetExamplesFrom element: %s: %s", elementName, elementType)
-	query := fmt.Sprintf("MATCH (a:%v {Name: $name})<-[:Uses]-(b:Example) RETURN b.Name", elementType)
+	query := fmt.Sprintf("MATCH (a:%v {Name: $name})<-[:Uses]-(b:Example) RETURN b.Name", "Element")
 	examples, err := aali_graphdb.CypherQueryReadGeneric[exampleName](
 		graphdb_context.client,
 		graphdb_context.dbname,
@@ -844,9 +844,9 @@ func (graphdb_context *graphDbContext) GetReturnTypeFromCodeGenerationElement(el
 		Name string `json:"b.Name"`
 	}
 
-	// Get parameters
+	// Get returntype
 	logging.Log.Debugf(&logging.ContextMap{}, "kapatil:GetReturnTypeFrom element: %s: %s", elementName, elementType)
-	query := fmt.Sprintf("MATCH (a:%v {Name: $name})-[:Returns]->(b:Element) RETURN b.Name", elementType)
+	query := fmt.Sprintf("MATCH (a:%v {Name: $name})-[:Returns]->(b:Element) RETURN b.Name", "Element")
 	retTypes, err := aali_graphdb.CypherQueryReadGeneric[returnType](
 		graphdb_context.client,
 		graphdb_context.dbname,
@@ -896,7 +896,7 @@ func (graphdb_context *graphDbContext) GetParametersFromCodeGenerationElement(el
 
 	// Get parameters
 	logging.Log.Debugf(&logging.ContextMap{}, "kapatil:GetParamsFrom element: %s: %s", elementName, elementType)
-	query := fmt.Sprintf("MATCH (a:%v {Name: $name})<-[:UsesParameter]-(b:Element) RETURN b.Name", elementType)
+	query := fmt.Sprintf("MATCH (a:%v {Name: $name})<-[:UsesParameter]-(b:Element) RETURN b.Name", "Element")
 	parameters, err := aali_graphdb.CypherQueryReadGeneric[paramName](
 		graphdb_context.client,
 		graphdb_context.dbname,

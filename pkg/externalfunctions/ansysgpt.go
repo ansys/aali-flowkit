@@ -24,9 +24,12 @@ package externalfunctions
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
@@ -324,7 +327,7 @@ func AnsysGPTPerformLLMRequest(finalQuery string, history []sharedtypes.Historic
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(finalQuery, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, nil)
+	responseChannel := sendChatRequest(finalQuery, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, nil, nil)
 
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
@@ -897,6 +900,99 @@ func AecGetContextFromRetrieverModule(
 	return context
 }
 
+// GetContextFromDataPlugin retrieves context from a data plugin
+//
+// Tags:
+//   - @displayName: Get Context from Data Plugin
+//
+// Parameters:
+//   - userQuery: the user query
+//   - apiUrl: the API URL of the data plugin
+//   - username: the username for authentication at the data plugin
+//   - password: the password for authentication at the data plugin
+//   - topK: the number of results to be returned
+//
+// Returns:
+//   - context: the context retrieved from the data plugin
+func GetContextFromDataPlugin(userQuery string, apiUrl string, username string, password string, topK int) (context []sharedtypes.AnsysGPTRetrieverModuleChunk) {
+	// Encode the query and max_doc in base64
+	encodedQuery := base64.StdEncoding.EncodeToString([]byte(userQuery))
+	encodedMaxDoc := base64.StdEncoding.EncodeToString([]byte(strconv.Itoa(topK)))
+
+	// Prepare form data
+	formData := url.Values{}
+	formData.Set("q", encodedQuery)
+	formData.Set("max_doc", encodedMaxDoc)
+
+	// Create the request
+	req, err := http.NewRequest("POST", apiUrl, bytes.NewBufferString(formData.Encode()))
+	if err != nil {
+		panic(fmt.Errorf("error creating request: %v", err))
+	}
+
+	// Set content type for form data
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// Set basic authentication header
+	auth := username + ":" + password
+	encodedAuth := base64.StdEncoding.EncodeToString([]byte(auth))
+	req.Header.Set("Authorization", "Basic "+encodedAuth)
+
+	// Make the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(fmt.Errorf("error making request: %v", err))
+	}
+	defer resp.Body.Close()
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		panic(fmt.Errorf("error reading response body: %v", err))
+	}
+
+	// Check status code
+	if resp.StatusCode != 200 {
+		panic(fmt.Errorf("error response from data plugin: %v, body: %s", resp.Status, string(body)))
+	}
+
+	// The response is base64 encoded
+	base64EncodedResponse := string(body)
+
+	// Decode the base64 response
+	decodedResponse, err := base64.StdEncoding.DecodeString(base64EncodedResponse)
+	if err != nil {
+		panic(fmt.Errorf("error decoding base64 response: %v", err))
+	}
+
+	// Unmarshal the response
+	response := map[string]sharedtypes.AnsysGPTRetrieverModuleChunk{}
+	err = json.Unmarshal(decodedResponse, &response)
+	if err != nil {
+		panic(fmt.Errorf("error unmarshalling response: %v", err))
+	}
+	logging.Log.Debugf(&logging.ContextMap{}, "Received response from retriever module: %v", response)
+
+	// Extract the context from the response
+	context = make([]sharedtypes.AnsysGPTRetrieverModuleChunk, len(response))
+	for chunkNum, chunk := range response {
+		// Extract int from chunkNum
+		_, chunkNumstring, found := strings.Cut(chunkNum, "chunk ")
+		if !found {
+			panic(fmt.Errorf("error extracting chunk number from '%v'", chunkNum))
+		}
+		chunkNumInt, err := strconv.Atoi(chunkNumstring)
+		if err != nil {
+			panic(fmt.Errorf("error converting chunk number to int: %v", err))
+		}
+		// Store the chunk in the context slice
+		context[chunkNumInt-1] = chunk
+	}
+
+	return context
+}
+
 // AecPerformLLMFinalRequest performs a final request to LLM
 //
 // Tags:
@@ -927,7 +1023,8 @@ func AecPerformLLMFinalRequest(systemTemplate string,
 	tokenCountModelName string,
 	isStream bool,
 	userEmail string,
-	jwtToken string) (message string, stream *chan string) {
+	jwtToken string,
+	dontSendTokenCount bool) (message string, stream *chan string) {
 
 	logging.Log.Debugf(&logging.ContextMap{}, "Performing LLM final request")
 
@@ -1006,7 +1103,7 @@ func AecPerformLLMFinalRequest(systemTemplate string,
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request.
-	responseChannel := sendChatRequest(userPrompt, "general", nil, 0, systemPrompt, llmHandlerEndpoint, nil, options, nil)
+	responseChannel := sendChatRequest(userPrompt, "general", nil, 0, systemPrompt, llmHandlerEndpoint, nil, nil, options, nil)
 
 	// Create a stream channel
 	streamChannel := make(chan string, 400)
@@ -1018,8 +1115,14 @@ func AecPerformLLMFinalRequest(systemTemplate string,
 	}
 	totalInputTokenCount := previousInputTokenCount + inputTokenCount
 
+	// check if token count should be sent
+	sendTokenCount := false
+	if !dontSendTokenCount {
+		sendTokenCount = true
+	}
+
 	// Start a goroutine to transfer the data from the response channel to the stream channel.
-	go transferDatafromResponseToStreamChannel(&responseChannel, &streamChannel, false, true, tokenCountEndpoint, totalInputTokenCount, previousOutputTokenCount, tokenCountModelName, jwtToken, userEmail, true, contextString)
+	go transferDatafromResponseToStreamChannel(&responseChannel, &streamChannel, false, sendTokenCount, tokenCountEndpoint, totalInputTokenCount, previousOutputTokenCount, tokenCountModelName, jwtToken, userEmail, true, contextString)
 
 	return "", &streamChannel
 }

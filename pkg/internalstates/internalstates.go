@@ -27,6 +27,7 @@ import (
 )
 
 // Global variables
+var FlowkitVersion string
 var AvailableFunctions map[string]*aaliflowkitgrpc.FunctionDefinition
 
 // InitializeInternalStates initializes the internal states of the agent

@@ -307,7 +307,7 @@ func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID strin
 //   - modelIds: the model IDs of the LLMs to query
 //   - tokenCountModelName: the model name used for token count calculation
 //   - n: number of parallel requests to perform
-//   - temperature: the temperature setting for the LLM requests 
+//   - temperature: the temperature setting for the LLM requests
 //   - traceID: the trace ID in decimal format
 //   - spanID: the span ID in decimal format
 //
@@ -328,7 +328,7 @@ func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(inp
 
 	// Helper function to send a request and get the response as string
 	sendRequest := func() string {
-		responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, modelOptions, nil, nil)
+		responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, modelOptions, nil)
 		defer close(responseChannel)
 
 		var responseStr string

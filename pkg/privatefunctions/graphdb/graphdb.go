@@ -771,6 +771,106 @@ func (graphdb_context *graphDbContext) WriteCypherQuery(query string, parameters
 
 ////////////// Read functions //////////////
 
+// GetPyaedtGroupCaller gets PyaedtGroup's Caller category element name.
+// Pyaedt Group attribute is a Class specific atttribute, for methods we need to get to
+// its class to find pyaedt group.
+//
+// Parameters:
+//   - elementName: Name of the pyaedtGroup.
+//
+// Returns:
+//   - PyaedtCallerGroup
+//   - funcError: Error object.
+//
+func (graphdb_context *graphDbContext) GetPyaedtGroupCaller(pyaedtGroupInName string) (callerPyaedtGroup string, funcError error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			logging.Log.Errorf(&logging.ContextMap{}, "Panic GetPyaedtGroupCaller: %v", r)
+			funcError = r.(error)
+			return
+		}
+	}()
+
+	type elePyaedtGroup struct {
+		Name string `json:"b.Name"`
+	}
+
+	// Get pyaedtGroup
+	// Assuming it will always be a method type
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil:GetPyaedtGroup : %s", pyaedtGroupInName)
+	query := fmt.Sprintf("MATCH (a:%v {Name: $name})<-[:Calls]-(b:Element) RETURN b.Name", "Element")
+	elePyaedtGroupOut, err := aali_graphdb.CypherQueryReadGeneric[elePyaedtGroup](
+		graphdb_context.client,
+		graphdb_context.dbname,
+		query,
+		aali_graphdb.ParameterMap{
+			"name": aali_graphdb.StringValue(pyaedtGroupInName),
+		},
+	)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
+		return "", err
+	}
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Results pyaedtGroup= %d, Query:  %s", len(elePyaedtGroupOut), query)
+	if len(elePyaedtGroupOut) >0 {
+		callerPyaedtGroup = elePyaedtGroupOut[0].Name
+		logging.Log.Debugf(&logging.ContextMap{}, "kapatil: pyaedt Group = %s", callerPyaedtGroup)
+	}
+	return callerPyaedtGroup, nil
+}
+
+// GetPyaedtGroupFromCodeGenerationElement gets return type from a code generation element.
+// Pyaedt Group attribute is a Class specific atttribute, for methods we need to get to its
+// its class to find pyaedt group.
+//
+// Parameters:
+//   - elementType: Type of the code generation element.
+//   - elementName: Name of the code generation element.
+//
+// Returns:
+//   - elementPyaedtGroup
+//   - funcError: Error object.
+//
+func (graphdb_context *graphDbContext) GetPyaedtGroupFromCodeGenerationElement(elementType string, elementName string) (elementPyaedtGroup string, funcError error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			logging.Log.Errorf(&logging.ContextMap{}, "Panic GetElementPyaedtGroupFromCodeGenerationElement: %v", r)
+			funcError = r.(error)
+			return
+		}
+	}()
+
+	type elePyaedtGroup struct {
+		Name string `json:"b.Name"`
+	}
+
+	// Get pyaedtGroup
+	// Assuming it will always be a method type
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil:GetPyaedtGroup of element: %s: %s", elementName, elementType)
+	query := fmt.Sprintf("MATCH (a:%v {Name: $name})-[:IsAPyaedtGroup]->(b:Element) RETURN b.Name", "Element")
+	elePyaedtGroupOut, err := aali_graphdb.CypherQueryReadGeneric[elePyaedtGroup](
+		graphdb_context.client,
+		graphdb_context.dbname,
+		query,
+		aali_graphdb.ParameterMap{
+			"name": aali_graphdb.StringValue(elementName),
+		},
+	)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
+		return "", err
+	}
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Results pyaedtGroup= %d, Query:  %s", len(elePyaedtGroupOut), query)
+
+	if len(elePyaedtGroupOut) > 0{
+		elementPyaedtGroup = elePyaedtGroupOut[0].Name
+		logging.Log.Debugf(&logging.ContextMap{}, "kapatil: pyaedt Group = %v", elementPyaedtGroup)
+        }
+	return elementPyaedtGroup, nil
+}
+
 // GetExamplesFromCodeGenerationElement gets examples from a code generation element.
 //
 // Parameters:
@@ -819,6 +919,8 @@ func (graphdb_context *graphDbContext) GetExamplesFromCodeGenerationElement(elem
 
 	return exampleNames, nil
 }
+
+
 
 
 // GetReturnTypeFromCodeGenerationElement gets return type from a code generation element.
@@ -889,7 +991,7 @@ func (graphdb_context *graphDbContext) GetParametersFromCodeGenerationElement(el
 			return
 		}
 	}()
-
+	// TODO: Do we need this for methods or we can parse name string to get parameters
 	type paramName struct {
 		Name string `json:"b.Name"`
 	}

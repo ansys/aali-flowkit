@@ -46,7 +46,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"AppendMessageHistory":                                                                      AppendMessageHistory,
 	"ShortenMessageHistory":                                                                     ShortenMessageHistory,
 	"CheckTokenLimitReached":                                                                    CheckTokenLimitReached,
-	"PyaedtBuildFinalQueryForCodeLLMRequest":                                                 PyaedtBuildFinalQueryForCodeLLMRequest,
+	"PyaedtBuildFinalQueryForCodeLLMRequest":                                                    PyaedtBuildFinalQueryForCodeLLMRequest,
 
 	// knowledge db
 	"SendVectorsToKnowledgeDB": SendVectorsToKnowledgeDB,
@@ -61,7 +61,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"CreateMetadataDbFilter":   CreateMetadataDbFilter,
 	"CreateDbFilter":           CreateDbFilter,
         "SendVectorsToExampleDB":   SendVectorsToExampleDB,
-	"PyaedtGetElementContextFromGraphDb": PyaedtGetElementContextFromGraphDb,
+	"PyaedtBatchGetElementContextFromGraphDb": PyaedtBatchGetElementContextFromGraphDb,
         "SendVectorsToUserGuide":   SendVectorsToUserGuide,	
 
 	// ansys gpt

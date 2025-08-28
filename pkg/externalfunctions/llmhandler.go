@@ -1066,7 +1066,7 @@ func PerformGeneralRequestNoStreaming(input string, history []sharedtypes.Histor
 //   - messageWithContext: the message with context
 func BuildLibraryContext(message string, libraryContext string) (messageWithContext string) {
 	// Check if "pyansys" is in the library context
-	message = libraryContext + message
+	message = libraryContext + " " + message
 
 	return message
 }
@@ -1112,24 +1112,26 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 // Parameters:
 //   - request: the original request
 //   - knowledgedbResponse: the KnowledgeDB response
-//   - userGuideSearch: flag to indicate if include search results from user guide
-//   - citations: the citations to include in the final query
+//   - userGuideSearch: include user guide citations
+//   - citations: citations string
+//   - elementContext: String context prompt
 //
 // Returns:
 //   - finalQuery: the final query
-func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse, userGuideSearch bool, citations []string) (finalQuery string) {
+func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse, userGuideSearch bool, citations []string, elementContexts []string) (finalQuery string) {
+	finalQuery = "You are a Python expert with experience in writing complete, functional PyAEDT scripts. These scripts typically include python code for tasks such as geometry creation, boundary setup, and analysis setups - especially for HFSS (or other AnsysEM tools as applicable). Your task is to write valid Python code using PyAEDT APIs "
 	// Build the final query using the KnowledgeDB response and the original request
 	// We have to use the text from the DB response and the original request.
 	//
 	// The prompt should be in the following format:
 	//
 	// ******************************************************************************
-	// Based on the following reference links and examples:
+	/// Based on the following reference links and examples:
 	// --- REFERENCE LINKS START ---
-	// {citation_url_1}
-	// {citation_url_2}
+	// {citation_url_1},
+	// {citation_url_2},
 	// {citation_url_3}
-	// --- END REFERENCE LINKS ---
+	// --- END REFERENCE LINKS --
 	//
 	// --- START EXAMPLE {response_n}---
 	// >>> Summary:
@@ -1154,39 +1156,32 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	finalQuery = "You are a Python expert with experience in writing complete, functional PyAEDT scripts. These scripts typically include python code for tasks such as geometry creation, boundary setup, and analysis setups - especially for HFSS (or other AnsysEM tools as applicable). Your task is to write valid Python code using PyAEDT APIs "
 
 	// If there is no response from the KnowledgeDB, return the original request
-	if len(knowledgedbResponse) > 0 {
-		if userGuideSearch {
-			finalQuery += "based on the following pyaedt documentation links and examples:\n\n"
-
-			for i, citation := range citations {
-				finalQuery += "--- REFERENCE LINKS START " + fmt.Sprint(i+1) + " ---\n"
-				finalQuery += citation + "\n"
-				finalQuery += "--- END REFERENCE LINKS " + fmt.Sprint(i+1) + " ---\n\n"
-			}
-
-			for i, element := range knowledgedbResponse {
-				// Add the example number
-				logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Reading knowledge DB response")
-				finalQuery += "--- START EXAMPLE " + fmt.Sprint(i+1) + "---\n"
-				finalQuery += ">>> Summary:\n" + element.Summary + "\n\n"
-				finalQuery += ">>> Code snippet:\n```python\n" + element.Text + "\n```\n"
-				finalQuery += "--- END EXAMPLE " + fmt.Sprint(i+1) + "---\n\n"
-				// logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Initial Query %s", finalQuery)
-			}
-		} else {
-			finalQuery += "based on the following examples:\n\n"
-			for i, element := range knowledgedbResponse {
-				// Add the example number
-				logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Reading knowledge DB response")
-				finalQuery += "--- START EXAMPLE " + fmt.Sprint(i+1) + "---\n"
-				finalQuery += ">>> Summary:\n" + element.Summary + "\n\n"
-				finalQuery += ">>> Code snippet:\n```python\n" + element.Text + "\n```\n"
-				finalQuery += "--- END EXAMPLE " + fmt.Sprint(i+1) + "---\n\n"
-				// logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Initial Query %s", finalQuery)
-			}
+	// Initial request
+	if userGuideSearch {
+		finalQuery += "based on the following pyaedt documentation links\n\n"
+		for i, citation := range citations {
+			finalQuery += "--- REFERENCE LINKS START " + fmt.Sprint(i+1) + " ---\n"
+			finalQuery += citation + "\n"
+			finalQuery += "--- END REFERENCE LINKS " + fmt.Sprint(i+1) + " ---\n\n"
 		}
+		finalQuery += "And following examples:\n\n"
 	} else {
-		logging.Log.Debugf(&logging.ContextMap{}, "Zero knowledge DB response found")
+		finalQuery += "based on the following examples:\n\n"
+	}
+
+	if len(knowledgedbResponse) > 0 {
+		for i, element := range knowledgedbResponse {
+			// Add the example number
+			logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Reading knowledge DB response")
+			finalQuery += "--- START EXAMPLE " + fmt.Sprint(i+1) + "---\n"
+			finalQuery += ">>> Summary:\n" + element.Summary + "\n\n"
+			finalQuery += ">>> Code snippet:\n```python\n" + element.Text + "\n```\n"
+			finalQuery += "--- END EXAMPLE " + fmt.Sprint(i+1) + "---\n\n"
+			logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Initial Query %s", finalQuery)
+		}
+
+	} else {
+		logging.Log.Debugf(&logging.ContextMap{}, "No relevant examples found in DB.")
 	}
 
 	// Kaumudi: Rephrase

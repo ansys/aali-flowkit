@@ -254,8 +254,6 @@ func SendVectorsToUserGuide(vector []float32, keywords []string, keywordsSearch 
 	}
 
 	return citations
-
-	return citations
 }
 
 // SendVectorsToKnowledgeDB sends the given vector to the KnowledgeDB and returns the most relevant data

@@ -1066,7 +1066,7 @@ func PerformGeneralRequestNoStreaming(input string, history []sharedtypes.Histor
 //   - messageWithContext: the message with context
 func BuildLibraryContext(message string, libraryContext string) (messageWithContext string) {
 	// Check if "pyansys" is in the library context
-	message = libraryContext + message
+	message = libraryContext + " "+ message
 
 	return message
 }
@@ -1120,7 +1120,7 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 // Returns:
 //   - finalQuery: the final query
 func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse, userGuideSearch bool, citations []string, elementContexts []string) (finalQuery string) {
-	finalQuery = "You are a Python expert. "
+	finalQuery = "You are a Python expert with experience in writing complete, functional PyAEDT scripts. These scripts typically include python code for tasks such as geometry creation, boundary setup, and analysis setups - especially for HFSS (or other AnsysEM tools as applicable). Your task is to write valid Python code using PyAEDT APIs " 
 	// Build the final query using the KnowledgeDB response and the original request
 	// We have to use the text from the DB response and the original request.
 	//
@@ -1157,7 +1157,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// If there is no response from the KnowledgeDB, return the original request
 	// Initial request
 	if userGuideSearch {
-		finalQuery += "Based on the following pyaedt documentation links\n\n"
+		finalQuery += "based on the following pyaedt documentation links\n\n"
 		for i, citation := range citations {
 			finalQuery += "--- REFERENCE LINKS START " + fmt.Sprint(i+1) + " ---\n"
 			finalQuery += citation + "\n"
@@ -1165,7 +1165,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		}
 		finalQuery += "And following examples:\n\n"
 	} else {
-		finalQuery = "Based on the following examples:\n\n"
+		finalQuery += "based on the following examples:\n\n"
 	}
 
 	if len(knowledgedbResponse) > 0 {

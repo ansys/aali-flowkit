@@ -40,13 +40,13 @@ import (
 // PyaedtGetElementContextFromGraphDb  graph database.
 //
 // Tags:
-//   - @displayName: Pyaedt Get examples from graph db
+//   - @displayName: Pyaedt Get context from graph db
 //
 // Parameters:
 //   - elementName - string
 //   - elementType - string
 // TODO: Move to pyaedt.go file 
-func PyaedtGetElementContextFromGraphDb(dbResponse sharedtypes.ApiDbResponse) ( exampleNames []string , parameters []string, returnTypes []string){
+func PyaedtGetElementContextFromGraphDb(dbResponse sharedtypes.ApiDbResponse) (exampleNames []string , parameters []string, returnTypes []string, pyaedtGroupCaller string){
 	ctx := &logging.ContextMap{}
 	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
 	if err != nil {
@@ -58,19 +58,35 @@ func PyaedtGetElementContextFromGraphDb(dbResponse sharedtypes.ApiDbResponse) ( 
 		elementType := dbResponse.Type
 		elementName := dbResponse.Name
 		logging.Log.Debugf(ctx, "reading entry points %s of type %s", elementName, elementType)
+
+
 		// Get pyaedt group
 		// if element type = method -> go to class -> check isPyaedtGroup
 		// if element type = class -> check isPyaedtGroup
-		//exampleNames, err := graphdb.GraphDbDriver.GetExamplesFromCodeGenerationElement(elementType, elementName)
+		pGroup, err := graphdb.GraphDbDriver.GetPyaedtGroupFromCodeGenerationElement(elementType, elementName)
 		if err != nil {
-			logPanic(ctx, "error Getting examples from code generation element: %v", err)
+			logPanic(ctx, "error Getting pyaedtGroup from code generation element: %v", err)
+		} else {
+
+			pyaedtGroupCaller, err := graphdb.GraphDbDriver.GetPyaedtGroupCaller(pGroup)
+		        if err != nil {
+				logPanic(ctx, "error Getting pyaedtGroup Caller from code generation element: %v", err)
+			}
+			logging.Log.Debugf(ctx, "PyaedtCaller Type %s", pyaedtGroupCaller)
+
 		}
+
+
+		//exampleNames, err := graphdb.GraphDbDriver.GetExamplesFromCodeGenerationElement(elementType, elementName)
+		//if err != nil {
+		//	logPanic(ctx, "error Getting examples from code generation element: %v", err)
+		//}
 		if len(exampleNames) > 0 {
 			for ex, _ := range exampleNames {
 				logging.Log.Debugf(ctx, "Reading examples %s", ex)
 	        	}   
 	        } else {
-			logging.Log.Debugf(ctx, "No db points for this entry point")
+			logging.Log.Debugf(ctx, "GetExamplesFromGraphDB: No db points for this entry point")
 		}
 		// Get Parameters
 		parameters, err = graphdb.GraphDbDriver.GetParametersFromCodeGenerationElement(elementType, elementName)
@@ -82,7 +98,7 @@ func PyaedtGetElementContextFromGraphDb(dbResponse sharedtypes.ApiDbResponse) ( 
 				logging.Log.Debugf(ctx, "Reading parameters %s", ex)
 	        	}   
 	        } else {
-			logging.Log.Debugf(ctx, "No db points for this entry point")
+			logging.Log.Debugf(ctx, "GetParameters: No db points for this entry point")
 		}
 	
 		// Get Return types
@@ -95,13 +111,13 @@ func PyaedtGetElementContextFromGraphDb(dbResponse sharedtypes.ApiDbResponse) ( 
 				logging.Log.Debugf(ctx, "Reading returnTypes %s", ex)
 	        	}   
 	        } else {
-			logging.Log.Debugf(ctx, "No db points for this entry point")
+			logging.Log.Debugf(ctx, "GetReturnTypes: No db points for this entry point")
 		}
 	
 	//} else {
 	//	logging.Log.Debugf(ctx, "No entry point to graph DB found, Will skip context addition")
 	//}
-	return exampleNames, parameters, returnTypes
+	return exampleNames, parameters, returnTypes, pyaedtGroupCaller
 }
 
 // PyaedtBatchGetElementContextFromGraphDb  graph database.
@@ -128,9 +144,8 @@ func PyaedtBatchGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResp
 		logging.Log.Debugf(ctx, "Reading entry points %s of type %s", elementName, elementType)
 		tempPrompt := "For "
 		tempPrompt += elementName
-        	tempPrompt += " returns "
-	
-		_, parameters, returnTypes := PyaedtGetElementContextFromGraphDb(dbResponses[0])
+			
+		_, parameters, returnTypes, pyaedtGroupCallerType := PyaedtGetElementContextFromGraphDb(dbResponses[0])
 		if len(parameters) > 0 {
 			elementParams[elementName] = parameters
 			tempPrompt += elementParams[elementName][0]
@@ -138,8 +153,14 @@ func PyaedtBatchGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResp
 		if len(returnTypes) > 0 {
 			elementReturns[elementName] = returnTypes
 			tempPrompt += elementReturns[elementName][0]
+		
 		}
+		if pyaedtGroupCallerType != "Pyaedt_Application" {
+			tempPrompt += "Additionally this function "+elementName+ " needs an pyaedt application or solver object like HFSS,Maxwell, Circuit,Q3d, etc as an argument." 
+		}
+		logging.Log.Debugf(ctx, "kapatil: Create Context prompt draft: %s", tempPrompt)
 		elementContexts = append(elementContexts, tempPrompt)
+
 	}
 	if len(dbResponses) == 0 {
 		logging.Log.Debugf(ctx, "No function context found")
@@ -326,7 +347,7 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	scoreThreshold := float32(similaritySearchMinScore)
 
 	var query qdrant.QueryPoints
-
+	
 	// Use fusion if both dense and sparse vectors are available
 	if sparse != nil && len(sparse) > 0 {
 		// Create prefetch queries for hybrid search using RRF (Reciprocal Rank Fusion)

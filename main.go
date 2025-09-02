@@ -24,6 +24,7 @@ package main
 
 import (
 	_ "embed"
+	"strings"
 
 	"github.com/ansys/aali-sharedtypes/pkg/config"
 	"github.com/ansys/aali-sharedtypes/pkg/logging"
@@ -32,6 +33,9 @@ import (
 	"github.com/ansys/aali-flowkit/pkg/grpcserver"
 	"github.com/ansys/aali-flowkit/pkg/internalstates"
 )
+
+//go:embed VERSION
+var version string
 
 //go:embed pkg/externalfunctions/dataextraction.go
 var dataExtractionFile string
@@ -69,6 +73,9 @@ var mcpFile string
 //go:embed pkg/externalfunctions/rhsc.go
 var rhscFile string
 
+//go:embed pkg/externalfunctions/fluent.go
+var fluentFile string
+
 func init() {
 	// initialize config
 	config.InitConfig([]string{}, map[string]interface{}{
@@ -83,6 +90,9 @@ func init() {
 
 	// initialize logging
 	logging.InitLogger(config.GlobalConfig)
+
+	// assign the version from the embedded file
+	internalstates.FlowkitVersion = strings.TrimSpace(version)
 }
 
 func main() {
@@ -103,6 +113,7 @@ func main() {
 		"auth":             authFile,
 		"mcp":              mcpFile,
 		"rhsc":             rhscFile,
+		"fluent":           fluentFile,
 	}
 
 	// Load function definitions

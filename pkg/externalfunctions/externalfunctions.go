@@ -78,6 +78,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"AisChangeAcsResponsesByFactor":                  AisChangeAcsResponsesByFactor,
 	"AecGetContextFromRetrieverModule":               AecGetContextFromRetrieverModule,
 	"AecPerformLLMFinalRequest":                      AecPerformLLMFinalRequest,
+	"GetContextFromDataPlugin":                       GetContextFromDataPlugin,
 
 	// data extraction
 	"GetGithubFilesToExtract":                    GetGithubFilesToExtract,
@@ -101,6 +102,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"JsonPath":               JsonPath,
 	"StringConcat":           StringConcat,
 	"StringFormat":           StringFormat,
+	"FluentCodeGenTest":      FluentCodeGenTest,
 
 	// code generation
 	"LoadCodeGenerationElements":      LoadCodeGenerationElements,
@@ -187,4 +189,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 
 	// rhsc
 	"SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,
+
+	// fluent
+	"FluentCodeGen": FluentCodeGen,
 }

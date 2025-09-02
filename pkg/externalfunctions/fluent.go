@@ -41,9 +41,7 @@ import (
 //
 // Returns:
 //   - response: the response from the Fluent container as a string
-func FluentCodeGen(message string) (response string) {
-	url := "http://aali-fluent:8000/chat"
-
+func FluentCodeGen(url string, message string) (response string) {
 	// Create the JSON payload directly
 	jsonData := fmt.Sprintf(`{"message": "%s"}`, message)
 

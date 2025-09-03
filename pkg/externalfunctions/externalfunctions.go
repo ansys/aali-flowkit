@@ -181,11 +181,12 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"LogRequestFailed":                 LogRequestFailed,
 	"LogRequestFailedDebugWithMessage": LogRequestFailedDebugWithMessage,
 	"PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput": PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput,
-	"CheckApiKeyAuthKvDb":                        CheckApiKeyAuthKvDb,
-	"UpdateTotalTokenCountForCustomerKvDb":       UpdateTotalTokenCountForCustomerKvDb,
-	"DenyCustomerAccessAndSendWarningKvDb":       DenyCustomerAccessAndSendWarningKvDb,
-	"AddAvailableAttributesToSystemPrompt":       AddAvailableAttributesToSystemPrompt,
-	"ExtractDesignRequirementsAndSearchCriteria": ExtractDesignRequirementsAndSearchCriteria,
+	"CheckApiKeyAuthKvDb":                           CheckApiKeyAuthKvDb,
+	"UpdateTotalTokenCountForCustomerKvDb":          UpdateTotalTokenCountForCustomerKvDb,
+	"DenyCustomerAccessAndSendWarningKvDb":          DenyCustomerAccessAndSendWarningKvDb,
+	"AddAvailableAttributesToSystemPrompt":          AddAvailableAttributesToSystemPrompt,
+	"ExtractDesignRequirementsAndSearchCriteria":    ExtractDesignRequirementsAndSearchCriteria,
+	"SendLogicAppNotificationEmailToMultipleEmails": SendLogicAppNotificationEmailToMultipleEmails,
 
 	// rhsc
 	"SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,

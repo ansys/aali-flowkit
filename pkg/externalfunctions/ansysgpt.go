@@ -911,18 +911,28 @@ func AecGetContextFromRetrieverModule(
 //   - username: the username for authentication at the data plugin
 //   - password: the password for authentication at the data plugin
 //   - topK: the number of results to be returned
+//   - physics: the physics to be used as filter
+//   - dataSource: the data sources to be used as filter
 //
 // Returns:
 //   - context: the context retrieved from the data plugin
-func GetContextFromDataPlugin(userQuery string, apiUrl string, username string, password string, topK int) (context []sharedtypes.AnsysGPTRetrieverModuleChunk) {
-	// Encode the query and max_doc in base64
+func GetContextFromDataPlugin(userQuery string, apiUrl string, username string, password string, topK int, physics []string, dataSource []string) (context []sharedtypes.AnsysGPTRetrieverModuleChunk) {
+	// Generate string of comma-separated physics and data sources
+	physicsString := strings.Join(physics, ", ")
+	dataSourceString := strings.Join(dataSource, ", ")
+
+	// Encode the query, max_doc, physics and data sources in base64
 	encodedQuery := base64.StdEncoding.EncodeToString([]byte(userQuery))
 	encodedMaxDoc := base64.StdEncoding.EncodeToString([]byte(strconv.Itoa(topK)))
+	encodedPhysics := base64.StdEncoding.EncodeToString([]byte(physicsString))
+	encodedDataSource := base64.StdEncoding.EncodeToString([]byte(dataSourceString))
 
 	// Prepare form data
 	formData := url.Values{}
 	formData.Set("q", encodedQuery)
 	formData.Set("max_doc", encodedMaxDoc)
+	formData.Set("filter_physics", encodedPhysics)
+	formData.Set("data_source", encodedDataSource)
 
 	// Create the request
 	req, err := http.NewRequest("POST", apiUrl, bytes.NewBufferString(formData.Encode()))

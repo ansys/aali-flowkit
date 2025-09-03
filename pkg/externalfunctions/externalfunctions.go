@@ -102,7 +102,6 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"JsonPath":               JsonPath,
 	"StringConcat":           StringConcat,
 	"StringFormat":           StringFormat,
-	"FluentCodeGenTest":      FluentCodeGenTest,
 
 	// code generation
 	"LoadCodeGenerationElements":      LoadCodeGenerationElements,

@@ -29,6 +29,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/ansys/aali-sharedtypes/pkg/logging"
 )
 
 // FluentCodeGen sends a raw user message to the Fluent container and returns the response
@@ -48,6 +50,7 @@ func FluentCodeGen(url string, message string) (response string) {
 	// Create HTTP request
 	req, err := http.NewRequest("POST", url, bytes.NewBufferString(jsonData))
 	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error creating HTTP request: %v", err)
 		panic(fmt.Sprintf("Error creating HTTP request: %v", err))
 	}
 
@@ -59,6 +62,7 @@ func FluentCodeGen(url string, message string) (response string) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error executing HTTP request: %v", err)
 		panic(fmt.Sprintf("Error executing HTTP request: %v", err))
 	}
 	defer resp.Body.Close()
@@ -66,17 +70,20 @@ func FluentCodeGen(url string, message string) (response string) {
 	// Read the response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error reading response body: %v", err)
 		panic(fmt.Sprintf("Error reading response body: %v", err))
 	}
 
 	// Check if the response code is successful (2xx)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		logging.Log.Errorf(&logging.ContextMap{}, "HTTP request failed with status code %d: %s", resp.StatusCode, string(body))
 		panic(fmt.Sprintf("HTTP request failed with status code %d: %s", resp.StatusCode, string(body)))
 	}
 
 	// Parse JSON response to extract just the response content
 	var responseData map[string]interface{}
 	if err := json.Unmarshal(body, &responseData); err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error parsing JSON response: %v", err)
 		panic(fmt.Sprintf("Error parsing JSON response: %v", err))
 	}
 

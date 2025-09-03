@@ -189,4 +189,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 
 	// rhsc
 	"SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,
+
+	// fluent
+	"FluentCodeGen": FluentCodeGen,
 }

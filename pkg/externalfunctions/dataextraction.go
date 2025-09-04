@@ -927,8 +927,7 @@ func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement) 
 	if err != nil {
 		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
 		logging.Log.Error(ctx, errMsg)
-		logging.Log.Info(ctx, "Skipping GraphDB operations due to connection issues")
-		return
+		panic(errMsg)
 	}
 
 	err = graphdb.GraphDbDriver.CreateSchema()
@@ -941,8 +940,7 @@ func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement) 
 	if err != nil {
 		errMsg := fmt.Sprintf("error adding code gen element nodes to graphdb: %v", err)
 		logging.Log.Error(ctx, errMsg)
-		logging.Log.Info(ctx, "Skipping GraphDB element insertion due to error")
-		return
+		panic(errMsg)
 	}
 
 	// Add the dependencies to the graph database.

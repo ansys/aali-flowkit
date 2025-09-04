@@ -315,15 +315,17 @@ func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID strin
 //   - uniqueCriterion: a deduplicated list of extracted attributes (criteria) from all responses
 //   - tokenCount: the total token count (input tokens × n + combined output tokens)
 //   - childSpanID: the child span ID created for this operation
-func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string, n int, temperature float32, traceID string, spanID string) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int, childSpanID string) {
+func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage,
+	systemPrompt string, modelIds []string, tokenCountModelName string, n int, temperature float64, traceID string, spanID string) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int, childSpanID string) {
 	ctx := &logging.ContextMap{}
 	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Create model options with temperature
+	tempFloat32 := float32(temperature)
 	modelOptions := &sharedtypes.ModelOptions{
-		Temperature: &temperature,
+		Temperature: &tempFloat32,
 	}
 
 	// Helper function to send a request and get the response as string

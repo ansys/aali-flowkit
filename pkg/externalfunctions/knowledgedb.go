@@ -134,17 +134,34 @@ func PyaedtBatchGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResp
 	if err != nil {
 		logPanic(nil, "error initializing graphdb: %v", err)
 	}
-        elementParams := make(map[string][]string)
+        elementParams := make(map[string][]string) // todo; not sure how to use it
 	elementReturns := make(map[string][]string)
 	// kapatil : instead of element names, can we use GUID ?
         // Assuming this is a single entry point 
 	for _, dbResponse := range dbResponses {
 		elementType := dbResponse.Type
 		elementName := dbResponse.Name
+		elementParentClass := dbResponse.ParentClass
 		logging.Log.Debugf(ctx, "Reading entry points %s of type %s", elementName, elementType)
-		tempPrompt := "For "
-		tempPrompt += elementName
-			
+		tempPrompt := "Possibly make use of this method "
+		tempPrompt +=  elementName 
+		tempPrompt += "."
+		// Hardcode PyaedtGroups for some classes
+		if elementParentClass == "ansys.aedt.core.Hfss" {
+			dbResponse.PyaedtGroup = "Pyaedt_Application"
+		}
+		if elementParentClass == "ansys.aedt.core.Desktop" {
+			dbResponse.PyaedtGroup = "Pyaedt_Application"
+		}
+		if elementParentClass == "ansys.aedt.core.modeler.cad.primitives_3d.Primitives3D" {
+			dbResponse.PyaedtGroup = "Pyaedt_Module"
+		}
+		if elementParentClass == "ansys.aedt.core.modeler.modeler_2d.Modeler2D" {
+			dbResponse.PyaedtGroup = "Pyaedt_Module"
+		}
+		if elementParentClass == "ansys.aedt.core.modeler.modeler_3d.Modeler3D" {
+			dbResponse.PyaedtGroup = "Pyaedt_Module"
+		}
 		_, parameters, returnTypes, pyaedtGroupCallerType := PyaedtGetElementContextFromGraphDb(dbResponses[0])
 		if len(parameters) > 0 {
 			elementParams[elementName] = parameters
@@ -152,11 +169,20 @@ func PyaedtBatchGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResp
 			}
 		if len(returnTypes) > 0 {
 			elementReturns[elementName] = returnTypes
-			tempPrompt += elementReturns[elementName][0]
+			tempPrompt += " It returns "
+			for _, r := range returnTypes {
+				tempPrompt += r
+				tempPrompt += " "
+			}
+			tempPrompt += "." 
 		
 		}
-		if pyaedtGroupCallerType != "Pyaedt_Application" {
-			tempPrompt += "Additionally this function "+elementName+ " needs an pyaedt application or solver object like HFSS,Maxwell, Circuit,Q3d, etc as an argument." 
+		if dbResponse.PyaedtGroup != pyaedtGroupCallerType {
+			if pyaedtGroupCallerType != "Pyaedt_Application" {
+				tempPrompt += "To call this function a pyaedt application or solver object like Desktop, HFSS,Maxwell, Circuit,Q3d, etc should be passed as an argument..\n" 
+			}
+		} else {
+			tempPrompt += "To call this function you will need to create or reuse a pyaedt application or solver object like Dekstop,HFSS,Maxwell, Circuit,Q3d,etc.\n" 
 		}
 		logging.Log.Debugf(ctx, "kapatil: Create Context prompt draft: %s", tempPrompt)
 		elementContexts = append(elementContexts, tempPrompt)
@@ -404,7 +430,7 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 
 	// Transform results
 	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Got %f points from qdrant query", len(scoredPoints))
-	
+	eleNamesOut := []string{}
 	dbResponses := make([]sharedtypes.ApiDbResponse, len(scoredPoints))
 	for i, scoredPoint := range scoredPoints {
 		logging.Log.Debugf(&logging.ContextMap{}, "Result #%d:", i)
@@ -414,11 +440,12 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		if err != nil {
 		}
 		dbResponses[i] = dbResponse
-		logging.Log.Debugf(&logging.ContextMap{}, "Similarity element name: %v", dbResponse.Name)
-		logging.Log.Debugf(&logging.ContextMap{}, "Similarity pyaedt_group: %v", dbResponse.PyaedtGroup)
+		eleNamesOut = append(eleNamesOut, dbResponse.Name)
+		//logging.Log.Debugf(&logging.ContextMap{}, "Similarity element name: %v", dbResponse.Name)
+		//logging.Log.Debugf(&logging.ContextMap{}, "Similarity pyaedt_group: %v", dbResponse.PyaedtGroup)
 	}
-        
-        //logging.Log.Debugf(&logging.ContextMap{}, "examples: %d", len(exampledbResponse))
+        simElementLogLine := strings.Join(eleNamesOut, ",")
+        logging.Log.Debugf(&logging.ContextMap{}, "Similarity elemnts: %s", simElementLogLine)
 
 	return dbResponses
 

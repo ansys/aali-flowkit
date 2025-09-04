@@ -1119,15 +1119,21 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 //
 // Returns:
 //   - finalQuery: the final query
-func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse, userGuideSearch bool, citations []string, elementContexts []string) (finalQuery string) {
-	finalQuery = "You are a Python expert with experience in writing complete, functional PyAEDT scripts. These scripts typically include python code for tasks such as geometry creation, boundary setup, and analysis setups - especially for HFSS (or other AnsysEM tools as applicable). Your task is to write valid Python code using PyAEDT APIs " 
+func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse, userGuideSearch bool, citations []string, elementContexts []string, designContext string) (finalQuery string) {
+	finalQuery = "You are a Python expert with experience in writing complete, functional PyAEDT scripts. These scripts typically include python code for tasks such as geometry creation, boundary setup, and analysis setups - especially for HFSS (or other AnsysEM tools as applicable). Your task is to write valid Python code using PyAEDT APIs." 
+	if len(elementContexts) > 0 {
+		// assuming we get the first element context only
+		finalQuery += elementContexts[0]
+
+	}
 	// Build the final query using the KnowledgeDB response and the original request
 	// We have to use the text from the DB response and the original request.
 	//
 	// The prompt should be in the following format:
 	//
 	// ******************************************************************************
-	/// Based on the following reference links and examples:
+	/// <Element Context here>
+	//  Based on the following reference links and examples:
 	// --- REFERENCE LINKS START ---
 	// {citation_url_1},
 	// {citation_url_2},
@@ -1148,7 +1154,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// ...
 	// --- END EXAMPLE {response_n}---
 	//
-	// Generate the Python code for the following request:
+	// Generate the PyAEDT code for the following request:
 	//
 	// >>> Request:
 	// {original_request}
@@ -1157,7 +1163,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// If there is no response from the KnowledgeDB, return the original request
 	// Initial request
 	if userGuideSearch {
-		finalQuery += "based on the following pyaedt documentation links\n\n"
+		finalQuery += "Based on the following pyaedt documentation links\n\n"
 		for i, citation := range citations {
 			finalQuery += "--- REFERENCE LINKS START " + fmt.Sprint(i+1) + " ---\n"
 			finalQuery += citation + "\n"
@@ -1165,7 +1171,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		}
 		finalQuery += "And following examples:\n\n"
 	} else {
-		finalQuery += "based on the following examples:\n\n"
+		finalQuery += "Based on the following examples:\n\n"
 	}
 
 	if len(knowledgedbResponse) > 0 {
@@ -1184,10 +1190,15 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	}
 
 	// Kaumudi: Rephrase
-	new_request := RephraseRequest_kapatil(request)
+	newRequest := RephraseRequest_kapatil(request)
 
+	if designContext != "" {
+		newRequest += "The current design has the following context:\n"
+		newRequest += "''' \n" + designContext + "\n'''\n\n"
+		newRequest += "Try to make the code relevant to this design context as much as possible.\n\n"
+	}
 	// Pass in the original request
-	finalQuery += "Generate the Python code for the following request:\n>>> Request:\n" + new_request + "\n"
+	finalQuery += "Generate the PyAEDT code for the following request:\n>>> Request:\n" + newRequest + "\n"
 
 	// Return the final query
 	return finalQuery

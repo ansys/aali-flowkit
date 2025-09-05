@@ -573,6 +573,15 @@ func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spa
 		logging.Log.Debugf(ctx, "Token count reset for customer %s. Last updated: %v, Current time: %v",
 			customer.CustomerName, lastUpdated, now)
 
+		historyEntry := materialsCustomerHistoryObject{
+			TotalTokenCount: customer.TotalTokenCount,
+			TokenLimit:      customer.TokenLimit,
+			Timestamp:       customer.LastUpdated,
+		}
+		customer.UsageHistory = append(customer.UsageHistory, historyEntry)
+		logging.Log.Debugf(ctx, "Saved usage history for customer %s: %d tokens (limit: %d) at timestamp %d",
+			customer.CustomerName, customer.TotalTokenCount, customer.TokenLimit, customer.LastUpdated)
+
 		// Reset token count to 0 and update timestamp
 		customer.TotalTokenCount = 0
 		customer.LastUpdated = now.Unix()

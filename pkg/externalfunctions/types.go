@@ -338,5 +338,6 @@ type materialsCustomerObject struct {
 
 type materialsCustomerHistoryObject struct {
 	TotalTokenCount int   `json:"total_token_usage"`
+	TokenLimit      int   `json:"token_limit"`
 	Timestamp       int64 `json:"timestamp"`
 }

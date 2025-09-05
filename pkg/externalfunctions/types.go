@@ -326,10 +326,17 @@ type kvdbErrorResponse struct {
 }
 
 type materialsCustomerObject struct {
-	ApiKey          string `json:"api_key"`
-	CustomerName    string `json:"customer_name"`
-	AccessDenied    bool   `json:"access_denied"`
-	TotalTokenCount int    `json:"total_token_usage"`
-	TokenLimit      int    `json:"token_limit"`
-	WarningSent     bool   `json:"warning_sent"`
+	ApiKey          string                           `json:"api_key"`
+	CustomerName    string                           `json:"customer_name"`
+	AccessDenied    bool                             `json:"access_denied"`
+	TotalTokenCount int                              `json:"total_token_usage"`
+	TokenLimit      int                              `json:"token_limit"`
+	WarningSent     bool                             `json:"warning_sent"`
+	LastUpdated     int64                            `json:"last_updated"`
+	UsageHistory    []materialsCustomerHistoryObject `json:"usage_history"`
+}
+
+type materialsCustomerHistoryObject struct {
+	TotalTokenCount int   `json:"total_token_usage"`
+	Timestamp       int64 `json:"timestamp"`
 }

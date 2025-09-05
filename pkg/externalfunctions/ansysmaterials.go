@@ -31,6 +31,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ansys/aali-sharedtypes/pkg/config"
 	"github.com/ansys/aali-sharedtypes/pkg/logging"
@@ -561,6 +562,34 @@ func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spa
 	if err != nil {
 		logging.Log.Errorf(ctx, "Error unmarshalling JSON string: %v", err)
 		panic(err)
+	}
+
+	// Check the last updated timestamp and reset token count if not from this month
+	now := time.Now()
+	lastUpdated := time.Unix(customer.LastUpdated, 0)
+
+	// Check if last updated is from a different month or year
+	if now.Year() != lastUpdated.Year() || now.Month() != lastUpdated.Month() {
+		logging.Log.Debugf(ctx, "Token count reset for customer %s. Last updated: %v, Current time: %v",
+			customer.CustomerName, lastUpdated, now)
+
+		// Reset token count to 0 and update timestamp
+		customer.TotalTokenCount = 0
+		customer.LastUpdated = now.Unix()
+
+		// Marshal updated customer object back to JSON
+		updatedJsonString, err := json.Marshal(customer)
+		if err != nil {
+			logging.Log.Errorf(ctx, "Error marshalling updated customer object: %v", err)
+			panic(err)
+		}
+
+		// Update the KVDB with the reset token count
+		err = kvdbSetEntry(kvdbEndpoint, apiKey, string(updatedJsonString))
+		if err != nil {
+			logging.Log.Errorf(ctx, "Error updating customer token count in KVDB: %v", err)
+			panic(err)
+		}
 	}
 
 	// Check if customer is denied access

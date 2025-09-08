@@ -554,6 +554,63 @@ func SynthesizeActionsTool2(message string, actions []map[string]string) (update
 	return
 }
 
+// SynthesizeActionsTool3 update action as per user instruction
+// // Tags:
+//   - @displayName: SynthesizeActionsTool3
+//
+// Parameters:
+//   - message_1: the first message from the llm
+//   - message_2: the second message from the llm
+//   - actions: the list of actions
+//
+// Returns:
+//   - updatedActions: the list of synthesized actions
+func SynthesizeActionsTool3(message_1 string, message_2 string, actions []map[string]string) (updatedActions []map[string]string) {
+	ctx := &logging.ContextMap{}
+
+	// Clean up the input messages
+	message_1 = strings.TrimSpace(strings.Trim(message_1, "\""))
+	message_2 = strings.TrimSpace(strings.Trim(message_2, "\""))
+
+	logging.Log.Debugf(ctx, "Tool 3 Synthesize Message 1: %s\n", message_1)
+	logging.Log.Debugf(ctx, "Tool 3 Synthesize Message 2: %s\n", message_2)
+
+	// Get synthesize actions find key from configuration
+	synthesizeActionsFindKey1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_TOOL3_VALUE"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load synthesize actions tool 3 find key from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	synthesizeActionsFindKey2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_FIND_KEY"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load synthesize actions tool 3 find key from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	// Initialize updatedActions with the input actions
+	updatedActions = actions
+
+	// Check the first dictionary in actions
+	if len(updatedActions) > 0 {
+		firstAction := updatedActions[0]
+		if _, ok := firstAction[synthesizeActionsFindKey1]; ok && len(message_1) != 0 {
+			// Replace the value with the input message
+			firstAction[synthesizeActionsFindKey1] = message_1
+		}
+
+		if _, ok := firstAction[synthesizeActionsFindKey2]; ok && len(message_2) != 0 {
+			firstAction[synthesizeActionsFindKey2] = message_2
+		}
+	}
+
+	logging.Log.Debugf(ctx, "The Updated Actions: %q\n", updatedActions)
+
+	return
+}
+
 // SynthesizeActionsTool11 synthesize actions based on user instruction
 //
 // Tags:
@@ -1844,6 +1901,39 @@ func SynthesizeSlashCommand(slashCmd, targetCmd, finalizeResult string) (result 
 	logging.Log.Infof(ctx, "successfully synthesized slash command")
 
 	return result
+}
+
+// ProcessMWWorkflowInfo parses the mwWorkflowInfo string and logs its content.
+//
+// Parameters:
+//   - mwWorkflowInfo: the workflow information in string format
+//
+// Returns:
+//   - None
+func ProcessMWWorkflowInfo(mwWorkflowInfo string) {
+	ctx := &logging.ContextMap{}
+
+	// Replace single quotes with double quotes to make it valid JSON
+	normalizedInfo := strings.ReplaceAll(mwWorkflowInfo, "'", "\"")
+
+	// Parse the JSON string into a generic map
+	var parsedData map[string]interface{}
+	err := json.Unmarshal([]byte(normalizedInfo), &parsedData)
+	if err != nil {
+		logging.Log.Errorf(ctx, "Failed to parse mwWorkflowInfo: %v", err)
+		return
+	}
+
+	// Convert the parsed data back to a single string
+	// parsedString, err := json.MarshalIndent(parsedData, "", "  ")
+	parsedString, err := json.Marshal(parsedData)
+	if err != nil {
+		logging.Log.Errorf(ctx, "Failed to convert parsed data to string: %v", err)
+		return
+	}
+
+	// Log the entire content as a single string
+	logging.Log.Infof(ctx, "MWWorkflowInfo Content: %s", string(parsedString))
 }
 
 // GenerateActionsSubWorkflowPrompt generates system and user prompts for subworkflow identification.

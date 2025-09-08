@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           ref: main
           fetch-depth: 0
@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -214,11 +214,11 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Go
         if: matrix.container != 'rockylinux'
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
@@ -303,13 +303,13 @@ jobs:
       labels: [self-hosted, Windows, signtool]
     steps:
       - name: Checkout SignTool
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ansys-internal/signtool-ansys-apps
           token: ${{ secrets.SIGNTOOL_ACCESS_TOKEN }}
 
       - name: Download Windows artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: windows_*_binaries
           path: signtool/installer
@@ -361,20 +361,20 @@ jobs:
     needs: [sign-windows-binaries, release-docker]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Create a directory to collect all binaries
       - name: Create release directory
         run: mkdir -p release_files
 
       # Download all artifacts to the release directory
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           pattern: "*_binaries*"
           path: release_files
           merge-multiple: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: windows-binaries-signed
           path: release_files
@@ -407,7 +407,7 @@ jobs:
     needs: [release, docs-build]
     steps:
       - name: Deploy the stable documentation
-        uses: ansys/actions/doc-deploy-stable@v9
+        uses: ansys/actions/doc-deploy-stable@v10
         with:
           cname: ${{ env.DOCUMENTATION_CNAME }}
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
@@ -428,7 +428,7 @@ jobs:
           git clone --branch main https://${{ secrets.PYANSYS_CI_BOT_TOKEN }}@github.com/ansys/aali.git
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: 'aali/scripts/releasehelper/go.mod'
 

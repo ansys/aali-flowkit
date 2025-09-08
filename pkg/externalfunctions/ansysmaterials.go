@@ -564,17 +564,22 @@ func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spa
 		panic(err)
 	}
 
+	// Check if customer is denied access
+	if customer.AccessDenied {
+		logging.Log.Warnf(ctx, "Access denied for customer: %s", customer.CustomerName)
+		return false, childSpanID
+	}
+
 	// Check the last updated timestamp and reset token count if not from this month
 	now := time.Now()
 	lastUpdated := time.Unix(customer.LastUpdated, 0)
 
-	// Handle case where LastUpdated is 0 (new customer or legacy data)
+	// Handle case where LastUpdated is 0 (new customer)
 	if customer.LastUpdated == 0 {
-		logging.Log.Debugf(ctx, "New customer or legacy data detected for %s. Setting initial timestamp.", customer.CustomerName)
+		logging.Log.Debugf(ctx, "New customer with key %s. Setting initial timestamp.", customer.ApiKey)
 		// Don't save any history for initial setup, just set the timestamp
 		customer.LastUpdated = now.Unix()
 
-		// Only update KVDB if we're actually changing something
 		updatedJsonString, err := json.Marshal(customer)
 		if err != nil {
 			logging.Log.Errorf(ctx, "Error marshalling updated customer object: %v", err)
@@ -592,44 +597,33 @@ func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spa
 			logging.Log.Debugf(ctx, "Token count reset for customer %s. Last updated: %v, Current time: %v",
 				customer.CustomerName, lastUpdated, now)
 
-			// Only save history and update KVDB if there's actual token usage
-			if customer.TotalTokenCount > 0 {
-				historyEntry := materialsCustomerHistoryObject{
-					TotalTokenCount: customer.TotalTokenCount,
-					TokenLimit:      customer.TokenLimit,
-					Timestamp:       customer.LastUpdated,
-				}
-				customer.UsageHistory = append(customer.UsageHistory, historyEntry)
-				logging.Log.Debugf(ctx, "Saved usage history for customer %s: %d tokens (limit: %d) at timestamp %d",
-					customer.CustomerName, customer.TotalTokenCount, customer.TokenLimit, customer.LastUpdated)
+			historyEntry := materialsCustomerHistoryObject{
+				TotalTokenCount: customer.TotalTokenCount,
+				TokenLimit:      customer.TokenLimit,
+				Timestamp:       customer.LastUpdated,
+			}
+			customer.UsageHistory = append(customer.UsageHistory, historyEntry)
+			logging.Log.Debugf(ctx, "Saved usage history for customer %s: %d tokens (limit: %d) at timestamp %d",
+				customer.CustomerName, customer.TotalTokenCount, customer.TokenLimit, customer.LastUpdated)
 
-				// Reset token count to 0 and update timestamp
-				customer.TotalTokenCount = 0
-				customer.LastUpdated = now.Unix()
+			// Reset token count to 0 and update timestamp
+			customer.TotalTokenCount = 0
+			customer.LastUpdated = now.Unix()
 
-				// Marshal updated customer object back to JSON
-				updatedJsonString, err := json.Marshal(customer)
-				if err != nil {
-					logging.Log.Errorf(ctx, "Error marshalling updated customer object: %v", err)
-					panic(err)
-				}
+			// Marshal updated customer object back to JSON
+			updatedJsonString, err := json.Marshal(customer)
+			if err != nil {
+				logging.Log.Errorf(ctx, "Error marshalling updated customer object: %v", err)
+				panic(err)
+			}
 
-				// Update the KVDB with the reset token count
-				err = kvdbSetEntry(kvdbEndpoint, apiKey, string(updatedJsonString))
-				if err != nil {
-					logging.Log.Errorf(ctx, "Error updating customer token count in KVDB: %v", err)
-					panic(err)
-				}
-			} else {
-				logging.Log.Debugf(ctx, "No token usage to save for customer %s", customer.CustomerName)
+			// Update the KVDB with the reset token count
+			err = kvdbSetEntry(kvdbEndpoint, apiKey, string(updatedJsonString))
+			if err != nil {
+				logging.Log.Errorf(ctx, "Error updating customer token count in KVDB: %v", err)
+				panic(err)
 			}
 		}
-	}
-
-	// Check if customer is denied access
-	if customer.AccessDenied {
-		logging.Log.Warnf(ctx, "Access denied for customer: %s", customer.CustomerName)
-		return false, childSpanID
 	}
 
 	return true, childSpanID

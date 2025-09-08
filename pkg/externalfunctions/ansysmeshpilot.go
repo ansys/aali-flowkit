@@ -1847,11 +1847,14 @@ func ParseSlashCommand(userInput string) (slashCmd, targetCmd string, hasCmd boo
 // Parameters:
 //   - slashCmd: the slash command
 //   - targetCmd: the target command
+//   - finalizeResult: the finalize result from previous step
 //
 // Returns:
 //   - result: the synthesized string
 func SynthesizeSlashCommand(slashCmd, targetCmd, finalizeResult string) (result string) {
 	ctx := &logging.ContextMap{}
+
+	logging.Log.Debugf(ctx, "finalizeResult: %q, targetCmd: %q, slashCmd: %q", finalizeResult, targetCmd, slashCmd)
 
 	message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_17_SUCCESS_MESSAGE"]
 	if !exists {

@@ -761,7 +761,7 @@ func TestStoreElementsInGraphDatabase(t *testing.T) {
 	logging.InitLogger(&setup.config)
 
 	// do some initial checks
-	const DBNAME = "aali" // this is hardcoded in the graphdb driver for now
+	const DBNAME = "aali"
 	client, err := aali_graphdb.DefaultClient(setup.config.GRAPHDB_ADDRESS)
 	require.NoError(err)
 
@@ -797,7 +797,7 @@ func TestStoreElementsInGraphDatabase(t *testing.T) {
 		EnumValues: nil,
 	}
 
-	StoreElementsInGraphDatabase([]sharedtypes.CodeGenerationElement{element})
+	StoreElementsInGraphDatabase(DBNAME, []sharedtypes.CodeGenerationElement{element})
 
 	// query graphdb to make sure things are as they should be
 
@@ -862,7 +862,7 @@ func TestStoreExamplesInGraphDatabase(t *testing.T) {
 	logging.InitLogger(&setup.config)
 
 	// do some initial checks
-	const DBNAME = "aali" // this is hardcoded in the graphdb driver for now
+	const DBNAME = "aali"
 	client, err := aali_graphdb.DefaultClient(setup.config.GRAPHDB_ADDRESS)
 	require.NoError(err)
 
@@ -881,7 +881,7 @@ func TestStoreExamplesInGraphDatabase(t *testing.T) {
 		},
 	}
 
-	StoreExamplesInGraphDatabase(examples)
+	StoreExamplesInGraphDatabase(DBNAME, examples)
 
 	// query graphdb to make sure things are as they should be
 
@@ -933,7 +933,7 @@ func TestStoreUserGuideSectionsInGraphDatabase(t *testing.T) {
 	logging.InitLogger(&setup.config)
 
 	// do some initial checks
-	const DBNAME = "aali" // this is hardcoded in the graphdb driver for now
+	const DBNAME = "aali"
 	client, err := aali_graphdb.DefaultClient(setup.config.GRAPHDB_ADDRESS)
 	require.NoError(err)
 
@@ -993,7 +993,7 @@ func TestStoreUserGuideSectionsInGraphDatabase(t *testing.T) {
 		},
 	}
 
-	StoreUserGuideSectionsInGraphDatabase(sections)
+	StoreUserGuideSectionsInGraphDatabase(DBNAME, sections)
 
 	// query graphdb to make sure things are as they should be
 	type dbUserGuideSection struct {

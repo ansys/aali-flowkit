@@ -41,7 +41,6 @@ import (
 
 type graphDbContext struct {
 	client *aali_graphdb.Client
-	dbname string
 }
 
 // Initialize DB login object
@@ -51,10 +50,11 @@ var GraphDbDriver graphDbContext
 //
 // Parameters:
 //   - uri: URI of the graph database.
+//   - dbname: The name of the database to target.
 //
 // Returns:
 //   - funcError: Error object.
-func Initialize(uri string) (funcError error) {
+func Initialize(uri string, dbname string) (funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -65,6 +65,7 @@ func Initialize(uri string) (funcError error) {
 	}()
 
 	logCtx := &logging.ContextMap{}
+	logging.Log.Infof(logCtx, "Initializing aali-graphdb %q", dbname)
 
 	// make sure address is absolute (for now, assume everything is http)
 	scheme, _, found := strings.Cut(uri, "://")
@@ -86,10 +87,7 @@ func Initialize(uri string) (funcError error) {
 		return err
 	}
 
-	GraphDbDriver = graphDbContext{
-		client: client,
-		dbname: "aali", // TODO: for now this is hard-coded, but may want configurable in the future
-	}
+	GraphDbDriver = graphDbContext{client}
 
 	// Check if DB connection is successfull
 	_, err = client.GetHealth()
@@ -104,13 +102,13 @@ func Initialize(uri string) (funcError error) {
 		logging.Log.Errorf(logCtx, "unable to get existing databases")
 		return err
 	}
-	if slices.Contains(dbs, GraphDbDriver.dbname) {
-		logging.Log.Debugf(logCtx, "database %q already exists in the graphdb", GraphDbDriver.dbname)
+	if slices.Contains(dbs, dbname) {
+		logging.Log.Debugf(logCtx, "database %q already exists in the graphdb", dbname)
 	} else {
-		logging.Log.Debugf(logCtx, "database %q does not exist, creating", GraphDbDriver.dbname)
-		err := client.CreateDatabase(GraphDbDriver.dbname)
+		logging.Log.Debugf(logCtx, "database %q does not exist, creating", dbname)
+		err := client.CreateDatabase(dbname)
 		if err != nil {
-			logging.Log.Errorf(logCtx, "unable to create database %q", GraphDbDriver.dbname)
+			logging.Log.Errorf(logCtx, "unable to create database %q", dbname)
 			return err
 		}
 	}
@@ -122,7 +120,8 @@ func Initialize(uri string) (funcError error) {
 }
 
 // Initialize the aali data extraction schema.
-func (graphdb_context *graphDbContext) CreateSchema() error {
+func (graphdb_context *graphDbContext) CreateSchema(dbname string) error {
+	logging.Log.Infof(&logging.ContextMap{}, "Creating aali-graphdb schema in %q", dbname)
 	stmts := []string{
 		`CREATE NODE TABLE IF NOT EXISTS Element(
 			type STRING,
@@ -171,10 +170,11 @@ func (graphdb_context *graphDbContext) CreateSchema() error {
 		"CREATE REL TABLE IF NOT EXISTS NextSibling(FROM UserGuide TO UserGuide)",
 		"CREATE REL TABLE IF NOT EXISTS NextParent(FROM UserGuide TO UserGuide)",
 		"CREATE REL TABLE IF NOT EXISTS HasFirstChild(FROM UserGuide TO UserGuide)",
-		"CREATE REL TABLE IF NOT EXISTS HasChild(FROM UserGuide TO UserGuide)"}
+		"CREATE REL TABLE IF NOT EXISTS HasChild(FROM UserGuide TO UserGuide)",
+	}
 
 	for _, stmt := range stmts {
-		_, err := graphdb_context.client.CypherQueryWrite(graphdb_context.dbname, stmt, nil)
+		_, err := graphdb_context.client.CypherQueryWrite(dbname, stmt, nil)
 		if err != nil {
 			return err
 		}
@@ -198,11 +198,12 @@ func graphdbStringList(l []string) aali_graphdb.ListValue {
 // AddCodeGenerationElementNodes adds nodes to graphdb database.
 //
 // Parameters:
+//   - dbname: The name of the database to target.
 //   - nodes: List of nodes to be added.
 //
 // Returns:
 //   - funcError: Error object.
-func (graphdb_context *graphDbContext) AddCodeGenerationElementNodes(nodes []sharedtypes.CodeGenerationElement) (funcError error) {
+func (graphdb_context *graphDbContext) AddCodeGenerationElementNodes(dbname string, nodes []sharedtypes.CodeGenerationElement) (funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -274,7 +275,7 @@ func (graphdb_context *graphDbContext) AddCodeGenerationElementNodes(nodes []sha
 
 		// Create node dynamically using the map
 		_, err = graphdb_context.client.CypherQueryWrite(
-			graphdb_context.dbname,
+			dbname,
 			query,
 			queryParams,
 		)
@@ -291,11 +292,12 @@ func (graphdb_context *graphDbContext) AddCodeGenerationElementNodes(nodes []sha
 // AddCodeGenerationExampleNodes adds nodes to graph database.
 //
 // Parameters:
+//   - dbname: The name of the database to target.
 //   - nodes: List of nodes to be added.
 //
 // Returns:
 //   - funcError: Error object.
-func (graphdb_context *graphDbContext) AddCodeGenerationExampleNodes(nodes []sharedtypes.CodeGenerationExample) (funcError error) {
+func (graphdb_context *graphDbContext) AddCodeGenerationExampleNodes(dbname string, nodes []sharedtypes.CodeGenerationExample) (funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -325,7 +327,7 @@ func (graphdb_context *graphDbContext) AddCodeGenerationExampleNodes(nodes []sha
 		}
 
 		_, err := graphdb_context.client.CypherQueryWrite(
-			graphdb_context.dbname,
+			dbname,
 			query,
 			parameters,
 		)
@@ -343,7 +345,7 @@ func (graphdb_context *graphDbContext) AddCodeGenerationExampleNodes(nodes []sha
 				"name":    aali_graphdb.StringValue(dep),
 				"example": aali_graphdb.StringValue(node.Name),
 			}
-			_, err := graphdb_context.client.CypherQueryWrite(graphdb_context.dbname, query, params)
+			_, err := graphdb_context.client.CypherQueryWrite(dbname, query, params)
 			if err != nil {
 				logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
 				return err
@@ -358,12 +360,13 @@ func (graphdb_context *graphDbContext) AddCodeGenerationExampleNodes(nodes []sha
 // AddUserGuideSectionNodes adds nodes to graph database.
 //
 // Parameters:
+//   - dbname: The name of the database to target.
 //   - nodes: List of nodes to be added.
 //   - label: Label for the nodes.
 //
 // Returns:
 //   - funcError: Error object.
-func (graphdb_context *graphDbContext) AddUserGuideSectionNodes(nodes []sharedtypes.CodeGenerationUserGuideSection) (funcError error) {
+func (graphdb_context *graphDbContext) AddUserGuideSectionNodes(dbname string, nodes []sharedtypes.CodeGenerationUserGuideSection) (funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -397,7 +400,7 @@ func (graphdb_context *graphDbContext) AddUserGuideSectionNodes(nodes []sharedty
 		}
 
 		_, err := graphdb_context.client.CypherQueryWrite(
-			graphdb_context.dbname,
+			dbname,
 			query,
 			parameters,
 		)
@@ -415,11 +418,12 @@ func (graphdb_context *graphDbContext) AddUserGuideSectionNodes(nodes []sharedty
 // CreateCodeGenerationExampleRelationships creates relationships between nodes in graph database.
 //
 // Parameters:
+//   - dbname: The name of the database to target.
 //   - relationships: List of relationships to be created.
 //
 // Returns:
 //   - funcError: Error object.
-func (graphdb_context *graphDbContext) CreateCodeGenerationExampleRelationships(nodes []sharedtypes.CodeGenerationExample) (funcError error) {
+func (graphdb_context *graphDbContext) CreateCodeGenerationExampleRelationships(dbname string, nodes []sharedtypes.CodeGenerationExample) (funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -442,7 +446,7 @@ func (graphdb_context *graphDbContext) CreateCodeGenerationExampleRelationships(
 				"example": aali_graphdb.StringValue(node.Name),
 				"element": aali_graphdb.StringValue(dependency),
 			}
-			_, err := graphdb_context.client.CypherQueryWrite(graphdb_context.dbname, query, parameters)
+			_, err := graphdb_context.client.CypherQueryWrite(dbname, query, parameters)
 			if err != nil {
 				logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
 				return err
@@ -458,11 +462,12 @@ func (graphdb_context *graphDbContext) CreateCodeGenerationExampleRelationships(
 // CreateCodeGenerationRelationships creates relationships between nodes in graph database.
 //
 // Parameters:
+//   - dbname: The name of the database to target.
 //   - relationships: List of relationships to be created.
 //
 // Returns:
 //   - funcError: Error object.
-func (graphdb_context *graphDbContext) CreateCodeGenerationRelationships(nodes []sharedtypes.CodeGenerationElement) (funcError error) {
+func (graphdb_context *graphDbContext) CreateCodeGenerationRelationships(dbname string, nodes []sharedtypes.CodeGenerationElement) (funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -503,7 +508,7 @@ func (graphdb_context *graphDbContext) CreateCodeGenerationRelationships(nodes [
 			alreadyAddedRelationships[dependency+"-"+dependencyList[i+1]] = true
 
 			_, err := graphdb_context.client.CypherQueryWrite(
-				graphdb_context.dbname,
+				dbname,
 				"MERGE (a:Element {name: $a}) MERGE (b:Element {name: $b}) MERGE (a)-[:BelongsTo]->(b)",
 				aali_graphdb.ParameterMap{
 					"a": aali_graphdb.StringValue(dependency),
@@ -520,7 +525,7 @@ func (graphdb_context *graphDbContext) CreateCodeGenerationRelationships(nodes [
 		// Create relationships between the node and its return values
 		for _, returnElement := range node.ReturnElementList {
 			_, err := graphdb_context.client.CypherQueryWrite(
-				graphdb_context.dbname,
+				dbname,
 				"MERGE (a:Element {name: $a}) MERGE (b:Element {name: $b}) MERGE (a)-[:Returns]->(b)",
 				aali_graphdb.ParameterMap{
 					"a": aali_graphdb.StringValue(node.Name),
@@ -547,7 +552,7 @@ func (graphdb_context *graphDbContext) CreateCodeGenerationRelationships(nodes [
 
 		for _, parameter := range parameterList {
 			_, err := graphdb_context.client.CypherQueryWrite(
-				graphdb_context.dbname,
+				dbname,
 				"MERGE (a:Element {name: $a}) MERGE (b:Element {name: $b}) MERGE (a)-[:UsesParameter]->(b)",
 				aali_graphdb.ParameterMap{
 					"a": aali_graphdb.StringValue(node.Name),
@@ -569,12 +574,13 @@ func (graphdb_context *graphDbContext) CreateCodeGenerationRelationships(nodes [
 // CreateUserGuideSectionRelationships creates relationships between nodes in graph database.
 //
 // Parameters:
+//   - dbname: The name of the database to target.
 //   - nodes: List of relationships to be created.
 //   - label: Label for the nodes (UserGuide by default).
 //
 // Returns:
 //   - funcError: Error object.
-func (graphdb_context *graphDbContext) CreateUserGuideSectionRelationships(nodes []sharedtypes.CodeGenerationUserGuideSection) (funcError error) {
+func (graphdb_context *graphDbContext) CreateUserGuideSectionRelationships(dbname string, nodes []sharedtypes.CodeGenerationUserGuideSection) (funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -595,7 +601,7 @@ func (graphdb_context *graphDbContext) CreateUserGuideSectionRelationships(nodes
 			// Check if reference link references the link of another section and create relationship
 			query := "MERGE (a:UserGuide {name: $section}) MERGE (b:UserGuide {name: $link}) MERGE (a)-[:References]->(b)"
 			_, err := graphdb_context.client.CypherQueryWrite(
-				graphdb_context.dbname,
+				dbname,
 				query,
 				aali_graphdb.ParameterMap{
 					"section": aali_graphdb.StringValue(node.Name),
@@ -613,7 +619,7 @@ func (graphdb_context *graphDbContext) CreateUserGuideSectionRelationships(nodes
 		if node.NextSibling != "" {
 			query := "MERGE (a:UserGuide {name: $a}) MERGE (b:UserGuide {name: $b}) MERGE (a)-[:NextSibling]->(b)"
 			_, err := graphdb_context.client.CypherQueryWrite(
-				graphdb_context.dbname,
+				dbname,
 				query,
 				aali_graphdb.ParameterMap{
 					"a": aali_graphdb.StringValue(node.Name),
@@ -632,7 +638,7 @@ func (graphdb_context *graphDbContext) CreateUserGuideSectionRelationships(nodes
 			query := "MERGE (a:UserGuide {name: $a}) MERGE (b:UserGuide {name: $b}) MERGE (a)-[:NextParent]->(b)"
 
 			_, err := graphdb_context.client.CypherQueryWrite(
-				graphdb_context.dbname,
+				dbname,
 				query,
 				aali_graphdb.ParameterMap{
 					"a": aali_graphdb.StringValue(node.Name),
@@ -652,7 +658,7 @@ func (graphdb_context *graphDbContext) CreateUserGuideSectionRelationships(nodes
 			query := "MERGE (a:UserGuide {name: $a}) MERGE (b:UserGuide {name: $b}) MERGE (b)-[:HasFirstChild]->(a)"
 
 			_, err := graphdb_context.client.CypherQueryWrite(
-				graphdb_context.dbname,
+				dbname,
 				query,
 				aali_graphdb.ParameterMap{
 					"a": aali_graphdb.StringValue(node.Name),
@@ -670,7 +676,7 @@ func (graphdb_context *graphDbContext) CreateUserGuideSectionRelationships(nodes
 		query := "MERGE (a:UserGuide {name: $a}) MERGE (b:UserGuide {name: $b}) MERGE (a)<-[:HasChild]-(b)"
 
 		_, err := graphdb_context.client.CypherQueryWrite(
-			graphdb_context.dbname,
+			dbname,
 			query,
 			aali_graphdb.ParameterMap{
 				"a": aali_graphdb.StringValue(node.Name),
@@ -691,13 +697,15 @@ func (graphdb_context *graphDbContext) CreateUserGuideSectionRelationships(nodes
 // WriteCypherQuery executes a cypher query with write access.
 //
 // Parameters:
+//   - dbname: The name of the database.
 //   - query: Cypher query to execute.
+//   - parameters: Query parameters.
 //
 // Returns:
 //   - results: array of map[string]any, keys are determined by the specific cypher query that was passed in
 //   - err: error, if any
-func (graphdb_context *graphDbContext) WriteCypherQuery(query string, parameters aali_graphdb.Parameters) ([]map[string]any, error) {
-	return graphdb_context.client.CypherQueryWrite(graphdb_context.dbname, query, parameters)
+func (graphdb_context *graphDbContext) WriteCypherQuery(dbname string, query string, parameters aali_graphdb.Parameters) ([]map[string]any, error) {
+	return graphdb_context.client.CypherQueryWrite(dbname, query, parameters)
 }
 
 ////////////// Read functions //////////////
@@ -705,13 +713,14 @@ func (graphdb_context *graphDbContext) WriteCypherQuery(query string, parameters
 // GetExamplesFromCodeGenerationElement gets examples from a code generation element.
 //
 // Parameters:
+//   - dbname: The name of the database to target.
 //   - elementType: Type of the code generation element.
 //   - elementName: Name of the code generation element.
 //
 // Returns:
 //   - exampleNames: List of example names.
 //   - funcError: Error object.
-func (graphdb_context *graphDbContext) GetExamplesFromCodeGenerationElement(elementType string, elementName string) (exampleNames []string, funcError error) {
+func (graphdb_context *graphDbContext) GetExamplesFromCodeGenerationElement(dbname string, elementType string, elementName string) (exampleNames []string, funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -729,7 +738,7 @@ func (graphdb_context *graphDbContext) GetExamplesFromCodeGenerationElement(elem
 	query := fmt.Sprintf("MATCH (a:%v {Name: $name})<-[:Uses]-(b:Example) RETURN b.Name", elementType)
 	examples, err := aali_graphdb.CypherQueryReadGeneric[exampleName](
 		graphdb_context.client,
-		graphdb_context.dbname,
+		dbname,
 		query,
 		aali_graphdb.ParameterMap{
 			"name": aali_graphdb.StringValue(elementName),
@@ -751,13 +760,14 @@ func (graphdb_context *graphDbContext) GetExamplesFromCodeGenerationElement(elem
 // GetCodeGenerationElementAndDependencies gets a code generation element and its dependencies.
 //
 // Parameters:
+//   - dbname: The name of the database to target.
 //   - elementName: Name of the code generation element.
 //   - maxHops: Maximum number of hops to search for dependencies.
 //
 // Returns:
 //   - elements: List of code generation elements.
 //   - funcError: Error object.
-func (graphdb_context *graphDbContext) GetCodeGenerationElementAndDependencies(elementName string, maxHops int) (elements []sharedtypes.CodeGenerationElement, funcError error) {
+func (graphdb_context *graphDbContext) GetCodeGenerationElementAndDependencies(dbname string, elementName string, maxHops int) (elements []sharedtypes.CodeGenerationElement, funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -785,7 +795,7 @@ func (graphdb_context *graphDbContext) GetCodeGenerationElementAndDependencies(e
 	params := aali_graphdb.ParameterMap{
 		"element_name": aali_graphdb.StringValue(elementName),
 	}
-	elements, err := aali_graphdb.CypherQueryReadGeneric[sharedtypes.CodeGenerationElement](graphdb_context.client, graphdb_context.dbname, query, params)
+	elements, err := aali_graphdb.CypherQueryReadGeneric[sharedtypes.CodeGenerationElement](graphdb_context.client, dbname, query, params)
 	if err != nil {
 		logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
 		return nil, err
@@ -797,9 +807,10 @@ func (graphdb_context *graphDbContext) GetCodeGenerationElementAndDependencies(e
 // GetUserGuideMainChapters gets the main chapters of the user guide.
 //
 // Returns:
+//   - dbname: The name of the database to target.
 //   - sections: List of user guide sections.
 //   - funcError: Error object.
-func (graphdb_context *graphDbContext) GetUserGuideMainChapters() (sections []sharedtypes.CodeGenerationUserGuideSection, funcError error) {
+func (graphdb_context *graphDbContext) GetUserGuideMainChapters(dbname string) (sections []sharedtypes.CodeGenerationUserGuideSection, funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -818,7 +829,7 @@ func (graphdb_context *graphDbContext) GetUserGuideMainChapters() (sections []sh
 			WITH firstChild, [n IN nodes(path)] AS chapters
 			RETURN chapters
 		`
-	result, err := aali_graphdb.CypherQueryReadGeneric[[]sharedtypes.CodeGenerationUserGuideSection](graphdb_context.client, graphdb_context.dbname, query, nil)
+	result, err := aali_graphdb.CypherQueryReadGeneric[[]sharedtypes.CodeGenerationUserGuideSection](graphdb_context.client, dbname, query, nil)
 
 	if err != nil {
 		logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
@@ -844,12 +855,13 @@ func (graphdb_context *graphDbContext) GetUserGuideMainChapters() (sections []sh
 // GetUserGuideSectionChildren gets the children of a user guide section.
 //
 // Parameters:
+//   - dbname: The name of the database to target.
 //   - sectionName: Name of the user guide section.
 //
 // Returns:
 //   - sectionChildren: List of user guide sections.
 //   - funcError: Error object.
-func (graphdb_context *graphDbContext) GetUserGuideSectionChildren(sectionName string) (sectionChildren []sharedtypes.CodeGenerationUserGuideSection, funcError error) {
+func (graphdb_context *graphDbContext) GetUserGuideSectionChildren(dbname string, sectionName string) (sectionChildren []sharedtypes.CodeGenerationUserGuideSection, funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -872,7 +884,7 @@ func (graphdb_context *graphDbContext) GetUserGuideSectionChildren(sectionName s
 	params := aali_graphdb.ParameterMap{
 		"sectionName": aali_graphdb.StringValue(sectionName),
 	}
-	sectionChildren, err := aali_graphdb.CypherQueryReadGeneric[sharedtypes.CodeGenerationUserGuideSection](graphdb_context.client, graphdb_context.dbname, query, params)
+	sectionChildren, err := aali_graphdb.CypherQueryReadGeneric[sharedtypes.CodeGenerationUserGuideSection](graphdb_context.client, dbname, query, params)
 	if err != nil {
 		logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
 		return nil, err
@@ -884,12 +896,13 @@ func (graphdb_context *graphDbContext) GetUserGuideSectionChildren(sectionName s
 // GetUserGuideTableOfContents gets the table of contents of the user guide.
 //
 // Parameters:
+//   - dbname: The name of the database to target.
 //   - maxLevel: Maximum depth of the table of contents.
 //
 // Returns:
 //   - tableOfContents: List of user guide sections.
 //   - funcError: Error object.
-func (graphdb_context *graphDbContext) GetUserGuideTableOfContents(maxLevel int) (tableOfContents []map[string]interface{}, funcError error) {
+func (graphdb_context *graphDbContext) GetUserGuideTableOfContents(dbname string, maxLevel int) (tableOfContents []map[string]interface{}, funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -900,7 +913,7 @@ func (graphdb_context *graphDbContext) GetUserGuideTableOfContents(maxLevel int)
 	}()
 
 	// Fetch table of contents
-	mainChapters, err := GraphDbDriver.GetUserGuideMainChapters()
+	mainChapters, err := GraphDbDriver.GetUserGuideMainChapters(dbname)
 	if err != nil {
 		logging.Log.Errorf(&logging.ContextMap{}, "Error fetching main chapters: %v", err)
 		return nil, err
@@ -910,7 +923,7 @@ func (graphdb_context *graphDbContext) GetUserGuideTableOfContents(maxLevel int)
 
 	// Process each section
 	for _, section := range mainChapters {
-		sectionNode, err := graphdb_context.getUserGuideNodeRecursive(section.Name, maxLevel)
+		sectionNode, err := graphdb_context.getUserGuideNodeRecursive(dbname, section.Name, maxLevel)
 		if err != nil {
 			logging.Log.Errorf(&logging.ContextMap{}, "Error fetching section node %v: %v", section.Name, err)
 			return nil, err
@@ -936,13 +949,14 @@ type userGuideNodeProps struct {
 // GetUserGuideNodeRecursive fetches a user guide node and its children recursively.
 //
 // Parameters:
+//   - dbname: The name of the database to target.
 //   - nodeName: Name of the user guide node.
 //   - maxLevel: Maximum depth of the table of contents.
 //
 // Returns:
 //   - nodeProps: Properties of the user guide node.
 //   - funcError: Error object.
-func (graphdb_context *graphDbContext) getUserGuideNodeRecursive(nodeName string, maxLevel int) (*userGuideNodeProps, error) {
+func (graphdb_context *graphDbContext) getUserGuideNodeRecursive(dbname string, nodeName string, maxLevel int) (*userGuideNodeProps, error) {
 	type userGuideNodePropsRaw struct {
 		Title    string   `json:"title"`
 		Name     string   `json:"name"`
@@ -966,7 +980,7 @@ func (graphdb_context *graphDbContext) getUserGuideNodeRecursive(nodeName string
 		"node_name": aali_graphdb.StringValue(nodeName),
 	}
 
-	result, err := aali_graphdb.CypherQueryReadGeneric[userGuideNodePropsRaw](graphdb_context.client, graphdb_context.dbname, query, params)
+	result, err := aali_graphdb.CypherQueryReadGeneric[userGuideNodePropsRaw](graphdb_context.client, dbname, query, params)
 	if err != nil {
 		return nil, fmt.Errorf("error during cypher query: %v", err)
 	}
@@ -981,7 +995,7 @@ func (graphdb_context *graphDbContext) getUserGuideNodeRecursive(nodeName string
 	children := []userGuideNodeProps{}
 	if orderedChildrenNames != nil && maxLevel > 1 {
 		for _, childName := range orderedChildrenNames {
-			childNode, err := graphdb_context.getUserGuideNodeRecursive(childName, maxLevel-1)
+			childNode, err := graphdb_context.getUserGuideNodeRecursive(dbname, childName, maxLevel-1)
 			if err != nil {
 				return nil, fmt.Errorf("error fetching child node %v: %v", childName, err)
 			}
@@ -1002,12 +1016,13 @@ func (graphdb_context *graphDbContext) getUserGuideNodeRecursive(nodeName string
 // GetUserGuideSectionReferences gets the references of a user guide section.
 //
 // Parameters:
+//   - dbname: The name of the database to target.
 //   - sectionName: Name of the user guide section.
 //
 // Returns:
 //   - referencedSections: List of referenced sections.
 //   - funcError: Error object.
-func (graphdb_context *graphDbContext) GetUserGuideSectionReferences(sectionName string) (referencedSections string, funcError error) {
+func (graphdb_context *graphDbContext) GetUserGuideSectionReferences(dbname string, sectionName string) (referencedSections string, funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -1028,7 +1043,7 @@ func (graphdb_context *graphDbContext) GetUserGuideSectionReferences(sectionName
 	params := aali_graphdb.ParameterMap{
 		"sectionName": aali_graphdb.StringValue(sectionName),
 	}
-	result, err := aali_graphdb.CypherQueryReadGeneric[reference](graphdb_context.client, graphdb_context.dbname, query, params)
+	result, err := aali_graphdb.CypherQueryReadGeneric[reference](graphdb_context.client, dbname, query, params)
 
 	if err != nil {
 		logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
@@ -1047,6 +1062,7 @@ func (graphdb_context *graphDbContext) GetUserGuideSectionReferences(sectionName
 //
 // Parameters:
 //   - ctx: ContextMap object.
+//   - dbname: The name of the database to target.
 //   - relationshipName: Name of the relationship.
 //   - relationshipDirection: Direction of the relationship.
 //   - sourceDocumentId: Id of the document.
@@ -1056,7 +1072,7 @@ func (graphdb_context *graphDbContext) GetUserGuideSectionReferences(sectionName
 // Returns:
 //   - dependenciesIds: List of dependencies ids.
 //   - funcError: Error object.
-func (graphdb_context *graphDbContext) RetrieveDependencies(ctx *logging.ContextMap, relationshipName string, relationshipDirection string, sourceDocumentName string, nodeTypesFilter sharedtypes.DbArrayFilter, tagsFilter []string, maxHops int) (dependencyNames []string, funcError error) {
+func (graphdb_context *graphDbContext) RetrieveDependencies(ctx *logging.ContextMap, dbname string, relationshipName string, relationshipDirection string, sourceDocumentName string, nodeTypesFilter sharedtypes.DbArrayFilter, tagsFilter []string, maxHops int) (dependencyNames []string, funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -1135,7 +1151,7 @@ func (graphdb_context *graphDbContext) RetrieveDependencies(ctx *logging.Context
 	}
 	result, err := aali_graphdb.CypherQueryReadGeneric[struct {
 		Name string `json:"name"`
-	}](graphdb_context.client, graphdb_context.dbname, query, params)
+	}](graphdb_context.client, dbname, query, params)
 	if err != nil {
 		logging.Log.Errorf(ctx, "error during cypher query: %v", err)
 		return nil, err

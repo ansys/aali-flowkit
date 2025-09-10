@@ -64,6 +64,48 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// Parse message for warning or an error
+// Here msgType also acts as a delimiter
+// msgType is either warning: or error:
+func parseMessageForType(msgType string, msg string) (finalMsg []string, lineNos []string){
+    var es []string
+    es = strings.Split(msg, msgType)
+    for _, e:= range es {
+        if strings.Contains(e, "py:") {
+            lineNos = append(lineNos, strings.Split(e, "py:")[1])
+        }
+        if strings.Contains(e, ")"){
+            finalMsg = append(finalMsg, strings.Split(e, ")")[0] +")\n")
+        }
+    }
+    return finalMsg, lineNos
+}
+
+// Parse error String with pyright
+func GetValidationPrompt(errStr string) (errPrompt string) {
+	errPrompt = "You are a code debugging expert, following errors and warnings were found in given pyaedt script code. Fix code with reference to ansys.aedt.core library\n."
+	// Errors
+	errMsg, errLine := parseMessageForType("error:", errStr)
+	// Warnings
+	warnMsg, warnLine := parseMessageForType("warning:", errStr)
+   	
+	if len(errMsg) > 0 {
+		errPrompt += "Errors:\n"
+		for i,e := range errMsg {
+			errPrompt += "Line "+ errLine[i] + e + ".\n"
+		}
+	}
+	if len(warnMsg) > 0 {
+		errPrompt += "Warnings:\n"
+		for i,w := range warnMsg {
+			errPrompt += "Line "+ warnLine[i] + w + ".\n"
+		}
+	}
+	logging.Log.Debugf(&logging.ContextMap{}, "Read input errStr %s", errStr)
+	return errPrompt
+}
+
+
 // transferDatafromResponseToStreamChannel transfers the data from the response channel to the stream channel
 //
 // Parameters:
@@ -160,6 +202,14 @@ func transferDatafromResponseToStreamChannel(
 					valid, warnings, err := validatePythonCode(pythonCode)
 					if err != nil {
 						logging.Log.Errorf(&logging.ContextMap{}, "Error validating Python code: %v\n", err)
+						// parse errors
+						// kapatil: redo code generation 
+						// Prompt: Following errors are found in code, fix code w.r.t pyaedt code library
+						//errPrompt := GetValidationPrompt(err.Error())
+						//errPrompt += "Pyaedt script:\n " + pythonCode
+						// Set up WebSocket connection with LLM and send chat request
+						//responseString := sendChatRequestNoStreaming(errPrompt, "code", nil, 0, "", llmHandlerEndpoint, nil, nil, nil)
+						//logging.Log.Debugf(&logging.ContextMap{}, "%s", errPrompt)
 					} else {
 						if valid {
 							if warnings {

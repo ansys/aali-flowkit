@@ -947,6 +947,7 @@ func PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOut
 	return responseAsStr, inputTokenCount, outputTokenCount
 }
 
+
 // PerformCodeLLMRequest performs a code generation request to LLM
 //
 // Tags:
@@ -998,7 +999,7 @@ func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, 
 			break
 		}
 	}
-
+	validateCode = true
 	// Code validation
 	if validateCode {
 
@@ -1012,6 +1013,15 @@ func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, 
 			valid, warnings, err := validatePythonCode(pythonCode)
 			if err != nil {
 				logging.Log.Errorf(&logging.ContextMap{}, "Error validating Python code: %v", err)
+				// parse errors
+				// kapatil: redo code generation 
+				// Prompt: Following errors are found in code, fix code w.r.t pyaedt code library
+				errPrompt := GetValidationPrompt(err.Error())
+				errPrompt += "Pyaedt script:\n " + pythonCode
+				// Set up WebSocket connection with LLM and send chat request
+				responseString := sendChatRequestNoStreaming(errPrompt, "code", nil, 0, "", llmHandlerEndpoint, nil, nil, nil)
+				logging.Log.Debugf(&logging.ContextMap{}, "%s", errPrompt, responseString)
+
 			} else {
 				if valid {
 					if warnings {
@@ -1020,6 +1030,14 @@ func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, 
 						responseAsStr += "\nCode is valid."
 					}
 				} else {
+					// kapatilPrompt: Following errors are found in code, fix code w.r.t pyaedt code library
+					//errPrompt := GetValidationPrompt(err.Error())
+					//errPrompt += "Pyaedt script:\n " + pythonCode
+					//// Set up WebSocket connection with LLM and send chat request
+					//responseString := sendChatRequestNoStreaming(errPrompt, "code", nil, 0, "", llmHandlerEndpoint, nil, nil, nil)
+					//logging.Log.Debugf(&logging.ContextMap{}, "%s", responseString)
+					// Return the response
+					
 					responseAsStr += "\nCode is invalid."
 				}
 			}

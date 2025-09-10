@@ -43,3 +43,4 @@ aali-flowkit
 doc/source/api_reference/**/index.md
 doc/source/api_reference/functiontesting/
 doc/source/api_reference/meshpilot/
+.DS_Store

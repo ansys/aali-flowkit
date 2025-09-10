@@ -23,6 +23,7 @@
 package externalfunctions
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -2745,45 +2746,277 @@ func logPanic(ctx *logging.ContextMap, msg string, args ...any) {
 	panic(errMsg)
 }
 
-// connectToMCP establishes a WebSocket connection to the MCP server.
+// This section implements transport support for MCP
+// - WebSocket: For ws:// and wss:// servers
+// - SSE: For HTTP-based servers using Server-Sent Events
+// - STDIO: For local MCP servers running as subprocesses
+
+// transportHandlers maps transport names to their connection functions
+// Each handler returns an MCPConnection wrapper that abstracts transport differences
+var transportHandlers = map[string]func(context.Context, MCPConfig) (*MCPConnection, error){
+	"websocket": connectWebSocketTransport,
+	"sse":       connectSSETransport,
+	"stdio":     connectSTDIOTransport,
+}
+
+// validateToken validates authentication token for security
+func validateToken(token string) error {
+	if strings.ContainsAny(token, "\r\n") {
+		return fmt.Errorf("token contains invalid characters")
+	}
+	return nil
+}
+
+// connectToMCP establishes a connection to an MCP server with optional authentication
 //
 // Parameters:
-//   - ctx: The context for managing connection timeout and cancellation.
-//   - serverURL: The WebSocket URL of the MCP server.
+//   - ctx: The context for managing connection timeout and cancellation
+//   - serverURL: The WebSocket URL of the MCP server
 //
 // Returns:
-//   - conn: The established WebSocket connection.
-//   - err: An error if the connection fails.
-func connectToMCP(ctx context.Context, serverURL string) (*websocket.Conn, error) {
-	conn, _, err := websocket.Dial(ctx, serverURL, nil)
+//   - conn: The established MCP connection wrapper
+//   - err: An error if the connection fails
+func connectToMCP(ctx context.Context, config MCPConfig) (*MCPConnection, error) {
+	// Set default transport if not specified
+	if config.Transport == "" {
+		config.Transport = "websocket"
+	}
+
+	// Set default timeout if not specified (30 seconds)
+	if config.Timeout == 0 {
+		config.Timeout = 30
+	}
+
+	// Apply timeout to context
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(config.Timeout)*time.Second)
+	defer cancel()
+
+	// Use transport handlers map for cleaner code
+	handler, exists := transportHandlers[config.Transport]
+	if !exists {
+		return nil, fmt.Errorf("unsupported transport type: %s", config.Transport)
+	}
+
+	return handler(ctx, config)
+}
+
+// connectWebSocketTransport establishes a WebSocket connection with authentication support
+// Returns MCPConnection wrapper with WebSocket transport
+func connectWebSocketTransport(ctx context.Context, config MCPConfig) (*MCPConnection, error) {
+	// Call original connectWebSocket and wrap in MCPConnection
+	wsConn, err := connectWebSocket(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &MCPConnection{
+		Transport: "websocket",
+		WSConn:    wsConn,
+	}, nil
+}
+
+// connectWebSocket establishes a raw WebSocket connection with authentication support
+func connectWebSocket(ctx context.Context, config MCPConfig) (*websocket.Conn, error) {
+	// Prepare dial options with optional authentication token
+	options := &websocket.DialOptions{}
+
+	// Apply authentication token if provided
+	if token := config.GetAuthToken(); token != "" {
+		// Validate token for security (CRLF injection protection)
+		if err := validateToken(token); err != nil {
+			return nil, fmt.Errorf("invalid authentication token: %w", err)
+		}
+
+		// Set Bearer token in Authorization header
+		options.HTTPHeader = http.Header{}
+		options.HTTPHeader.Set("Authorization", "Bearer "+token)
+	}
+
+	// Establish WebSocket connection with authentication
+	conn, _, err := websocket.Dial(ctx, config.ServerURL, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to WebSocket server: %w", err)
 	}
 	return conn, nil
 }
 
-// sendMCPRequest sends a JSON request over the WebSocket connection and returns the parsed response.
+// connectSSETransport establishes an SSE connection for HTTP-based MCP servers
+func connectSSETransport(ctx context.Context, config MCPConfig) (*MCPConnection, error) {
+	// Create HTTP client with timeout
+	client := &http.Client{
+		Timeout: time.Duration(config.Timeout) * time.Second,
+	}
+
+	// Prepare auth headers if needed
+	headers := http.Header{}
+	if token := config.GetAuthToken(); token != "" {
+		if err := validateToken(token); err != nil {
+			return nil, fmt.Errorf("invalid authentication token: %w", err)
+		}
+		headers.Set("Authorization", "Bearer "+token)
+	}
+
+	// Test connection with a simple POST request
+	testReq, err := http.NewRequestWithContext(ctx, "POST", config.ServerURL+"/rpc", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create test request: %w", err)
+	}
+	testReq.Header = headers
+
+	// Try connection
+	resp, err := client.Do(testReq)
+	if err != nil {
+		return nil, fmt.Errorf("SSE connection failed - ensure MCP server is running at %s: %w", config.ServerURL, err)
+	}
+	defer resp.Body.Close()
+
+	// Check for auth errors
+	if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		return nil, fmt.Errorf("authentication failed for MCP server at %s", config.ServerURL)
+	}
+
+	return &MCPConnection{
+		Transport:  "sse",
+		HTTPClient: client,
+		ServerURL:  config.ServerURL,
+	}, nil
+}
+
+// connectSTDIOTransport launches an MCP server as a subprocess and communicates via standard I/O
+func connectSTDIOTransport(ctx context.Context, config MCPConfig) (*MCPConnection, error) {
+	// For STDIO, ServerURL is the path to the MCP server executable
+	// Example: "/usr/local/bin/mcp-server" or "python /path/to/server.py"
+
+	// Parse the command - support both single executable and command with args
+	parts := strings.Fields(config.ServerURL)
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("invalid STDIO server path: %s", config.ServerURL)
+	}
+
+	var cmd *exec.Cmd
+	if len(parts) == 1 {
+		cmd = exec.CommandContext(ctx, parts[0])
+	} else {
+		cmd = exec.CommandContext(ctx, parts[0], parts[1:]...)
+	}
+
+	// Set up pipes
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stdin pipe: %w", err)
+	}
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stdout pipe: %w", err)
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stderr pipe: %w", err)
+	}
+
+	// Pass auth token as environment variable if provided
+	if token := config.GetAuthToken(); token != "" {
+		cmd.Env = append(os.Environ(), "MCP_AUTH_TOKEN="+token)
+	}
+
+	// Start the process
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start MCP server process: %w", err)
+	}
+
+	// Send initialization message
+	initMsg := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"method":  "initialize",
+		"params": map[string]interface{}{
+			"protocolVersion": "1.0.0",
+			"clientInfo": map[string]string{
+				"name":    "aali-flowkit",
+				"version": "1.0.0",
+			},
+		},
+		"id": 1,
+	}
+
+	initData, err := json.Marshal(initMsg)
+	if err != nil {
+		cmd.Process.Kill()
+		return nil, fmt.Errorf("failed to marshal init message: %w", err)
+	}
+
+	// Send init message
+	if _, err := stdin.Write(append(initData, '\n')); err != nil {
+		cmd.Process.Kill()
+		return nil, fmt.Errorf("failed to send init message: %w", err)
+	}
+
+	return &MCPConnection{
+		Transport: "stdio",
+		Process:   cmd,
+		Stdin:     stdin,
+		Stdout:    stdout,
+		Stderr:    stderr,
+	}, nil
+}
+
+// sendMCPRequest sends a JSON-RPC request to the MCP server and returns the response
 //
 // Parameters:
-//   - ctx: The context for sending and receiving messages.
-//   - conn: The active WebSocket connection.
-//   - request: The request object to be marshaled and sent.
+//   - ctx: The context for the request
+//   - conn: The active MCP connection wrapper
+//   - method: The JSON-RPC method to call
+//   - params: The parameters for the method (can be nil)
 //
 // Returns:
-//   - response: The parsed response from the MCP server as a map.
-//   - err: An error if marshaling, sending, or receiving fails.
-func sendMCPRequest(ctx context.Context, conn *websocket.Conn, request interface{}) (map[string]interface{}, error) {
+//   - response: The result field from the JSON-RPC response
+//   - err: An error if the request fails
+func sendMCPRequest(ctx context.Context, conn *MCPConnection, method string, params interface{}) (interface{}, error) {
+	// Route to appropriate transport handler
+	switch conn.Transport {
+	case "websocket":
+		return sendMCPRequestWebSocket(ctx, conn.WSConn, method, params)
+	case "sse":
+		return sendMCPRequestSSE(ctx, conn, method, params)
+	case "stdio":
+		return sendMCPRequestSTDIO(ctx, conn, method, params)
+	default:
+		return nil, fmt.Errorf("unsupported transport for sendMCPRequest: %s", conn.Transport)
+	}
+}
+
+// sendMCPRequestWebSocket handles WebSocket transport for MCP requests
+func sendMCPRequestWebSocket(ctx context.Context, wsConn *websocket.Conn, method string, params interface{}) (interface{}, error) {
+	// Generate a unique request ID
+	requestID := uuid.New().String()
+
+	// Build JSON-RPC request
+	request := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      requestID,
+		"method":  method,
+	}
+
+	// Add params if provided
+	if params != nil {
+		request["params"] = params
+	}
+
+	// Marshal request to JSON
 	data, err := json.Marshal(request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	err = conn.Write(ctx, websocket.MessageText, data)
+	// Send request
+	err = wsConn.Write(ctx, websocket.MessageText, data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 
-	_, msg, err := conn.Read(ctx)
+	// Read response
+	_, msg, err := wsConn.Read(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -2793,18 +3026,158 @@ func sendMCPRequest(ctx context.Context, conn *websocket.Conn, request interface
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
+	// Check for errors
+	if errField, exists := response["error"]; exists {
+		if errMap, ok := errField.(map[string]interface{}); ok {
+			errMsg := "MCP server error"
+			if msg, ok := errMap["message"].(string); ok {
+				errMsg = msg
+			}
+			return nil, fmt.Errorf("%s", errMsg)
+		}
+	}
+
+	// Return result
+	if result, exists := response["result"]; exists {
+		return result, nil
+	}
+
+	return response, nil
+}
+
+// sendMCPRequestSSE handles SSE/HTTP transport for MCP requests
+func sendMCPRequestSSE(ctx context.Context, conn *MCPConnection, method string, params interface{}) (interface{}, error) {
+	// Generate request ID
+	requestID := uuid.New().String()
+
+	// Build JSON-RPC request
+	request := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      requestID,
+		"method":  method,
+	}
+	if params != nil {
+		request["params"] = params
+	}
+
+	// Marshal to JSON
+	data, err := json.Marshal(request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// Create POST request
+	req, err := http.NewRequestWithContext(ctx, "POST", conn.ServerURL+"/rpc", bytes.NewBuffer(data))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Send request
+	resp, err := conn.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send SSE request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read SSE response: %w", err)
+	}
+
+	// Parse response
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal SSE response: %w", err)
+	}
+
+	// Check for errors
+	if errField, exists := response["error"]; exists {
+		if errMap, ok := errField.(map[string]interface{}); ok {
+			errMsg := "MCP server error"
+			if msg, ok := errMap["message"].(string); ok {
+				errMsg = msg
+			}
+			return nil, fmt.Errorf("%s", errMsg)
+		}
+	}
+
+	// Return result
+	if result, exists := response["result"]; exists {
+		return result, nil
+	}
+
+	return response, nil
+}
+
+// sendMCPRequestSTDIO handles STDIO transport for MCP requests
+func sendMCPRequestSTDIO(ctx context.Context, conn *MCPConnection, method string, params interface{}) (interface{}, error) {
+	// Generate request ID
+	requestID := uuid.New().String()
+
+	// Build JSON-RPC request
+	request := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      requestID,
+		"method":  method,
+	}
+	if params != nil {
+		request["params"] = params
+	}
+
+	// Marshal to JSON
+	data, err := json.Marshal(request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// Send via stdin (with newline delimiter)
+	if _, err := conn.Stdin.Write(append(data, '\n')); err != nil {
+		return nil, fmt.Errorf("failed to write to stdin: %w", err)
+	}
+
+	// Read response from stdout (line by line)
+	reader := bufio.NewReader(conn.Stdout)
+	line, err := reader.ReadBytes('\n')
+	if err != nil {
+		return nil, fmt.Errorf("failed to read from stdout: %w", err)
+	}
+
+	// Parse response
+	var response map[string]interface{}
+	if err := json.Unmarshal(line, &response); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal STDIO response: %w", err)
+	}
+
+	// Check for errors
+	if errField, exists := response["error"]; exists {
+		if errMap, ok := errField.(map[string]interface{}); ok {
+			errMsg := "MCP server error"
+			if msg, ok := errMap["message"].(string); ok {
+				errMsg = msg
+			}
+			return nil, fmt.Errorf("%s", errMsg)
+		}
+	}
+
+	// Return result
+	if result, exists := response["result"]; exists {
+		return result, nil
+	}
+
 	return response, nil
 }
 
 // kvdbGetEntry retrieves the value from a specific key from the KVDB
 //
 // Parameters:
-//   - key: The key to retrive the value for.
+//   - key: The key to retrive the value for
 //
 // Returns:
-//   - value: The value for the given key.
-//   - exists: A boolean indicating if the given key exists in the KVDB.
-//   - err: An error if marshaling, sending, or receiving fails.
+//   - value: The value for the given key
+//   - exists: A boolean indicating if the given key exists in the KVDB
+//   - err: An error if marshaling, sending, or receiving fails
 func kvdbGetEntry(kvdbEndpoint string, key string) (value string, exists bool, err error) {
 	// make GET request to the kvdb
 	url := kvdbEndpoint + "/entries/" + key
@@ -2860,7 +3233,7 @@ func kvdbGetEntry(kvdbEndpoint string, key string) (value string, exists bool, e
 //   - value: The value for the given key.
 //
 // Returns:
-//   - err: An error if marshaling, sending, or receiving fails.
+//   - err: An error if marshaling, sending, or receiving fails
 func kvdbSetEntry(kvdbEndpoint string, key string, value string) (err error) {
 
 	// make PUT request to the kvdb

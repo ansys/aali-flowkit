@@ -23,11 +23,17 @@
 package externalfunctions
 
 import (
+	"io"
+	"net/http"
+	"os"
+	"os/exec"
+	"strings"
 	"sync"
 
 	"github.com/ansys/aali-sharedtypes/pkg/sharedtypes"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/mongo"
+	"nhooyr.io/websocket"
 )
 
 // similarityElement represents a single element in the similarity search result.
@@ -198,6 +204,99 @@ type ACSSearchResponseCrtech struct {
 	SearchScore         float64 `json:"@search.score"`
 	SearchRerankerScore float64 `json:"@search.rerankerScore"`
 	IndexName           string  `json:"indexName"`
+}
+
+// MCPConfig represents the configuration for MCP connections
+type MCPConfig struct {
+	// ServerURL is the URL of the MCP server (required)
+	ServerURL string `json:"serverURL" description:"The URL of the MCP server" required:"true"`
+
+	// Transport specifies the transport protocol to use
+	Transport string `json:"transport" description:"Transport protocol: websocket, sse, or stdio" required:"false"`
+
+	// AuthToken is an optional authentication token
+	AuthToken string `json:"authToken" description:"Optional authentication token" required:"false"`
+
+	// Timeout specifies the connection timeout in seconds
+	Timeout int `json:"timeout" description:"Connection timeout in seconds (default: 30)" required:"false"`
+}
+
+// GetAuthToken returns the authentication token, resolving environment variables if needed
+// ${MCP_TOKEN} will return the value of the MCP_TOKEN environment variable
+func (config *MCPConfig) GetAuthToken() string {
+	if len(config.AuthToken) > 3 &&
+		strings.HasPrefix(config.AuthToken, "${") &&
+		strings.HasSuffix(config.AuthToken, "}") {
+		envVar := config.AuthToken[2 : len(config.AuthToken)-1]
+		return os.Getenv(envVar)
+	}
+	return config.AuthToken
+}
+
+// DiscoverServerResponse represents the response from MCP server discovery
+type DiscoverServerResponse struct {
+	ServerURL             string   `json:"serverURL" description:"The URL of the MCP server that was checked"`
+	Status                string   `json:"status" description:"Connection status: connected, requires_auth, possible_stdio, or unavailable"`
+	RequiresAuth          bool     `json:"requiresAuth" description:"Whether the server requires authentication"`
+	AvailableTransports   []string `json:"availableTransports" description:"List of supported transport protocols"`
+	HasTools              bool     `json:"hasTools" description:"Whether the server provides tools"`
+	ToolsCount            int      `json:"toolsCount" description:"Number of available tools"`
+	HasResources          bool     `json:"hasResources" description:"Whether the server provides resources"`
+	ResourcesCount        int      `json:"resourcesCount" description:"Number of available resources"`
+	HasPrompts            bool     `json:"hasPrompts" description:"Whether the server provides prompt templates"`
+	PromptsCount          int      `json:"promptsCount" description:"Number of available prompts"`
+	RecommendedTimeout    int      `json:"recommendedTimeout" description:"Suggested timeout in seconds"`
+	RecommendedTransport  string   `json:"recommendedTransport" description:"Recommended transport protocol to use"`
+	Error                 string   `json:"error,omitempty" description:"Error message if discovery failed"`
+	Note                  string   `json:"note,omitempty" description:"Additional information about the server"`
+}
+
+// MCPConnection represents a unified connection wrapper for different MCP transport types.
+type MCPConnection struct {
+	// Transport identifies which transport is being used
+	Transport string
+	
+	// WebSocket connection (used for "websocket" transport)
+	WSConn *websocket.Conn
+	
+	// HTTP client (used for "sse" transport)
+	HTTPClient *http.Client
+	ServerURL  string // Base URL for SSE requests
+	
+	// Process handles (used for "stdio" transport)
+	Process *exec.Cmd      // The MCP server process
+	Stdin   io.WriteCloser // Write JSON-RPC to server
+	Stdout  io.ReadCloser  // Read JSON-RPC from server
+	Stderr  io.ReadCloser  // Server logs/errors
+}
+
+// Close connection based on transport type
+func (conn *MCPConnection) Close() error {
+	switch conn.Transport {
+	case "websocket":
+		if conn.WSConn != nil {
+			return conn.WSConn.Close(websocket.StatusNormalClosure, "closing connection")
+		}
+	case "stdio":
+		if conn.Process != nil {
+			// Close pipes
+			if conn.Stdin != nil {
+				conn.Stdin.Close()
+			}
+			if conn.Stdout != nil {
+				conn.Stdout.Close()
+			}
+			if conn.Stderr != nil {
+				conn.Stderr.Close()
+			}
+			// Terminate process
+			return conn.Process.Process.Kill()
+		}
+	case "sse":
+		// HTTP client doesn't need explicit closing
+		return nil
+	}
+	return nil
 }
 
 // AnsysGPTRetrieverModuleRequest represents the request structure for the Ansys GPT Retriever Module.

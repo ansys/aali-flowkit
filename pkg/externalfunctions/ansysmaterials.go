@@ -828,7 +828,7 @@ func SendLogicAppNotificationEmailToMultipleEmails(logicAppEndpoint string, emai
 // Returns:
 //   - updatedCustomer: the customer object with potentially reset token count and updated timestamp
 //   - childSpanID: the child span ID created for this operation
-func ResetTokenCountIfNewMonth(kvdbEndpoint string, apiKey string, traceID string, spanID string) (updatedCustomer materialsCustomerObject, childSpanID string) {
+func ResetTokenCountIfNewMonth(kvdbEndpoint string, apiKey string, traceID string, spanID string) (childSpanID string) {
 	ctx := &logging.ContextMap{}
 	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
@@ -906,5 +906,5 @@ func ResetTokenCountIfNewMonth(kvdbEndpoint string, apiKey string, traceID strin
 		}
 	}
 
-	return customer, childSpanID
+	return childSpanID
 }

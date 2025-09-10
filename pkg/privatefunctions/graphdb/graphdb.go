@@ -771,6 +771,55 @@ func (graphdb_context *graphDbContext) WriteCypherQuery(query string, parameters
 
 ////////////// Read functions //////////////
 
+
+// GetNameForKeyValue Graph db query
+func (graphdb_context *graphDbContext) GetNameForKeyValue(searchKey string, searchValue string) (apiSignature string, funcError error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			logging.Log.Errorf(&logging.ContextMap{}, "Panic GetNameForValue: %v", r)
+			funcError = r.(error)
+			return
+		}
+	}()
+
+	type apiSign struct {
+		Name string `json:"a.Name"`
+	}
+
+
+	// Get pyaedtGroup
+	var query string
+	// Assuming it will always be a method type
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: API : %s", searchValue)
+	if searchKey == "name" {
+		query = fmt.Sprintf("MATCH (a:%v) WHERE starts_with(a.name, '%v') RETURN a.Name", "Element", searchValue)
+	} else {
+		query = fmt.Sprintf("MATCH (a:%v) WHERE a.name_pseudocode='%v' RETURN a.Name", "Element", searchValue)
+	}
+	apisOut, err := aali_graphdb.CypherQueryReadGeneric[apiSign](
+		graphdb_context.client,
+		graphdb_context.dbname,
+		query,
+		aali_graphdb.ParameterMap{
+			//"name": aali_graphdb.StringValue(searchValue),
+		},
+	)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error during cypher query: %v", err)
+		return "", err
+	}
+	logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Results apis= %d, Query:  %s", len(apisOut), query)
+	if len(apisOut) > 0 {
+		apiSignature = apisOut[0].Name
+		logging.Log.Debugf(&logging.ContextMap{}, "kapatil: signatures = %s", apiSignature)
+	}
+	return apiSignature, nil
+}
+
+
+
+
 // GetPyaedtGroupCaller gets PyaedtGroup's Caller category element name.
 // Pyaedt Group attribute is a Class specific atttribute, for methods we need to get to
 // its class to find pyaedt group.

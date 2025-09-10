@@ -45,6 +45,11 @@ import (
 	"time"
 
 	"github.com/ansys/aali-flowkit/pkg/privatefunctions/codegeneration"
+	
+	"github.com/ansys/aali-flowkit/pkg/privatefunctions/graphdb"
+        //qdrant_utils "github.com/ansys/aali-flowkit/pkg/privatefunctions/qdrant"
+        //"github.com/ansys/aali-sharedtypes/pkg/aali_graphdb"
+	//"github.com/ansys/aali-flowkit/pkg/"
 	"github.com/ansys/aali-sharedtypes/pkg/config"
 	"github.com/ansys/aali-sharedtypes/pkg/logging"
 	"github.com/ansys/aali-sharedtypes/pkg/sharedtypes"
@@ -63,6 +68,65 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"golang.org/x/oauth2"
 )
+
+//func GetApiSignaturesFromGraphDB(listApis string[])(listApisOutput string[]){
+
+//}
+
+// Parse message for warning or an error
+// Here msgType also acts as a delimiter
+// msgType is either warning: or error:
+func parseMessageForType(msgType string, msg string) (finalMsg []string, lineNos []string){
+    var es []string
+    es = strings.Split(msg, msgType)
+    if len(es) > 1 {
+	    for _, e:= range es {
+	        if strings.Contains(e, "py:") {
+	            lineNos = append(lineNos, strings.Split(e, "py:")[1])
+	        }
+	        if strings.Contains(e, ")"){
+	            finalMsg = append(finalMsg, strings.Split(e, ")")[0] +")\n")
+	        }
+	}
+    }
+    return finalMsg, lineNos
+}
+
+// Parse error String with pyright
+func GetValidationPrompt(errStr string, latestAPISignatures []string) (errPrompt string) {
+	errPrompt = "You are a code debugging expert, following errors and warnings were found in given pyaedt script code. Fix API calls with reference to ansys.aedt.core library latest version of pyaedt. "
+	if len(latestAPISignatures) > 0 {
+		errPrompt += "Use following latest API reference signatures:\n. Latest API Signatures:\n"
+		for  _, apis := range latestAPISignatures {
+			errPrompt += apis 
+			errPrompt += "\n"
+		}
+	}
+	// Errors
+	errMsg, errLine := parseMessageForType("error:", errStr)
+	if len(errMsg) == 0 {
+		return "" // empty prompt, no error found
+	}
+	// Warnings
+	// kapatil: warnings have duplicates from errro
+	//warnMsg, warnLine := parseMessageForType("warning:", errStr)
+   	
+	if len(errMsg) > 0 {
+		errPrompt += "Errors:\n"
+		for i,e := range errMsg {
+			errPrompt += "Line "+ errLine[i] + e + ".\n"
+		}
+	}
+	//if len(warnMsg) > 0 {
+	//	errPrompt += "Warnings:\n"
+	//	for i,w := range warnMsg {
+	//		errPrompt += "Line "+ warnLine[i] + w + ".\n"
+	//	}
+	//}
+	//logging.Log.Debugf(&logging.ContextMap{}, "Read input errStr %s", errStr)
+	return errPrompt
+}
+
 
 // transferDatafromResponseToStreamChannel transfers the data from the response channel to the stream channel
 //
@@ -149,6 +213,7 @@ func transferDatafromResponseToStreamChannel(
 			}
 
 			// check for code validation
+			validateCode = false
 			if validateCode {
 				// Extract the code from the response
 				pythonCode, err := extractPythonCode(responseAsStr)
@@ -718,7 +783,7 @@ func extractPythonCode(markdown string) (pythonCode string, error error) {
 	// Compile the regular expression
 	regex, err := regexp.Compile(pattern)
 	if err != nil {
-		return "", err
+		return "```python```", err
 	}
 
 	// Find the first match
@@ -732,6 +797,42 @@ func extractPythonCode(markdown string) (pythonCode string, error error) {
 	// Extract and return the Python code
 	pythonCode = match[1]
 	return pythonCode, nil
+}
+
+
+func GetLatestApiSignaturesForApis(inputs []string) (ApiSignatures []string) {
+	ctx := &logging.ContextMap{}
+	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
+	if err != nil {
+		logPanic(nil, "error initializing graphdb: %v", err)
+        }
+
+	for _, api := range inputs {
+		if strings.Contains(api, "ansys.aedt.core") {
+			var apisOut string
+			// search name
+			apisOut, err := graphdb.GraphDbDriver.GetNameForKeyValue("name", api)
+                	if err != nil {
+                	        logPanic(ctx, "error Getting class constructor api signature for graph db: %v", err)
+                	} else {
+                	        ApiSignatures = append(ApiSignatures,apisOut)
+
+                	}
+		} else {
+			// search name pseudo code
+			var apisOut string
+			// search name
+			apisOut, err := graphdb.GraphDbDriver.GetNameForKeyValue("name_pseudocode", api)
+                	if err != nil {
+                	        logPanic(ctx, "error Getting api signature from graph db: %v", err)
+                	} else {
+                	        ApiSignatures = append(ApiSignatures,apisOut)
+                	}
+
+		}
+
+	}
+	return ApiSignatures
 }
 
 // validatePythonCode validates the Python code using a Python code analysis tool (pyright)
@@ -780,8 +881,10 @@ func validatePythonCode(pythonCode string) (bool, bool, error) {
 
 	// Check if the Python code is valid (no errors in the output)
 	if err == nil {
+		return true, true, nil
 		// Check for potential warnings in output
 		outputAsStr := string(output)
+		logging.Log.Debugf(&logging.ContextMap{}, "Testing pyright %s", outputAsStr)
 		if !strings.Contains(outputAsStr, "0 warnings") {
 			logging.Log.Warn(&logging.ContextMap{}, "Potential errors in Python code...")
 			return true, true, nil

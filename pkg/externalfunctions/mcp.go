@@ -26,6 +26,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/ansys/aali-sharedtypes/pkg/logging"
 )
 
 // detectTransport automatically determines the transport protocol based on the server URL format
@@ -67,7 +69,9 @@ func detectTransport(serverURL string) string {
 // Returns:
 //   - tools: list of tools with their descriptions and parameters
 //   - error: error if connection fails
-func ListTools(serverURL string, authToken string, transport string) ([]interface{}, error) {
+func ListTools(serverURL string, authToken string, transport string) []interface{} {
+	logging.Log.Debugf(&logging.ContextMap{}, "ListTools called with serverURL: %s, transport: %s", serverURL, transport)
+	
 	// Create context for execution time control
 	ctx := context.Background()
 
@@ -87,7 +91,8 @@ func ListTools(serverURL string, authToken string, transport string) ([]interfac
 	// Connect to MCP server via WebSocket
 	conn, err := connectToMCP(ctx, config)
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to MCP server %s: %v", serverURL, err)
+		logging.Log.Errorf(&logging.ContextMap{}, "Unable to connect to MCP server %s: %v", serverURL, err)
+		panic(fmt.Sprintf("Unable to connect to MCP server %s: %v", serverURL, err))
 	}
 	// Ensure connection closes when done
 	defer conn.Close()
@@ -95,19 +100,20 @@ func ListTools(serverURL string, authToken string, transport string) ([]interfac
 	// Send tools list request per MCP protocol
 	response, err := sendMCPRequest(ctx, conn, "tools/list", nil)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching tools: %v", err)
+		logging.Log.Errorf(&logging.ContextMap{}, "Error fetching tools: %v", err)
+		panic(fmt.Sprintf("Error fetching tools: %v", err))
 	}
 
 	// Extract tools from response
 	if responseMap, ok := response.(map[string]interface{}); ok {
 		if tools, exists := responseMap["tools"]; exists {
 			if toolsList, ok := tools.([]interface{}); ok {
-				return toolsList, nil
+				return toolsList
 			}
 		}
 	}
 
-	return []interface{}{}, nil // Return empty list if no tools
+	return []interface{}{} // Return empty list if no tools
 }
 
 // CallTool invokes a specific tool on the MCP server with given arguments.
@@ -124,8 +130,9 @@ func ListTools(serverURL string, authToken string, transport string) ([]interfac
 //
 // Returns:
 //   - result: tool execution result
-//   - error: error if tool doesn't exist or execution fails
-func CallTool(serverURL string, authToken string, transport string, toolName string, arguments map[string]interface{}) (interface{}, error) {
+func CallTool(serverURL string, authToken string, transport string, toolName string, arguments map[string]interface{}) interface{} {
+	logging.Log.Debugf(&logging.ContextMap{}, "CallTool called with serverURL: %s, toolName: %s", serverURL, toolName)
+	
 	ctx := context.Background()
 
 	// Auto-detect transport if not specified
@@ -144,7 +151,8 @@ func CallTool(serverURL string, authToken string, transport string, toolName str
 	// Connect to server
 	conn, err := connectToMCP(ctx, config)
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to MCP server %s: %v", serverURL, err)
+		logging.Log.Errorf(&logging.ContextMap{}, "Unable to connect to MCP server %s: %v", serverURL, err)
+		panic(fmt.Sprintf("Unable to connect to MCP server %s: %v", serverURL, err))
 	}
 	defer conn.Close()
 
@@ -157,17 +165,18 @@ func CallTool(serverURL string, authToken string, transport string, toolName str
 	// Send request and return result
 	response, err := sendMCPRequest(ctx, conn, "tools/call", params)
 	if err != nil {
-		return nil, fmt.Errorf("error calling tool %s: %v", toolName, err)
+		logging.Log.Errorf(&logging.ContextMap{}, "Error calling tool %s: %v", toolName, err)
+		panic(fmt.Sprintf("Error calling tool %s: %v", toolName, err))
 	}
 
 	// Extract result from response
 	if responseMap, ok := response.(map[string]interface{}); ok {
 		if content, exists := responseMap["content"]; exists {
-			return content, nil
+			return content
 		}
 	}
 
-	return response, nil
+	return response
 }
 
 // ListResources retrieves the list of available resources from an MCP server.
@@ -182,8 +191,9 @@ func CallTool(serverURL string, authToken string, transport string, toolName str
 //
 // Returns:
 //   - resources: list of available resources with their URIs
-//   - error: error if problem occurs
-func ListResources(serverURL string, authToken string, transport string) ([]interface{}, error) {
+func ListResources(serverURL string, authToken string, transport string) []interface{} {
+	logging.Log.Debugf(&logging.ContextMap{}, "ListResources called with serverURL: %s, transport: %s", serverURL, transport)
+	
 	ctx := context.Background()
 
 	// Auto-detect transport if not specified
@@ -201,26 +211,28 @@ func ListResources(serverURL string, authToken string, transport string) ([]inte
 
 	conn, err := connectToMCP(ctx, config)
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to MCP server %s: %v", serverURL, err)
+		logging.Log.Errorf(&logging.ContextMap{}, "Unable to connect to MCP server %s: %v", serverURL, err)
+		panic(fmt.Sprintf("Unable to connect to MCP server %s: %v", serverURL, err))
 	}
 	defer conn.Close()
 
 	// Send resources list request
 	response, err := sendMCPRequest(ctx, conn, "resources/list", nil)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching resources: %v", err)
+		logging.Log.Errorf(&logging.ContextMap{}, "Error fetching resources: %v", err)
+		panic(fmt.Sprintf("Error fetching resources: %v", err))
 	}
 
 	// Extract resources from response
 	if responseMap, ok := response.(map[string]interface{}); ok {
 		if resources, exists := responseMap["resources"]; exists {
 			if resourcesList, ok := resources.([]interface{}); ok {
-				return resourcesList, nil
+				return resourcesList
 			}
 		}
 	}
 
-	return []interface{}{}, nil
+	return []interface{}{}
 }
 
 // ReadResource reads the content of a specific resource from the MCP server.
@@ -236,8 +248,9 @@ func ListResources(serverURL string, authToken string, transport string) ([]inte
 //
 // Returns:
 //   - content: resource content
-//   - error: error if resource doesn't exist or cannot be read
-func ReadResource(serverURL string, authToken string, transport string, uri string) (interface{}, error) {
+func ReadResource(serverURL string, authToken string, transport string, uri string) interface{} {
+	logging.Log.Debugf(&logging.ContextMap{}, "ReadResource called with serverURL: %s, uri: %s", serverURL, uri)
+	
 	ctx := context.Background()
 
 	// Auto-detect transport if not specified
@@ -255,7 +268,8 @@ func ReadResource(serverURL string, authToken string, transport string, uri stri
 
 	conn, err := connectToMCP(ctx, config)
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to MCP server %s: %v", serverURL, err)
+		logging.Log.Errorf(&logging.ContextMap{}, "Unable to connect to MCP server %s: %v", serverURL, err)
+		panic(fmt.Sprintf("Unable to connect to MCP server %s: %v", serverURL, err))
 	}
 	defer conn.Close()
 
@@ -267,17 +281,18 @@ func ReadResource(serverURL string, authToken string, transport string, uri stri
 	// Send request and return content
 	response, err := sendMCPRequest(ctx, conn, "resources/read", params)
 	if err != nil {
-		return nil, fmt.Errorf("error reading resource %s: %v", uri, err)
+		logging.Log.Errorf(&logging.ContextMap{}, "Error reading resource %s: %v", uri, err)
+		panic(fmt.Sprintf("Error reading resource %s: %v", uri, err))
 	}
 
 	// Extract content from response
 	if responseMap, ok := response.(map[string]interface{}); ok {
 		if contents, exists := responseMap["contents"]; exists {
-			return contents, nil
+			return contents
 		}
 	}
 
-	return response, nil
+	return response
 }
 
 // ListPrompts retrieves the list of available prompt templates from an MCP server.
@@ -292,8 +307,9 @@ func ReadResource(serverURL string, authToken string, transport string, uri stri
 //
 // Returns:
 //   - prompts: list of available prompt templates with their descriptions
-//   - error: error if problem occurs
-func ListPrompts(serverURL string, authToken string, transport string) ([]interface{}, error) {
+func ListPrompts(serverURL string, authToken string, transport string) []interface{} {
+	logging.Log.Debugf(&logging.ContextMap{}, "ListPrompts called with serverURL: %s, transport: %s", serverURL, transport)
+	
 	ctx := context.Background()
 
 	// Auto-detect transport if not specified
@@ -311,26 +327,28 @@ func ListPrompts(serverURL string, authToken string, transport string) ([]interf
 
 	conn, err := connectToMCP(ctx, config)
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to MCP server %s: %v", serverURL, err)
+		logging.Log.Errorf(&logging.ContextMap{}, "Unable to connect to MCP server %s: %v", serverURL, err)
+		panic(fmt.Sprintf("Unable to connect to MCP server %s: %v", serverURL, err))
 	}
 	defer conn.Close()
 
 	// Send prompts list request per MCP protocol
 	response, err := sendMCPRequest(ctx, conn, "prompts/list", nil)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching prompts: %v", err)
+		logging.Log.Errorf(&logging.ContextMap{}, "Error fetching prompts: %v", err)
+		panic(fmt.Sprintf("Error fetching prompts: %v", err))
 	}
 
 	// Extract prompts from response
 	if responseMap, ok := response.(map[string]interface{}); ok {
 		if prompts, exists := responseMap["prompts"]; exists {
 			if promptsList, ok := prompts.([]interface{}); ok {
-				return promptsList, nil
+				return promptsList
 			}
 		}
 	}
 
-	return []interface{}{}, nil
+	return []interface{}{}
 }
 
 // GetPrompt retrieves and fills a specific prompt template with given arguments.
@@ -347,8 +365,9 @@ func ListPrompts(serverURL string, authToken string, transport string) ([]interf
 //
 // Returns:
 //   - prompt: filled prompt ready for use
-//   - error: error if prompt doesn't exist or cannot be filled
-func GetPrompt(serverURL string, authToken string, transport string, promptName string, arguments map[string]interface{}) (interface{}, error) {
+func GetPrompt(serverURL string, authToken string, transport string, promptName string, arguments map[string]interface{}) interface{} {
+	logging.Log.Debugf(&logging.ContextMap{}, "GetPrompt called with serverURL: %s, promptName: %s", serverURL, promptName)
+	
 	ctx := context.Background()
 
 	// Auto-detect transport if not specified
@@ -367,7 +386,8 @@ func GetPrompt(serverURL string, authToken string, transport string, promptName 
 	// Connect to server
 	conn, err := connectToMCP(ctx, config)
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to MCP server %s: %v", serverURL, err)
+		logging.Log.Errorf(&logging.ContextMap{}, "Unable to connect to MCP server %s: %v", serverURL, err)
+		panic(fmt.Sprintf("Unable to connect to MCP server %s: %v", serverURL, err))
 	}
 	defer conn.Close()
 
@@ -384,11 +404,12 @@ func GetPrompt(serverURL string, authToken string, transport string, promptName 
 	// Send request and return result
 	response, err := sendMCPRequest(ctx, conn, "prompts/get", params)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching prompt %s: %v", promptName, err)
+		logging.Log.Errorf(&logging.ContextMap{}, "Error fetching prompt %s: %v", promptName, err)
+		panic(fmt.Sprintf("Error fetching prompt %s: %v", promptName, err))
 	}
 
 	// Return full response which may contain messages array or other format
-	return response, nil
+	return response
 }
 
 // ListAll retrieves all available tools, resources, and prompt templates from an MCP server.
@@ -403,32 +424,23 @@ func GetPrompt(serverURL string, authToken string, transport string, promptName 
 //
 // Returns:
 //   - result: map with keys "tools", "resources", and "prompts"
-//   - error: error if problem occurs
-func ListAll(serverURL string, authToken string, transport string) (map[string]interface{}, error) {
+func ListAll(serverURL string, authToken string, transport string) map[string]interface{} {
+	logging.Log.Debugf(&logging.ContextMap{}, "ListAll called with serverURL: %s, transport: %s", serverURL, transport)
+	
 	// Reuse existing functions
 
 	// Fetch everything using existing functions
-	tools, errTools := ListTools(serverURL, authToken, transport)
-	resources, errResources := ListResources(serverURL, authToken, transport)
-	prompts, errPrompts := ListPrompts(serverURL, authToken, transport)
-
-	// If anything fails, return error
-	if errTools != nil {
-		return nil, fmt.Errorf("error fetching tools: %v", errTools)
-	}
-	if errResources != nil {
-		return nil, fmt.Errorf("error fetching resources: %v", errResources)
-	}
-	if errPrompts != nil {
-		return nil, fmt.Errorf("error fetching prompts: %v", errPrompts)
-	}
+	// These will panic if there's an error
+	tools := ListTools(serverURL, authToken, transport)
+	resources := ListResources(serverURL, authToken, transport)
+	prompts := ListPrompts(serverURL, authToken, transport)
 
 	// Return everything in one map
 	return map[string]interface{}{
 		"tools":     tools,
 		"resources": resources,
 		"prompts":   prompts,
-	}, nil
+	}
 }
 
 // HealthCheck verifies if an MCP server is available and functional.
@@ -443,8 +455,9 @@ func ListAll(serverURL string, authToken string, transport string) (map[string]i
 //
 // Returns:
 //   - available: true if server is available, false otherwise
-//   - error: error if problem occurs during check
-func HealthCheck(serverURL string, authToken string, transport string) (bool, error) {
+func HealthCheck(serverURL string, authToken string, transport string) bool {
+	logging.Log.Debugf(&logging.ContextMap{}, "HealthCheck called with serverURL: %s, transport: %s", serverURL, transport)
+	
 	ctx := context.Background()
 
 	// Auto-detect transport if not specified
@@ -464,7 +477,7 @@ func HealthCheck(serverURL string, authToken string, transport string) (bool, er
 	conn, err := connectToMCP(ctx, config)
 	if err != nil {
 		// Server not available, but that's not an "error" - just return false
-		return false, nil
+		return false
 	}
 
 	// If connection succeeded, server is available
@@ -473,7 +486,7 @@ func HealthCheck(serverURL string, authToken string, transport string) (bool, er
 	// Optionally: could send a ping or test request
 	// Successful connection means server is healthy
 
-	return true, nil
+	return true
 }
 
 // DiscoverServer performs auto-discovery on an MCP server to determine its capabilities and requirements.
@@ -486,13 +499,14 @@ func HealthCheck(serverURL string, authToken string, transport string) (bool, er
 //
 // Returns:
 //   - discovery: DiscoverServerResponse containing server information
-//   - error: error if discovery fails completely
-func DiscoverServer(serverURL string) (*DiscoverServerResponse, error) {
+func DiscoverServer(serverURL string) DiscoverServerResponse {
+	logging.Log.Debugf(&logging.ContextMap{}, "DiscoverServer called with serverURL: %s", serverURL)
+	
 	// Auto-detect the most likely transport
 	transport := detectTransport(serverURL)
 
 	// Initialize result with defaults
-	result := &DiscoverServerResponse{
+	result := DiscoverServerResponse{
 		ServerURL:            serverURL,
 		Status:               "checking",
 		RequiresAuth:         false,
@@ -505,17 +519,10 @@ func DiscoverServer(serverURL string) (*DiscoverServerResponse, error) {
 	}
 
 	// Quick health check to see if server is available
-	available, err := HealthCheck(serverURL, "", transport)
+	available := HealthCheck(serverURL, "", transport)
 
-	// Check if authentication is required
-	if err != nil && (strings.Contains(err.Error(), "401") ||
-		strings.Contains(err.Error(), "403") ||
-		strings.Contains(err.Error(), "authentication")) {
-		result.Status = "requires_auth"
-		result.RequiresAuth = true
-		result.Error = "Authentication required"
-		return result, nil
-	}
+	// Note: Since HealthCheck now returns bool only, we can't detect auth errors this way anymore
+	// This is a limitation of removing error returns
 
 	// If not available
 	if !available {
@@ -523,21 +530,49 @@ func DiscoverServer(serverURL string) (*DiscoverServerResponse, error) {
 		if transport == "stdio" {
 			result.Status = "possible_stdio"
 			result.Note = "This appears to be a local executable. Use STDIO transport."
-			return result, nil
+			return result
 		}
 
 		result.Status = "unavailable"
 		result.Error = "Server not reachable"
-		return result, nil
+		return result
 	}
 
 	// Get capabilities
 	result.Status = "connected"
 
 	// Use auto-detection for all capability checks
-	tools, _ := ListTools(serverURL, "", "")
-	resources, _ := ListResources(serverURL, "", "")
-	prompts, _ := ListPrompts(serverURL, "", "")
+	// Wrap in defer/recover to catch panics from list functions
+	var tools []interface{}
+	var resources []interface{}
+	var prompts []interface{}
+	
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// If listing fails, just leave empty
+			}
+		}()
+		tools = ListTools(serverURL, "", "")
+	}()
+	
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// If listing fails, just leave empty
+			}
+		}()
+		resources = ListResources(serverURL, "", "")
+	}()
+	
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// If listing fails, just leave empty
+			}
+		}()
+		prompts = ListPrompts(serverURL, "", "")
+	}()
 
 	// Update capability information
 	result.HasTools = len(tools) > 0
@@ -547,7 +582,7 @@ func DiscoverServer(serverURL string) (*DiscoverServerResponse, error) {
 	result.HasPrompts = len(prompts) > 0
 	result.PromptsCount = len(prompts)
 
-	return result, nil
+	return result
 }
 
 // Functions connectToMCP and sendMCPRequest are defined in privatefunctions.go

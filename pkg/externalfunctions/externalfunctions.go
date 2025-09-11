@@ -188,6 +188,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"AddAvailableAttributesToSystemPrompt":          AddAvailableAttributesToSystemPrompt,
 	"ExtractDesignRequirementsAndSearchCriteria":    ExtractDesignRequirementsAndSearchCriteria,
 	"SendLogicAppNotificationEmailToMultipleEmails": SendLogicAppNotificationEmailToMultipleEmails,
+	"ResetTokenCountIfNewMonth":                     ResetTokenCountIfNewMonth,
 
 	// rhsc
 	"SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,

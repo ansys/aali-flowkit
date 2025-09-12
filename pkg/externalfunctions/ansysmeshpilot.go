@@ -565,15 +565,17 @@ func SynthesizeActionsTool2(message string, actions []map[string]string) (update
 //
 // Returns:
 //   - updatedActions: the list of synthesized actions
-func SynthesizeActionsTool3(message_1 string, message_2 string, actions []map[string]string) (updatedActions []map[string]string) {
+func SynthesizeActionsTool3(message_1 string, message_2 string, target_object string, actions []map[string]string) (updatedActions []map[string]string) {
 	ctx := &logging.ContextMap{}
 
 	// Clean up the input messages
 	message_1 = strings.TrimSpace(strings.Trim(message_1, "\""))
 	message_2 = strings.TrimSpace(strings.Trim(message_2, "\""))
+	target_object = strings.TrimSpace(strings.Trim(target_object, "\""))
 
 	logging.Log.Debugf(ctx, "Tool 3 Synthesize Message 1: %s\n", message_1)
 	logging.Log.Debugf(ctx, "Tool 3 Synthesize Message 2: %s\n", message_2)
+	logging.Log.Debugf(ctx, "Tool 3 Target Object: %s\n", target_object)
 
 	// Get synthesize actions find key from configuration
 	synthesizeActionsFindKey1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_TOOL3_VALUE"]
@@ -590,20 +592,52 @@ func SynthesizeActionsTool3(message_1 string, message_2 string, actions []map[st
 		panic(errorMessage)
 	}
 
+	APP_TOOL_ACTIONS_TARGET_5, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_TARGET_5"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_TARGET_5 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	APP_TOOL_ACTIONS_TARGET_6, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_TARGET_6"]
+	if !exists {
+		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_TARGET_6 from the configuration")
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
 	// Initialize updatedActions with the input actions
 	updatedActions = actions
 
-	// Check the first dictionary in actions
-	if len(updatedActions) > 0 {
-		firstAction := updatedActions[0]
-		if _, ok := firstAction[synthesizeActionsFindKey1]; ok && len(message_1) != 0 {
-			// Replace the value with the input message
-			firstAction[synthesizeActionsFindKey1] = message_1
-		}
+	if target_object == APP_TOOL_ACTIONS_TARGET_5 {
+		// Check the first dictionary in actions
+		if len(updatedActions) > 0 {
+			firstAction := updatedActions[0]
+			if _, ok := firstAction[synthesizeActionsFindKey1]; ok {
+				// Replace the value with the input message
+				firstAction[synthesizeActionsFindKey1] = message_1
+			}
 
-		if _, ok := firstAction[synthesizeActionsFindKey2]; ok && len(message_2) != 0 {
-			firstAction[synthesizeActionsFindKey2] = message_2
+			if _, ok := firstAction[synthesizeActionsFindKey2]; ok && len(message_2) != 0 {
+				firstAction[synthesizeActionsFindKey2] = message_2
+			}
 		}
+	} else if target_object == APP_TOOL_ACTIONS_TARGET_6 {
+		// Check if there is a third dictionary in actions
+		if len(updatedActions) > 2 {
+			thirdAction := updatedActions[2]
+			if _, ok := thirdAction[synthesizeActionsFindKey1]; ok {
+				// Replace the value with the input message
+				thirdAction[synthesizeActionsFindKey1] = message_1
+			}
+
+			updatedActions = []map[string]string{thirdAction}
+		} else {
+			logging.Log.Warnf(ctx, "No third action found in updatedActions for target_object: %s", target_object)
+		}
+	} else {
+		// Skip if target_object is neither APP_TOOL_ACTIONS_TARGET_5 nor APP_TOOL_ACTIONS_TARGET_6
+		logging.Log.Infof(ctx, "Skipping action synthesis for target_object: %s", target_object)
 	}
 
 	logging.Log.Debugf(ctx, "The Updated Actions: %q\n", updatedActions)
@@ -1813,11 +1847,14 @@ func ParseSlashCommand(userInput string) (slashCmd, targetCmd string, hasCmd boo
 // Parameters:
 //   - slashCmd: the slash command
 //   - targetCmd: the target command
+//   - finalizeResult: the finalize result from previous step
 //
 // Returns:
 //   - result: the synthesized string
 func SynthesizeSlashCommand(slashCmd, targetCmd, finalizeResult string) (result string) {
 	ctx := &logging.ContextMap{}
+
+	logging.Log.Debugf(ctx, "finalizeResult: %q, targetCmd: %q, slashCmd: %q", finalizeResult, targetCmd, slashCmd)
 
 	message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_17_SUCCESS_MESSAGE"]
 	if !exists {

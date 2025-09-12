@@ -968,21 +968,6 @@ func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, 
 	// Set up WebSocket connection with LLM and send chat request
 	responseChannel := sendChatRequest(input, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
 
-	// If isStream is true, create a stream channel and return asap
-	if isStream {
-		// Create a stream channel
-		streamChannel := make(chan string, 400)
-
-		// Start a goroutine to transfer the data from the response channel to the stream channel
-		go transferDatafromResponseToStreamChannel(&responseChannel, &streamChannel, validateCode, false, "", 0, 0, "", "", "", false, "")
-
-		// Return the stream channel
-		return "", &streamChannel
-	}
-
-	// Close the response channel
-	defer close(responseChannel)
-
 	// else Process all responses
 	var responseAsStr string
 	for response := range responseChannel {
@@ -999,6 +984,11 @@ func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, 
 			break
 		}
 	}
+
+	// kapatil: 
+	// Parse API call list
+	// Get latest API signatures for all
+	var latestAPISignatures []string
 	validateCode = true
 	// Code validation
 	if validateCode {
@@ -1012,16 +1002,17 @@ func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, 
 			// Validate the Python code
 			valid, warnings, err := validatePythonCode(pythonCode)
 			if err != nil {
-				logging.Log.Errorf(&logging.ContextMap{}, "Error validating Python code: %v", err)
+				//logging.Log.Errorf(&logging.ContextMap{}, "Error validating Python code: %v", err)
 				// parse errors
 				// kapatil: redo code generation 
 				// Prompt: Following errors are found in code, fix code w.r.t pyaedt code library
-				errPrompt := GetValidationPrompt(err.Error())
-				errPrompt += "Pyaedt script:\n " + pythonCode
+				errPrompt := GetValidationPrompt(err.Error(), latestAPISignatures)
+				errPrompt += "Pyaedt script:\n\n " + pythonCode
 				// Set up WebSocket connection with LLM and send chat request
-				responseString := sendChatRequestNoStreaming(errPrompt, "code", nil, 0, "", llmHandlerEndpoint, nil, nil, nil)
-				logging.Log.Debugf(&logging.ContextMap{}, "%s", errPrompt, responseString)
-
+				responseChannel = sendChatRequest(errPrompt, "code", nil, 0, "", llmHandlerEndpoint, nil, nil, nil)
+				//responseString := sendChatRequestNoStreaming(errPrompt, "code", nil, 0, "", llmHandlerEndpoint, nil, nil, nil)
+				logging.Log.Debugf(&logging.ContextMap{}, "Request review : ",errPrompt)
+				logging.Log.Debugf(&logging.ContextMap{}, "kaumudi : 1st response : %s \n\n", responseAsStr)
 			} else {
 				if valid {
 					if warnings {
@@ -1030,19 +1021,26 @@ func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, 
 						responseAsStr += "\nCode is valid."
 					}
 				} else {
-					// kapatilPrompt: Following errors are found in code, fix code w.r.t pyaedt code library
-					//errPrompt := GetValidationPrompt(err.Error())
-					//errPrompt += "Pyaedt script:\n " + pythonCode
-					//// Set up WebSocket connection with LLM and send chat request
-					//responseString := sendChatRequestNoStreaming(errPrompt, "code", nil, 0, "", llmHandlerEndpoint, nil, nil, nil)
-					//logging.Log.Debugf(&logging.ContextMap{}, "%s", responseString)
-					// Return the response
 					
 					responseAsStr += "\nCode is invalid."
 				}
 			}
 		}
 	}
+	// If isStream is true, create a stream channel and return asap
+	if isStream {
+		
+		// Create a stream channel
+		streamChannel := make(chan string, 400)
+		// Start a goroutine to transfer the data from the response channel to the stream channel
+		go transferDatafromResponseToStreamChannel(&responseChannel, &streamChannel, validateCode, false, "", 0, 0, "", "", "", false, "")
+		// Return the stream channel
+		return "", &streamChannel
+	}
+
+	// Close the response channel
+	defer close(responseChannel)
+	
 
 	// Return the response
 	return responseAsStr, nil
@@ -1216,7 +1214,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		newRequest += "Try to make the code relevant to this design context as much as possible.\n\n"
 	}
 	// Pass in the original request
-	finalQuery += "Generate the PyAEDT code for the following request:\n>>> Request:\n" + newRequest + "\n"
+	finalQuery += "Generate the PyAEDT code for the following request and list all the APIs used.:\n>>> Request:\n" + newRequest + "\n"
 
 	// Return the final query
 	return finalQuery

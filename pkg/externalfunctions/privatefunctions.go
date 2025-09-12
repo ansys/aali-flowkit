@@ -82,12 +82,18 @@ func parseMessageForType(msgType string, msg string) (finalMsg []string, lineNos
 }
 
 // Parse error String with pyright
-func GetValidationPrompt(errStr string) (errPrompt string) {
-	errPrompt = "You are a code debugging expert, following errors and warnings were found in given pyaedt script code. Fix code with reference to ansys.aedt.core library\n."
+func GetValidationPrompt(errStr string, latestAPISignatures []string) (errPrompt string) {
+	errPrompt = "You are a code debugging expert, following errors and warnings were found in given pyaedt script code. Fix API calls with reference to ansys.aedt.core library latest version of pyaedt. Use following latest API reference signatures:\n. Latest API reference signatures:\n"
+	
+	for  i, apis := range latestAPISignatures {
+		errPrompt += apis 
+		errPrompt += "\n"
+	}
 	// Errors
 	errMsg, errLine := parseMessageForType("error:", errStr)
 	// Warnings
-	warnMsg, warnLine := parseMessageForType("warning:", errStr)
+	// kapatil: warnings have duplicates from errro
+	//warnMsg, warnLine := parseMessageForType("warning:", errStr)
    	
 	if len(errMsg) > 0 {
 		errPrompt += "Errors:\n"
@@ -95,13 +101,13 @@ func GetValidationPrompt(errStr string) (errPrompt string) {
 			errPrompt += "Line "+ errLine[i] + e + ".\n"
 		}
 	}
-	if len(warnMsg) > 0 {
-		errPrompt += "Warnings:\n"
-		for i,w := range warnMsg {
-			errPrompt += "Line "+ warnLine[i] + w + ".\n"
-		}
-	}
-	logging.Log.Debugf(&logging.ContextMap{}, "Read input errStr %s", errStr)
+	//if len(warnMsg) > 0 {
+	//	errPrompt += "Warnings:\n"
+	//	for i,w := range warnMsg {
+	//		errPrompt += "Line "+ warnLine[i] + w + ".\n"
+	//	}
+	//}
+	//logging.Log.Debugf(&logging.ContextMap{}, "Read input errStr %s", errStr)
 	return errPrompt
 }
 
@@ -191,6 +197,7 @@ func transferDatafromResponseToStreamChannel(
 			}
 
 			// check for code validation
+			validateCode = false
 			if validateCode {
 				// Extract the code from the response
 				pythonCode, err := extractPythonCode(responseAsStr)
@@ -202,14 +209,6 @@ func transferDatafromResponseToStreamChannel(
 					valid, warnings, err := validatePythonCode(pythonCode)
 					if err != nil {
 						logging.Log.Errorf(&logging.ContextMap{}, "Error validating Python code: %v\n", err)
-						// parse errors
-						// kapatil: redo code generation 
-						// Prompt: Following errors are found in code, fix code w.r.t pyaedt code library
-						//errPrompt := GetValidationPrompt(err.Error())
-						//errPrompt += "Pyaedt script:\n " + pythonCode
-						// Set up WebSocket connection with LLM and send chat request
-						//responseString := sendChatRequestNoStreaming(errPrompt, "code", nil, 0, "", llmHandlerEndpoint, nil, nil, nil)
-						//logging.Log.Debugf(&logging.ContextMap{}, "%s", errPrompt)
 					} else {
 						if valid {
 							if warnings {
@@ -832,6 +831,7 @@ func validatePythonCode(pythonCode string) (bool, bool, error) {
 	if err == nil {
 		// Check for potential warnings in output
 		outputAsStr := string(output)
+		logging.Log.Debugf(&logging.ContextMap{}, "Testing pyright %s", outputAsStr)
 		if !strings.Contains(outputAsStr, "0 warnings") {
 			logging.Log.Warn(&logging.ContextMap{}, "Potential errors in Python code...")
 			return true, true, nil

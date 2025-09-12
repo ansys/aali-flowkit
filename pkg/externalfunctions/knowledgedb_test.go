@@ -540,6 +540,7 @@ func TestRetrieveDependencies(t *testing.T) {
 
 	require := require.New(t)
 	assert := assert.New(t)
+	const DBNAME = "aali-test"
 
 	setup := setupFlowkitTestContainers(
 		t,
@@ -554,8 +555,8 @@ func TestRetrieveDependencies(t *testing.T) {
 	config.GlobalConfig = &setup.config
 	logging.InitLogger(&setup.config)
 
-	require.NoError(graphdb.Initialize(setup.config.GRAPHDB_ADDRESS))
-	require.NoError(graphdb.GraphDbDriver.CreateSchema())
+	require.NoError(graphdb.Initialize(setup.config.GRAPHDB_ADDRESS, DBNAME))
+	require.NoError(graphdb.GraphDbDriver.CreateSchema(DBNAME))
 	driver := graphdb.GraphDbDriver
 
 	// first add data
@@ -575,19 +576,19 @@ func TestRetrieveDependencies(t *testing.T) {
 		{Name: "4", Level: 0},
 		{Name: "4a", IsFirstChild: true, Parent: "4", Level: 1},
 	}
-	require.NoError(driver.AddUserGuideSectionNodes(data))
-	require.NoError(driver.CreateUserGuideSectionRelationships(data))
+	require.NoError(driver.AddUserGuideSectionNodes(DBNAME, data))
+	require.NoError(driver.CreateUserGuideSectionRelationships(DBNAME, data))
 
 	// now test deps
 	// relationshipName := []string{"NextSibling", "NextParent", "HasFirstChild", "HasChild"}
 	// relationshipDirection := []string{"in", "out", "both"}
-	depIds := RetrieveDependencies("NextParent", "out", "3b", sharedtypes.DbArrayFilter{}, 2)
+	depIds := RetrieveDependencies(DBNAME, "NextParent", "out", "3b", sharedtypes.DbArrayFilter{}, 2)
 	assert.EqualValues([]string{"4"}, depIds)
 
-	depIds = RetrieveDependencies("NextSibling", "in", "3b", sharedtypes.DbArrayFilter{}, 2)
+	depIds = RetrieveDependencies(DBNAME, "NextSibling", "in", "3b", sharedtypes.DbArrayFilter{}, 2)
 	assert.EqualValues([]string{"3a"}, depIds)
 
-	depIds = RetrieveDependencies("HasChild", "both", "3b", sharedtypes.DbArrayFilter{}, 2)
+	depIds = RetrieveDependencies(DBNAME, "HasChild", "both", "3b", sharedtypes.DbArrayFilter{}, 2)
 	expected := []string{"3", "3b1", "3b2"}
 	assert.Len(depIds, len(expected))
 	for _, exp := range expected {
@@ -601,6 +602,7 @@ func TestGeneralGraphDbQuery(t *testing.T) {
 
 	require := require.New(t)
 	assert := assert.New(t)
+	const DBNAME = "test-db"
 
 	setup := setupFlowkitTestContainers(
 		t,
@@ -615,8 +617,8 @@ func TestGeneralGraphDbQuery(t *testing.T) {
 	config.GlobalConfig = &setup.config
 	logging.InitLogger(&setup.config)
 
-	require.NoError(graphdb.Initialize(setup.config.GRAPHDB_ADDRESS))
-	require.NoError(graphdb.GraphDbDriver.CreateSchema())
+	require.NoError(graphdb.Initialize(setup.config.GRAPHDB_ADDRESS, DBNAME))
+	require.NoError(graphdb.GraphDbDriver.CreateSchema(DBNAME))
 	driver := graphdb.GraphDbDriver
 
 	// first add data
@@ -636,11 +638,11 @@ func TestGeneralGraphDbQuery(t *testing.T) {
 		{Name: "4", Level: 0},
 		{Name: "4a", IsFirstChild: true, Parent: "4", Level: 1},
 	}
-	require.NoError(driver.AddUserGuideSectionNodes(data))
-	require.NoError(driver.CreateUserGuideSectionRelationships(data))
+	require.NoError(driver.AddUserGuideSectionNodes(DBNAME, data))
+	require.NoError(driver.CreateUserGuideSectionRelationships(DBNAME, data))
 
 	// now make a query
-	res := GeneralGraphDbQuery("MATCH (n {parent:'1'}) RETURN n.name AS name", nil)
+	res := GeneralGraphDbQuery(DBNAME, "MATCH (n {parent:'1'}) RETURN n.name AS name", nil)
 	expected := []string{"1a", "1b"}
 	require.Len(res, len(expected))
 	for _, r := range res {
@@ -655,6 +657,7 @@ func TestGeneralGraphDbQueryWithParameters(t *testing.T) {
 
 	require := require.New(t)
 	assert := assert.New(t)
+	const DBNAME = "test-db-params"
 
 	setup := setupFlowkitTestContainers(
 		t,
@@ -669,8 +672,8 @@ func TestGeneralGraphDbQueryWithParameters(t *testing.T) {
 	config.GlobalConfig = &setup.config
 	logging.InitLogger(&setup.config)
 
-	require.NoError(graphdb.Initialize(setup.config.GRAPHDB_ADDRESS))
-	require.NoError(graphdb.GraphDbDriver.CreateSchema())
+	require.NoError(graphdb.Initialize(setup.config.GRAPHDB_ADDRESS, DBNAME))
+	require.NoError(graphdb.GraphDbDriver.CreateSchema(DBNAME))
 	driver := graphdb.GraphDbDriver
 
 	// first add data
@@ -690,15 +693,15 @@ func TestGeneralGraphDbQueryWithParameters(t *testing.T) {
 		{Name: "4", Level: 0},
 		{Name: "4a", IsFirstChild: true, Parent: "4", Level: 1},
 	}
-	require.NoError(driver.AddUserGuideSectionNodes(data))
-	require.NoError(driver.CreateUserGuideSectionRelationships(data))
+	require.NoError(driver.AddUserGuideSectionNodes(DBNAME, data))
+	require.NoError(driver.CreateUserGuideSectionRelationships(DBNAME, data))
 
 	// make a parameter map
 	paramMap := aali_graphdb.ParameterMap{}
 	AddGraphDbParameter(paramMap, "parent", "1", "string")
 
 	// now make a query
-	res := GeneralGraphDbQuery("MATCH (n {parent:$parent}) RETURN n.name AS name", paramMap)
+	res := GeneralGraphDbQuery(DBNAME, "MATCH (n {parent:$parent}) RETURN n.name AS name", paramMap)
 	expected := []string{"1a", "1b"}
 	require.Len(res, len(expected))
 	for _, r := range res {

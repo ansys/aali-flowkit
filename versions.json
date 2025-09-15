@@ -1,0 +1,12 @@
+[
+  {
+    "name": "dev",
+    "version": "dev",
+    "url": "https://ansys.github.io/aali-flowkit/version/dev/"
+  },
+  {
+    "name": "1.2 (stable)",
+    "version": "1.2",
+    "url": "https://ansys.github.io/aali-flowkit/version/stable/"
+  }
+]

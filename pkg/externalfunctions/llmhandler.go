@@ -1187,8 +1187,61 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// Kaumudi: Rephrase
 	new_request := RephraseRequest_kapatil(request)
 
+	// stable_version := "0.19"
+
+	// TODO: Read from design context.
+	pyaedt_version := "0.19"
+	// aedt_version := "2025.1"
+	// solver := ""
+	// ============================
+
+	import_templates := map[string]string{
+		"0.19": "```python\n import ansys.aedt.core as pyaedt```",
+	}
+
+	init_templates := map[string]map[string]string{
+		"0.19": {
+			"Desktop":        "```python\nDesktop(version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None)```",
+			"Hfss":           "```python\nHfss(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
+			"Q3d":            "```python\nQ3d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
+			"Q2d":            "```python\nQ2d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
+			"Maxwell2d":      "```python\nMaxwell2d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
+			"Maxwell3d":      "```python\nMaxwell3d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
+			"Icepak":         "```python\nIcepak(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
+			"Hfss3dLayout":   "```python\nHfss3dLayout(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, ic_mode:bool|None, remove_lock:bool|None)```",
+			"Mechanical":     "```python\nMechanical(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
+			"Rmxprt":         "```python\nRmxprt(project:str|None, design:str|None, solution_type:str|None, model_units:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
+			"Circuit":        "```python\nCircuit(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
+			"MaxwellCircuit": "```python\nMaxwellCircuit(project:str|None, design:str|None, solution_type:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
+			"Emit":           "```python\nEmit(project:str|None, design:str|None, solution_type:str|None, version:str|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
+			"TwinBuilder":    "```python\nTwinBuilder(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
+		},
+	}
+
 	// Pass in the original request
 	finalQuery += "Generate the Python code for the following request:\n>>> Request:\n" + new_request + "\n"
+
+	// Include initialization template to prompt.
+	finalQuery += `
+	Requirements:
+	- Include **all imports** actually used. Follow the template for PyAEDT version ` +
+		pyaedt_version + `: ` + import_templates[pyaedt_version] +
+		`
+	- Provide an **Initialization** section that explicitly declares the necessary known information as follows:
+		- AEDT version: 2025.1
+		- Design name: MyFirstDesign
+		- Project name: MyFirstProject
+		The following statements are examples of how to initialization:
+
+	`
+	// 	`
+	// - Provide an **Initialization** section that explicitly declares **necessary constructor parameter** ` +
+	// 	`with its type and default values. Follow the below templates for PyAEDT version ` + pyaedt_version +
+	// 	`: ` + "```python\n ClassName(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```"
+
+	for _, init_template := range init_templates[pyaedt_version] {
+		finalQuery += ", " + init_template
+	}
 
 	logging.Log.Debugf(&logging.ContextMap{}, "=================== Final Query: %s ===================", finalQuery)
 	// Return the final query

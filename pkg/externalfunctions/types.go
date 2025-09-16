@@ -326,7 +326,7 @@ type kvdbErrorResponse struct {
 }
 
 type materialsCustomerObject struct {
-	ApiKey          string                           `json:"api_key"`
+	UserID          string                           `json:"user_id"`
 	CustomerName    string                           `json:"customer_name"`
 	AccessDenied    bool                             `json:"access_denied"`
 	TotalTokenCount int                              `json:"total_token_usage"`

@@ -580,7 +580,7 @@ func CheckApiKeyAuthKvDb(kvdbEndpoint string, apiKey string, traceID string, spa
 
 	// Check if customer is denied access
 	if customer.AccessDenied {
-		logging.Log.Info(ctx, "Access denied for customer: %s", customer.UserID)
+		logging.Log.Infof(ctx, "Access denied for customer: %s", customer.UserID)
 		return false, childSpanID, customer.UserID
 	}
 

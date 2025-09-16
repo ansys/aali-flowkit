@@ -1120,7 +1120,7 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 //
 // Returns:
 //   - finalQuery: the final query
-func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse, userGuideSearch bool, citations []string, elementContexts []string, designContext string) (finalQuery string) {
+func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse, userGuideSearch bool, citations []string, elementContexts []string, designContext []map[string]any) (finalQuery string) {
 	finalQuery = "You are a Python expert with experience in writing complete, functional PyAEDT scripts. These scripts typically include python code for tasks such as geometry creation, boundary setup, and analysis setups - especially for HFSS (or other AnsysEM tools as applicable). Your task is to write valid Python code using PyAEDT APIs "
 	// Build the final query using the KnowledgeDB response and the original request
 	// We have to use the text from the DB response and the original request.
@@ -1169,11 +1169,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		finalQuery += "based on the following examples:\n\n"
 	}
 
-	if designContext != "" {
-		finalQuery += "The current design has the following context:\n"
-		finalQuery += "''' \n" + designContext + "\n'''\n\n"
-		finalQuery += "Try to make the code relevant to this design context as much as possible.\n\n"
-	}
+
 
 	if len(knowledgedbResponse) > 0 {
 		for i, element := range knowledgedbResponse {
@@ -1196,6 +1192,12 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// Pass in the original request
 	finalQuery += "Generate the Python code for the following request:\n>>> Request:\n" + new_request + "\n"
 
+	//#TODO add design context
+	// if designContext != "" {
+	// 	finalQuery += "The current design has the following context:\n"
+	// 	finalQuery += "''' \n" + designContext + "\n'''\n\n"
+	// 	finalQuery += "Try to make the code relevant to this design context as much as possible.\n\n"
+	// }
 	// Return the final query
 	return finalQuery
 }

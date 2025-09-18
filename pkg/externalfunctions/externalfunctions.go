@@ -78,6 +78,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"AisChangeAcsResponsesByFactor":                  AisChangeAcsResponsesByFactor,
 	"AecGetContextFromRetrieverModule":               AecGetContextFromRetrieverModule,
 	"AecPerformLLMFinalRequest":                      AecPerformLLMFinalRequest,
+	"GetContextFromDataPlugin":                       GetContextFromDataPlugin,
 
 	// data extraction
 	"GetGithubFilesToExtract":                    GetGithubFilesToExtract,
@@ -138,6 +139,8 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"ProcessSubworkflowIdentificationOutput":    ProcessSubworkflowIdentificationOutput,
 	"MarkdownToHTML":                            MarkdownToHTML,
 	"ParseHistoryToHistoricMessages":            ParseHistoryToHistoricMessages,
+	"ParseSlashCommand":                         ParseSlashCommand,
+	"SynthesizeSlashCommand":                    SynthesizeSlashCommand,
 	"FinalizeMessage":                           FinalizeMessage,
 	"GenerateUserPrompt":                        GenerateUserPrompt,
 	"GenerateUserPromptWithList":                GenerateUserPromptWithList,
@@ -167,6 +170,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"GetSystemPrompt": GetSystemPrompt,
 
 	// materials
+	"StartTrace":                       StartTrace,
 	"SerializeResponse":                SerializeResponse,
 	"AddGuidsToAttributes":             AddGuidsToAttributes,
 	"FilterOutNonExistingAttributes":   FilterOutNonExistingAttributes,
@@ -176,18 +180,26 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"LogRequestFailed":                 LogRequestFailed,
 	"LogRequestFailedDebugWithMessage": LogRequestFailedDebugWithMessage,
 	"PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput": PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput,
-	"CheckApiKeyAuthKvDb":                  CheckApiKeyAuthKvDb,
-	"UpdateTotalTokenCountForCustomerKvDb": UpdateTotalTokenCountForCustomerKvDb,
-	"DenyCustomerAccessAndSendWarningKvDb": DenyCustomerAccessAndSendWarningKvDb,
+	"CheckApiKeyAuthKvDb":                        CheckApiKeyAuthKvDb,
+	"UpdateTotalTokenCountForCustomerKvDb":       UpdateTotalTokenCountForCustomerKvDb,
+	"DenyCustomerAccessAndSendWarningKvDb":       DenyCustomerAccessAndSendWarningKvDb,
+	"AddAvailableAttributesToSystemPrompt":       AddAvailableAttributesToSystemPrompt,
+	"ExtractDesignRequirementsAndSearchCriteria": ExtractDesignRequirementsAndSearchCriteria,
 
 	// rhsc
 	"SetCopilotGenerateRequestJsonBody": SetCopilotGenerateRequestJsonBody,
 
 	// ace
-	"QueryUserGuideAndFormat": QueryUserGuideAndFormat,
-	"SearchExamples":          SearchExamples,
-	"GenerateCode":            GenerateCode,
-	"SearchMethods":           SearchMethods,
-	"SearchDocumentation":     SearchDocumentation,
-	"RewriteQueryWithHistory": RewriteQueryWithHistory,
+	"QueryUserGuideAndFormat":                         QueryUserGuideAndFormat,
+	"SearchExamples":                                  SearchExamples,
+	"GenerateCode":                                    GenerateCode,
+	"SearchMethods":                                   SearchMethods,
+	"SearchDocumentation":                             SearchDocumentation,
+	"RewriteQueryWithHistory":                         RewriteQueryWithHistory,
+	"MakeAPIRequest":                                  MakeAPIRequest,
+	"GetDataFromCognitiveServices":                    GetDataFromCognitiveServices,
+	"GetRawDataFromCognitiveServices":                 GetRawDataFromCognitiveServices,
+	"GenerateWelcomeMessage":                          GenerateWelcomeMessage,
+	"PreprocessTheInput":                              PreprocessTheInput,
+	"GetRawDataFromCognitiveServicesForDocumentation": GetRawDataFromCognitiveServicesForDocumentation,
 }

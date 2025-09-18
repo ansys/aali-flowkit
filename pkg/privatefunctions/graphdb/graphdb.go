@@ -51,10 +51,11 @@ var GraphDbDriver graphDbContext
 //
 // Parameters:
 //   - uri: URI of the graph database.
+//   - dbname: Name of the graph database.
 //
 // Returns:
 //   - funcError: Error object.
-func Initialize(uri string) (funcError error) {
+func Initialize(uri string, dbname string) (funcError error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -88,7 +89,8 @@ func Initialize(uri string) (funcError error) {
 
 	GraphDbDriver = graphDbContext{
 		client: client,
-		dbname: "aali", // TODO: for now this is hard-coded, but may want configurable in the future
+		// dbname: "aali", // TODO: for now this is hard-coded, but may want configurable in the future
+		dbname: dbname,
 	}
 
 	// Check if DB connection is successfull

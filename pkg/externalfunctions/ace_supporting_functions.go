@@ -26,11 +26,25 @@ import (
 	"github.com/qdrant/go-client/qdrant"
 )
 
+// variable for pyansys product
+var pyansysProduct = map[string]map[string]string{
+	"pyfluent": {"name": "Ansys Fluent-Pyfluent", "version": "0.33.0"},
+	"pyaedt":   {"name": "Ansys Electronics Desktop-PyAEDT", "version": "0.19"},
+}
+
 // checkWhetherOneOfTheMethodsFits checks whether one of the provided methods is unambiguously the right one
 func checkWhetherOneOfTheMethodsFits(collectionName string, historyMessage []sharedtypes.HistoricMessage, ansysProduct string, denseWeight float64, sparseWeight float64, maxRetrievalCount int, methods string) string {
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING FUNC_CHECK_WHETHER_ONE_OF_THE_METHODS_FITS - Duration: %v", duration)
+	}()
 
-	systemMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided.
-        In this step you must decide whether one of the options provided is unambiguously the right one. If so, return the full path of the Method. Otherwise return the explanation for the ambiguity.
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_CHECK_WHETHER_ONE_OF_THE_METHODS_FITS - Input: collectionName=%s, ansysProduct=%s, denseWeight=%f, sparseWeight=%f, maxRetrievalCount=%d, methods=%s", collectionName, ansysProduct, denseWeight, sparseWeight, maxRetrievalCount, methods)
+
+	systemMessage := fmt.Sprintf(`In %s: You need to verify the methods returned from the database are relevant or not to solve the problem.
+	### Task:
+		In this step you must decide whether one of the options provided is unambiguously the right one. If so, return the full path of the Method. Otherwise return the explanation for the ambiguity.
 
         The format is as follows: "<full path of the Method, is mandatory to include the signature with parameters if present>"
 
@@ -38,13 +52,21 @@ func checkWhetherOneOfTheMethodsFits(collectionName string, historyMessage []sha
 
 	message, _ := PerformGeneralRequest(methods, historyMessage, false, systemMessage)
 
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_CHECK_WHETHER_ONE_OF_THE_METHODS_FITS - Output: %s", message)
 	return message
 }
 
 // checkWhetherUserInformationFits evaluates the information retrieved from the User Guide
 func checkWhetherUserInformationFits(ansysProduct string, userGuideInformation string, historyMessage []sharedtypes.HistoricMessage, userQuery string) (string, string, string) {
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING FUNC_CHECK_WHETHER_USER_INFORMATION_FITS - Duration: %v", duration)
+	}()
 
-	systemMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions below.  
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_CHECK_WHETHER_USER_INFORMATION_FITS - Input: ansysProduct=%s, userGuideInformation=%s, userQuery=%s", ansysProduct, userGuideInformation, userQuery)
+
+	systemMessage := fmt.Sprintf(`In %s: You need to evaluate the information retrieved from the User Guide and the user query to determine if you can unambiguously identify the correct Method.
 
 ### Task:
 Evaluate the **User Guide info** and **user query** to determine if you can unambiguously identify the correct Method.  
@@ -91,6 +113,7 @@ true-----ansys.fluent.core.launcher.launcher.launch_fluent(precision, dimension,
 	parts := strings.Split(result, "-----")
 	if len(parts) < 7 {
 		logging.Log.Errorf(&logging.ContextMap{}, "Invalid response format: %s", result)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_CHECK_WHETHER_USER_INFORMATION_FITS - Output: empty results due to invalid format")
 		return "", "", ""
 	}
 	// Extract the parts
@@ -98,29 +121,22 @@ true-----ansys.fluent.core.launcher.launcher.launch_fluent(precision, dimension,
 	unambiguousMethodPath := strings.TrimSpace(parts[1])
 	queryToApiReferenceRequired := strings.TrimSpace(parts[2])
 	askUserQuestionRequired := strings.TrimSpace(parts[3])
-	reasoningForDecision := strings.TrimSpace(parts[4])
+	// reasoningForDecision := strings.TrimSpace(parts[4]) - not used
 	questionToUser := strings.TrimSpace(parts[5])
 	queryToApiReference := strings.TrimSpace(parts[6])
-	// Log the extracted parts
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - userGuideInformation: %s", userGuideInformation)
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - systemMessage: %s", systemMessage)
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - userQuery: %s", userQuery)
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - Unambiguous Method Found: %s", unambiguousMethodFound)
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - Unambiguous Method Path: %s", unambiguousMethodPath)
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - Query to API Reference Required: %s", queryToApiReferenceRequired)
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - Ask User Question Required: %s", askUserQuestionRequired)
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - Reasoning for Decision: %s", reasoningForDecision)
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - Question to User: %s", questionToUser)
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: CheckUserInformation - Query to API Reference: %s", queryToApiReference)
 
 	if unambiguousMethodFound == "true" && unambiguousMethodPath != "" {
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_CHECK_WHETHER_USER_INFORMATION_FITS - Output: unambiguousMethodPath=%s", unambiguousMethodPath)
 		return unambiguousMethodPath, "", ""
 	} else if askUserQuestionRequired == "true" && questionToUser != "" {
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_CHECK_WHETHER_USER_INFORMATION_FITS - Output: questionToUser=%s", questionToUser)
 		return "", "", questionToUser
 	} else if queryToApiReferenceRequired == "true" && queryToApiReference != "" {
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_CHECK_WHETHER_USER_INFORMATION_FITS - Output: queryToApiReference=%s", queryToApiReference)
 		return "", queryToApiReference, ""
 	}
 
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_CHECK_WHETHER_USER_INFORMATION_FITS - Output: empty results")
 	return "", "", ""
 }
 
@@ -133,24 +149,6 @@ func countPlaceholders(input string) int {
 		}
 	}
 	return count
-}
-
-// buildReplacements creates a slice of replacement values based on the count needed
-func buildReplacements(count int, args StringReplacementArgs) []any {
-	switch count {
-	case 1:
-		return []any{args.Placeholder1}
-	case 2:
-		return []any{args.Placeholder1, args.Placeholder2}
-	case 3:
-		return []any{args.Placeholder1, args.Placeholder2, args.Placeholder3}
-	case 4:
-		return []any{args.Placeholder1, args.Placeholder2, args.Placeholder3, args.Placeholder4}
-	case 5:
-		return []any{args.Placeholder1, args.Placeholder2, args.Placeholder3, args.Placeholder4, args.Placeholder5}
-	default:
-		return []any{}
-	}
 }
 
 // convertJSONToCustomizeHelper processes the query result to generate hierarchical table of contents
@@ -260,7 +258,7 @@ func getExampleReferences(baseSearchNodeComplete string, db string) (string, []i
 	escapedName := strings.ReplaceAll(baseSearchNodeComplete, `"`, `\"`)
 	query := fmt.Sprintf(`MATCH (root:Example {name: "%s"})-[r]-(neighbor) RETURN root.name AS rootName, label(r) AS relationshipType, r AS relationshipProps, neighbor.name AS neighborName, label(neighbor) AS neighborLabel, neighbor.parameters AS neighborParameters, neighbor.remarks AS neighborRemarks, neighbor.return_type AS neighborReturn, neighbor.summary AS neighborSummary`, escapedName)
 	parameters := aali_graphdb.ParameterMap{}
-	result := GeneralGraphDbQuery(query, parameters)
+	result := GeneralGraphDbQuery(query, parameters, db)
 	for _, relationship := range result {
 		element := relationship["neighborName"]
 		elementType := relationship["neighborLabel"]
@@ -299,7 +297,7 @@ func getExampleReferences(baseSearchNodeComplete string, db string) (string, []i
 }
 
 // getExampleNodesFromElement retrieves example nodes from an element
-func getExampleNodesFromElement(baseSearchType string, baseSearchNodeComplete string, collectionName string) []map[string]interface{} {
+func getExampleNodesFromElement(baseSearchType string, baseSearchNodeComplete string, collectionName string, dbname string) []map[string]interface{} {
 
 	// Escape the string parameters properly for Cypher
 	escapedNodeComplete := strings.ReplaceAll(baseSearchNodeComplete, `"`, `\"`)
@@ -311,7 +309,7 @@ func getExampleNodesFromElement(baseSearchType string, baseSearchNodeComplete st
 
 	parameters := aali_graphdb.ParameterMap{}
 
-	result := GeneralGraphDbQuery(query, parameters)
+	result := GeneralGraphDbQuery(query, parameters, dbname)
 	preparedExample := []map[string]interface{}{}
 	for _, relationship := range result {
 		element := relationship["example"]
@@ -397,7 +395,14 @@ func queryExample(exampleName string, collectionName string) []map[string]interf
 
 // queryUserGuideName queries for user guide sections by name
 func queryUserGuideName(name string, resultCount uint64, collectionName string) []*qdrant.ScoredPoint {
-	logging.Log.Infof(&logging.ContextMap{}, "Querying user guide sections for name: %s", name)
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING FUNC_QUERY_USER_GUIDE_NAME - Duration: %v", duration)
+	}()
+
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_QUERY_USER_GUIDE_NAME - Input: name=%s, resultCount=%d, collectionName=%s", name, resultCount, collectionName)
+
 	client, err := qdrant_utils.QdrantClient()
 	query := qdrant.QueryPoints{
 		CollectionName: collectionName,
@@ -426,7 +431,8 @@ func queryUserGuideName(name string, resultCount uint64, collectionName string) 
 	for _, scoredPoint := range scoredPoints {
 		results = append(results, scoredPoint)
 	}
-	logging.Log.Infof(&logging.ContextMap{}, "Found %d user guide sections for name: %s", len(results), name)
+
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_QUERY_USER_GUIDE_NAME - Output: %d results found", len(results))
 	return results
 }
 
@@ -441,7 +447,7 @@ func getDocumentation(baseSearchNodeComplete string, db string) (string, []inter
 	parameters := aali_graphdb.ParameterMap{}
 
 	// Time the graph database query
-	result := GeneralGraphDbQuery(query, parameters)
+	result := GeneralGraphDbQuery(query, parameters, db)
 	for _, relationship := range result {
 		element := relationship["neighborName"]
 		elementType := relationship["neighborLabel"]
@@ -674,6 +680,14 @@ func preprocessLLMJSON(s string) string {
 
 // jsonStringToObject converts JSON string to map[string]interface{} in Go
 func jsonStringToObject(jsonStr string) (map[string]interface{}, error) {
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING FUNC_JSON_STRING_TO_OBJECT - Duration: %v", duration)
+	}()
+
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_JSON_STRING_TO_OBJECT - Input: jsonStr=%s", jsonStr)
+
 	clean := preprocessLLMJSON(jsonStr)
 
 	var obj map[string]interface{}
@@ -693,11 +707,17 @@ func jsonStringToObject(jsonStr string) (map[string]interface{}, error) {
 			logging.Log.Warnf(&logging.ContextMap{}, "Second JSON parse failed, attempting manual extraction: %v", err)
 			obj = extractJSONManually(clean)
 			if len(obj) > 0 {
+				logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_JSON_STRING_TO_OBJECT - Output: successful manual extraction, %d keys", len(obj))
 				return obj, nil
 			}
 		}
 	}
 
+	if err == nil {
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_JSON_STRING_TO_OBJECT - Output: successful parse, %d keys", len(obj))
+	} else {
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_JSON_STRING_TO_OBJECT - Output: parse failed with error: %v", err)
+	}
 	return obj, err
 }
 
@@ -925,7 +945,7 @@ func doHybridQuery(
 }
 
 // getElementByName retrieves an element by name and type from the graph database
-func getElementByName(nodeName string, nodeType string) []map[string]interface{} {
+func getElementByName(nodeName string, nodeType string, dbname string) []map[string]interface{} {
 
 	// Escape the string parameters properly for Cypher
 	escapedNodeName := strings.ReplaceAll(nodeName, `'`, `\'`)
@@ -933,27 +953,24 @@ func getElementByName(nodeName string, nodeType string) []map[string]interface{}
 	query := fmt.Sprintf("MATCH (n:Element) WHERE n.name = '%s' AND n.type = '%s' RETURN n", escapedNodeName, escapedNodeType)
 	logging.Log.Infof(&logging.ContextMap{}, "Executing query to get element by name: %s", query)
 
-	result := GeneralGraphDbQuery(query, aali_graphdb.ParameterMap{})
+	result := GeneralGraphDbQuery(query, aali_graphdb.ParameterMap{}, dbname)
 	return result
 }
 
-func searchExamplesForMethod(collectionName string, ansysProduct string, historyMessage []sharedtypes.HistoricMessage, methodNames string, maxExamples int) string {
-	startTime := time.Now()
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod STARTED - methodName: %s, collectionName: %s, maxExamples: %d", methodNames, collectionName, maxExamples)
+func searchExamplesForMethod(collectionName string, ansysProduct string, historyMessage []sharedtypes.HistoricMessage, methodNames string, maxExamples int, dbname string) string {
+	start := time.Now()
 	defer func() {
-		duration := time.Since(startTime)
-		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod COMPLETED - duration: %v", duration)
+		duration := time.Since(start)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING FUNC_SEARCH_EXAMPLES_FOR_METHOD - Duration: %v", duration)
 	}()
+
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_SEARCH_EXAMPLES_FOR_METHOD - Input: collectionName=%s, ansysProduct=%s, methodNames=%s, maxExamples=%d, dbname=%s", collectionName, ansysProduct, methodNames, maxExamples, dbname)
+
 	var outputBuilder strings.Builder
 	// split ; sperated methodName into parts
 	parts := strings.Split(methodNames, ";")
 	for _, methodName := range parts {
-		// Time the method lookup
-		methodDbStartTime := time.Now()
-		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (method lookup) STARTED for: %s", methodName)
-		nresult := getElementByName(methodName, "Method")
-		methodDbDuration := time.Since(methodDbStartTime)
-		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (method lookup) COMPLETED - duration: %v, results count: %d", methodDbDuration, len(nresult))
+		nresult := getElementByName(methodName, "Method", dbname)
 
 		if len(nresult) == 0 {
 			logging.Log.Warnf(&logging.ContextMap{}, "No method found with name: %s", methodName)
@@ -972,12 +989,7 @@ func searchExamplesForMethod(collectionName string, ansysProduct string, history
 			continue
 		}
 
-		// Time the examples lookup
-		examplesDbStartTime := time.Now()
-		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (examples lookup) STARTED for method: %s", methodName)
-		examples := getExampleNodesFromElement("Method", methodName, collectionName)
-		examplesDbDuration := time.Since(examplesDbStartTime)
-		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - Database query (examples lookup) COMPLETED - duration: %v, results count: %d", examplesDbDuration, len(examples))
+		examples := getExampleNodesFromElement("Method", methodName, collectionName, dbname)
 		outputBuilder.WriteString(methodName)
 		if apiExample != nil {
 			outputBuilder.WriteString(fmt.Sprintf("For the api method: %s the following examples were found:\n\n", methodName))
@@ -990,11 +1002,13 @@ func searchExamplesForMethod(collectionName string, ansysProduct string, history
 				}
 				outputBuilder.WriteString(fmt.Sprintf("Example: %s\n%s\n\n", example["name"], example["text"]))
 
-				exampleRefs, _ := getExampleReferences(example["name"].(string), "aali") //example_refs_info
+				exampleRefs, _ := getExampleReferences(example["name"].(string), dbname) //example_refs_info
 				outputBuilder.WriteString(fmt.Sprintf("%s-------------------\n\n", exampleRefs))
 			}
 		}
 	}
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: SearchExamplesForMethod - outputBuilder: %s", outputBuilder.String())
-	return outputBuilder.String()
+
+	result := outputBuilder.String()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_SEARCH_EXAMPLES_FOR_METHOD - Output: %s", result)
+	return result
 }

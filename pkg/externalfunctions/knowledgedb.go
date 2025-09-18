@@ -38,13 +38,7 @@ import (
 	"github.com/qdrant/go-client/qdrant"
 )
 
-// SendVectorsToKnowledgeDB sends the given vector to the KnowledgeDB and
-// returns the most relevant data. The number of results is specified in the
-// config file. The keywords are used to filter the results. The min score
-// filter is also specified in the config file. If it is not specified, the
-// default value is used.
-//
-// The function returns the most relevant data.
+// SendVectorsToKnowledgeDB sends the given vector to the KnowledgeDB and returns the most relevant data
 //
 // Tags:
 //   - @displayName: Similarity Search
@@ -56,44 +50,78 @@ import (
 //   - collection: the collection name
 //   - similaritySearchResults: the number of results to be returned
 //   - similaritySearchMinScore: the minimum score for the results
+//   - sparseVector: optional sparse vector for hybrid search (pass empty map for dense-only search)
 //
 // Returns:
 //   - databaseResponse: an array of the most relevant data
-func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64) (databaseResponse []sharedtypes.DbResponse) {
+func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearch bool, collection string, similaritySearchResults int, similaritySearchMinScore float64, sparseVector map[uint]float32) (databaseResponse []sharedtypes.DbResponse) {
+	// Use the provided sparse vector directly (will be empty map if not provided)
+	sparse := sparseVector
+
 	logCtx := &logging.ContextMap{}
 	client, err := qdrant_utils.QdrantClient()
 	if err != nil {
 		logPanic(logCtx, "unable to create qdrant client: %q", err)
 	}
+	// Pure vector similarity search across all collection types
+	filter := qdrant.Filter{}
+	// Note: Keyword search disabled for now to ensure broad compatibility
 
-	// perform the qdrant query
-	filter := qdrant.Filter{
-		Must: []*qdrant.Condition{
-			qdrant.NewMatch("level", "leaf"),
-		},
-	}
-	if keywordsSearch {
-		filter.Must = append(filter.Must, qdrant.NewMatchKeywords("keywords", keywords...))
-
-	}
 	limit := uint64(similaritySearchResults)
 	scoreThreshold := float32(similaritySearchMinScore)
-	query := qdrant.QueryPoints{
-		CollectionName: collection,
-		Query:          qdrant.NewQueryDense(vector),
-		Limit:          &limit,
-		ScoreThreshold: &scoreThreshold,
-		Filter:         &filter,
-		WithVectors:    qdrant.NewWithVectorsEnable(false),
-		WithPayload:    qdrant.NewWithPayloadInclude("guid", "document_id", "document_name", "summary", "keywords", "text"),
+
+	var query qdrant.QueryPoints
+
+	// Use fusion if both dense and sparse vectors are available
+	if sparse != nil && len(sparse) > 0 {
+		// Create prefetch queries for hybrid search using RRF (Reciprocal Rank Fusion)
+		prefetchQueries := []*qdrant.PrefetchQuery{
+			// Dense vector search prefetch
+			{
+				Query:  qdrant.NewQueryDense(vector),
+				Using:  nil, // Use default (unnamed) vector
+				Filter: &filter,
+				Limit:  &limit,
+			},
+			// Sparse vector search prefetch
+			{
+				Query:  createSparseQuery(sparse),
+				Using:  qdrant.PtrOf("sparse_vector"), // Use sparse vector field
+				Filter: &filter,
+				Limit:  &limit,
+			},
+		}
+
+		query = qdrant.QueryPoints{
+			CollectionName: collection,
+			Query:          qdrant.NewQueryFusion(qdrant.Fusion_RRF), // Use Reciprocal Rank Fusion
+			Prefetch:       prefetchQueries,
+			Limit:          &limit,
+			ScoreThreshold: &scoreThreshold,
+			Filter:         &filter,
+			WithVectors:    qdrant.NewWithVectorsEnable(false),
+			WithPayload:    qdrant.NewWithPayloadEnable(true),
+		}
+	} else {
+		// DENSE-ONLY SEARCH: Simplified approach
+		query = qdrant.QueryPoints{
+			CollectionName: collection,
+			Query:          qdrant.NewQueryDense(vector),
+			Limit:          &limit,
+			ScoreThreshold: &scoreThreshold,
+			Filter:         &filter,
+			WithVectors:    qdrant.NewWithVectorsEnable(false),
+			WithPayload:    qdrant.NewWithPayloadEnable(true),
+		}
 	}
+
+	// Execute query
 	scoredPoints, err := client.Query(context.TODO(), &query)
 	if err != nil {
 		logPanic(logCtx, "error in qdrant query: %q", err)
 	}
-	logging.Log.Debugf(logCtx, "Got %d points from qdrant query", len(scoredPoints))
 
-	// transform qdrant result into aali type
+	// Transform results
 	dbResponses := make([]sharedtypes.DbResponse, len(scoredPoints))
 	for i, scoredPoint := range scoredPoints {
 		logging.Log.Debugf(&logging.ContextMap{}, "Result #%d:", i)
@@ -113,6 +141,23 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		dbResponses[i] = dbResponse
 	}
 	return dbResponses
+}
+
+// Helper function to create sparse query from map[uint]float32
+func createSparseQuery(sparseVector map[uint]float32) *qdrant.Query {
+	if len(sparseVector) == 0 {
+		return nil
+	}
+
+	indices := make([]uint32, 0, len(sparseVector))
+	values := make([]float32, 0, len(sparseVector))
+
+	for idx, val := range sparseVector {
+		indices = append(indices, uint32(idx))
+		values = append(values, val)
+	}
+
+	return qdrant.NewQuerySparse(indices, values)
 }
 
 // GetListCollections retrieves the list of collections from the KnowledgeDB.
@@ -212,13 +257,14 @@ func AddGraphDbParameter(parameters aali_graphdb.ParameterMap, name string, valu
 // Parameters:
 //   - query: the Cypher query to be executed.
 //   - parameters: parameters to pass to the query during execution
+//   - dbname: the name of the graph database to use (optional, defaults to "aali")
 //
 // Returns:
 //   - databaseResponse: the graph db response
-func GeneralGraphDbQuery(query string, parameters aali_graphdb.ParameterMap) []map[string]any {
+func GeneralGraphDbQuery(query string, parameters aali_graphdb.ParameterMap, dbname string) []map[string]any {
 	// Initialize the graph database.
 	logging.Log.Infof(nil, "starting of the flow time %v", time.Now().Format(time.RFC3339))
-	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
+	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS, dbname)
 	if err != nil {
 		logPanic(nil, "error initializing graphdb: %v", err)
 	}
@@ -567,7 +613,7 @@ func AddDataRequest(collectionName string, documentData []sharedtypes.DbData) {
 //
 // Parameters:
 //   - collectionName: the name of the collection to create.
-//   - vectorSize: the length of the vector embeddings
+//   - vectorSize: the length of the vector S
 //   - vectorDistance: the vector similarity distance algorithm to use for the vector index (cosine, dot, euclid, manhattan)
 func CreateCollectionRequest(collectionName string, vectorSize uint64, vectorDistance string) {
 	logCtx := &logging.ContextMap{}

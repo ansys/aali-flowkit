@@ -28,6 +28,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -37,7 +38,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -267,7 +267,7 @@ func sendTokenCountToEndpoint(jwtToken string, tokenCountEndpoint string, inputT
 // Returns:
 //   - chan sharedtypes.HandlerResponse: the response channel
 func sendChatRequestNoHistory(data string, chatRequestType string, maxKeywordsSearch uint32, llmHandlerEndpoint string, modelIds []string, options *sharedtypes.ModelOptions) chan sharedtypes.HandlerResponse {
-	return sendChatRequest(data, chatRequestType, nil, maxKeywordsSearch, "", llmHandlerEndpoint, modelIds, options, nil)
+	return sendChatRequest(data, chatRequestType, nil, maxKeywordsSearch, "", llmHandlerEndpoint, modelIds, nil, options, nil)
 }
 
 // sendChatRequest sends a chat request to LLM
@@ -284,7 +284,7 @@ func sendChatRequestNoHistory(data string, chatRequestType string, maxKeywordsSe
 //
 // Returns:
 //   - chan sharedtypes.HandlerResponse: the response channel
-func sendChatRequest(data string, chatRequestType string, history []sharedtypes.HistoricMessage, maxKeywordsSearch uint32, systemPrompt interface{}, llmHandlerEndpoint string, modelIds []string, options *sharedtypes.ModelOptions, images []string) chan sharedtypes.HandlerResponse {
+func sendChatRequest(data string, chatRequestType string, history []sharedtypes.HistoricMessage, maxKeywordsSearch uint32, systemPrompt interface{}, llmHandlerEndpoint string, modelIds []string, modelCategory []string, options *sharedtypes.ModelOptions, images []string) chan sharedtypes.HandlerResponse {
 	// Initiate the channels
 	requestChannelChat := make(chan []byte, 400)
 	responseChannel := make(chan sharedtypes.HandlerResponse) // Create a channel for responses
@@ -293,7 +293,7 @@ func sendChatRequest(data string, chatRequestType string, history []sharedtypes.
 	go shutdownHandler(c)
 	go listener(c, responseChannel, false)
 	go writer(c, requestChannelChat, responseChannel)
-	go sendRequest("chat", data, requestChannelChat, chatRequestType, "true", false, history, maxKeywordsSearch, systemPrompt, responseChannel, modelIds, options, images)
+	go sendRequest("chat", data, requestChannelChat, chatRequestType, "true", false, history, maxKeywordsSearch, systemPrompt, responseChannel, modelIds, modelCategory, options, images)
 
 	return responseChannel // Return the response channel
 }
@@ -312,7 +312,7 @@ func sendChatRequest(data string, chatRequestType string, history []sharedtypes.
 //
 // Returns:
 //   - string: the response
-func sendChatRequestNoStreaming(data string, chatRequestType string, history []sharedtypes.HistoricMessage, maxKeywordsSearch uint32, systemPrompt string, llmHandlerEndpoint string, modelIds []string, options *sharedtypes.ModelOptions, images []string) string {
+func sendChatRequestNoStreaming(data string, chatRequestType string, history []sharedtypes.HistoricMessage, maxKeywordsSearch uint32, systemPrompt string, llmHandlerEndpoint string, modelIds []string, modelCategory []string, options *sharedtypes.ModelOptions, images []string) string {
 	// Initiate the channels
 	requestChannelChat := make(chan []byte, 400)
 	responseChannel := make(chan sharedtypes.HandlerResponse) // Create a channel for responses
@@ -322,7 +322,7 @@ func sendChatRequestNoStreaming(data string, chatRequestType string, history []s
 	go shutdownHandler(c)
 	go listener(c, responseChannel, true)
 	go writer(c, requestChannelChat, responseChannel)
-	go sendRequest("chat", data, requestChannelChat, chatRequestType, "false", false, history, maxKeywordsSearch, systemPrompt, responseChannel, modelIds, options, images)
+	go sendRequest("chat", data, requestChannelChat, chatRequestType, "false", false, history, maxKeywordsSearch, systemPrompt, responseChannel, modelIds, modelCategory, options, images)
 
 	// receive single answer from the response channel
 	response := <-responseChannel
@@ -356,7 +356,7 @@ func sendEmbeddingsRequest(data interface{}, llmHandlerEndpoint string, getSpars
 	go listener(c, responseChannel, false)
 	go writer(c, requestChannelEmbeddings, responseChannel)
 
-	go sendRequest("embeddings", data, requestChannelEmbeddings, "", "", getSparseEmbeddings, nil, 0, "", responseChannel, modelIds, nil, nil)
+	go sendRequest("embeddings", data, requestChannelEmbeddings, "", "", getSparseEmbeddings, nil, 0, "", responseChannel, modelIds, nil, nil, nil)
 	return responseChannel // Return the response channel
 }
 
@@ -562,7 +562,7 @@ func writer(c *websocket.Conn, RequestChannel chan []byte, responseChannel chan 
 //   - dataStream: the data stream flag
 //   - history: the conversation history
 //   - sc: the session context
-func sendRequest(adapter string, data interface{}, RequestChannel chan []byte, chatRequestType string, dataStream string, getSparseEmbeddings bool, history []sharedtypes.HistoricMessage, maxKeywordsSearch uint32, systemPrompt interface{}, responseChannel chan sharedtypes.HandlerResponse, modelIds []string, options *sharedtypes.ModelOptions, images []string) {
+func sendRequest(adapter string, data interface{}, RequestChannel chan []byte, chatRequestType string, dataStream string, getSparseEmbeddings bool, history []sharedtypes.HistoricMessage, maxKeywordsSearch uint32, systemPrompt interface{}, responseChannel chan sharedtypes.HandlerResponse, modelIds []string, modelCategory []string, options *sharedtypes.ModelOptions, images []string) {
 	request := sharedtypes.HandlerRequest{
 		Adapter:         adapter,
 		InstructionGuid: strings.Replace(uuid.New().String(), "-", "", -1),
@@ -576,6 +576,11 @@ func sendRequest(adapter string, data interface{}, RequestChannel chan []byte, c
 	// check for modelId
 	if len(modelIds) > 0 {
 		request.ModelIds = modelIds
+	}
+
+	// check for model category
+	if len(modelCategory) > 0 {
+		request.ModelCategory = modelCategory
 	}
 
 	// If history is not empty, set the IsConversation flag to true
@@ -1864,7 +1869,7 @@ func performGeneralRequest(input string, history []sharedtypes.HistoricMessage, 
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request.
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, options, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, options, nil)
 
 	// If isStream is true, create a stream channel and return asap.
 	if isStream {
@@ -2666,17 +2671,32 @@ func mongoDbGetCreateCustomerByUserId(mongoDbContext *MongoDbContext, userId str
 	// get current timestamp in seconds
 	timestamp := time.Now().Unix()
 
+	// get model id
+	var modelIdString string
+	if len(modelId) == 1 {
+		modelIdString = modelId[0]
+	} else {
+		return false, customer, errors.New("none or multiple modelIds provided; only one modelId is allowed")
+	}
+
 	// if customer does not exist, create it
 	if !existingUser {
+		// create model id token count dict
+		modelIdTokenCountDict := map[string]MongoDbTokenCountObjectDisco{
+			modelIdString: {
+				InputTokenCount:     0,
+				OutputTokenCount:    0,
+				TokenLimit:          temporaryTokenLimit,
+				TokenLimitTimestamp: timestamp,
+			},
+		}
+
+		// create customer
 		customer = &MongoDbCustomerObjectDisco{
-			UserId:              userId,
-			AccessDenied:        false,
-			ModelId:             modelId,
-			InputTokenCount:     0,
-			OutputTokenCount:    0,
-			TokenLimit:          temporaryTokenLimit,
-			TokenLimitTimestamp: timestamp,
-			WarningSent:         false,
+			UserId:                userId,
+			AccessDenied:          false,
+			ModelIdTokenCountDict: modelIdTokenCountDict,
+			WarningSent:           false,
 		}
 
 		// Insert the new customer document
@@ -2685,35 +2705,39 @@ func mongoDbGetCreateCustomerByUserId(mongoDbContext *MongoDbContext, userId str
 			return false, customer, fmt.Errorf("failed to insert new customer: %v", err)
 		}
 	} else {
-		// check if model Id needs to be updated
-		if !slices.Equal(customer.ModelId, modelId) {
-			// update model Id
-			update := bson.M{
-				"$set": bson.M{
-					"model_id": modelId,
-				},
+		var updateNeeded bool
+		// check if model id already exists in model id token count dict
+		tokenCountObject, exists := customer.ModelIdTokenCountDict[modelIdString]
+		if exists {
+			// check if token limit timestamp needs to be reset
+			if time.Since(time.Unix(tokenCountObject.TokenLimitTimestamp, 0)) > time.Duration(hoursUntilTokenLimitReset)*time.Hour {
+				updateNeeded = true
+				// update exiting token count object
+				tokenCountObject.InputTokenCount = 0
+				tokenCountObject.OutputTokenCount = 0
+				tokenCountObject.TokenLimitTimestamp = timestamp
+				customer.ModelIdTokenCountDict[modelIdString] = tokenCountObject
 			}
-
-			// Update the document
-			result, err := mongoDbContext.Collection.UpdateOne(context.Background(), filter, update)
-			if err != nil {
-				return false, customer, fmt.Errorf("failed to update token usage: %v", err)
+		} else {
+			updateNeeded = true
+			if customer.ModelIdTokenCountDict == nil {
+				customer.ModelIdTokenCountDict = make(map[string]MongoDbTokenCountObjectDisco, 1)
 			}
-
-			// Check if the document was updated
-			if result.MatchedCount == 0 {
-				return false, customer, fmt.Errorf("no customer found with id: %s", userId)
+			// add token count object
+			customer.ModelIdTokenCountDict[modelIdString] = MongoDbTokenCountObjectDisco{
+				InputTokenCount:     0,
+				OutputTokenCount:    0,
+				TokenLimit:          temporaryTokenLimit,
+				TokenLimitTimestamp: timestamp,
 			}
 		}
 
-		// check if token limit timestamp needs to be reset
-		if time.Since(time.Unix(customer.TokenLimitTimestamp, 0)) > time.Duration(hoursUntilTokenLimitReset)*time.Hour {
-			// update timestamp and reset token counts
+		// check if model Id needs to be updated
+		if updateNeeded {
+			// update model id token count dict
 			update := bson.M{
 				"$set": bson.M{
-					"token_limit_timestamp": timestamp,
-					"input_token_count":     0,
-					"output_token_count":    0,
+					"model_id_token_count_dict": customer.ModelIdTokenCountDict,
 				},
 			}
 
@@ -2775,7 +2799,7 @@ func mongoDbAddToTotalTokenCount(mongoDbContext *MongoDbContext, indetificationK
 //
 // Returns:
 //   - err: An error if any.
-func mongoDbAddToInputOutputTokenCountAndCheckLimit(mongoDbContext *MongoDbContext, userId string, additionalInputTokenCount int, additionalOutputTokenCount int, hoursUntilTokenLimitReset int) (tokenLimitReached bool, err error) {
+func mongoDbAddToInputOutputTokenCountAndCheckLimit(mongoDbContext *MongoDbContext, userId string, additionalInputTokenCount int, additionalOutputTokenCount int, hoursUntilTokenLimitReset int, modelId []string) (tokenLimitReached bool, err error) {
 	// Create filter for API key
 	filter := bson.M{"user_id": userId}
 
@@ -2786,34 +2810,36 @@ func mongoDbAddToInputOutputTokenCountAndCheckLimit(mongoDbContext *MongoDbConte
 		return false, fmt.Errorf("error in finding mongoDb document: %v", err)
 	}
 
-	// check if token limit timestamp needs to be reset
-	if time.Since(time.Unix(customer.TokenLimitTimestamp, 0)) > time.Duration(hoursUntilTokenLimitReset)*time.Hour {
-		// update timestamp and reset token counts
-		update := bson.M{
-			"$set": bson.M{
-				"token_limit_timestamp": time.Now().Unix(),
-				"input_token_count":     0,
-				"output_token_count":    0,
-			},
-		}
-
-		// Update the document
-		result, err := mongoDbContext.Collection.UpdateOne(context.Background(), filter, update)
-		if err != nil {
-			return false, fmt.Errorf("failed to update token usage: %v", err)
-		}
-
-		// Check if the document was updated
-		if result.MatchedCount == 0 {
-			return false, fmt.Errorf("no customer found with id: %s", userId)
-		}
+	// get model id
+	var modelIdString string
+	if len(modelId) == 1 {
+		modelIdString = modelId[0]
+	} else {
+		return false, errors.New("none or multiple modelIds provided; only one modelId is allowed")
 	}
 
-	// Create filter for API key & update for total token count
+	// check if model id already exists in model id token count dict
+	tokenCountObject, exists := customer.ModelIdTokenCountDict[modelIdString]
+	if !exists {
+		return false, fmt.Errorf("modelId '%v' not found for customer '%v'", modelIdString, customer.UserId)
+	}
+	// check if token limit timestamp needs to be reset
+	if time.Since(time.Unix(tokenCountObject.TokenLimitTimestamp, 0)) > time.Duration(hoursUntilTokenLimitReset)*time.Hour {
+		// reset exiting token count object
+		tokenCountObject.InputTokenCount = 0
+		tokenCountObject.OutputTokenCount = 0
+		tokenCountObject.TokenLimitTimestamp = time.Now().Unix()
+	}
+
+	// add input and output tokens
+	tokenCountObject.InputTokenCount += additionalInputTokenCount
+	tokenCountObject.OutputTokenCount += additionalOutputTokenCount
+	customer.ModelIdTokenCountDict[modelIdString] = tokenCountObject
+
+	// update model id token count dict
 	update := bson.M{
-		"$inc": bson.M{
-			"input_token_count":  additionalInputTokenCount,
-			"output_token_count": additionalOutputTokenCount,
+		"$set": bson.M{
+			"model_id_token_count_dict": customer.ModelIdTokenCountDict,
 		},
 	}
 
@@ -2828,7 +2854,8 @@ func mongoDbAddToInputOutputTokenCountAndCheckLimit(mongoDbContext *MongoDbConte
 		return false, fmt.Errorf("no customer found with id: %s", userId)
 	}
 
-	if (customer.InputTokenCount + customer.OutputTokenCount) >= customer.TokenLimit {
+	// check if token limit was reached
+	if (tokenCountObject.InputTokenCount + tokenCountObject.OutputTokenCount) >= tokenCountObject.TokenLimit {
 		return true, nil
 	}
 

@@ -26,7 +26,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/ansys/aali-flowkit/pkg/privatefunctions/graphdb"
 	qdrant_utils "github.com/ansys/aali-flowkit/pkg/privatefunctions/qdrant"
@@ -194,6 +193,7 @@ func GetListCollections() (collectionsList []string) {
 //   - @displayName: Retrieve Dependencies
 //
 // Parameters:
+//   - dbname: the name of the graphdb to target. If not provided, defaults to "aali".
 //   - relationshipName: the name of the relationship to retrieve dependencies for.
 //   - relationshipDirection: the direction of the relationship to retrieve dependencies for.
 //   - sourceDocumentId: the document ID of the source node.
@@ -203,14 +203,17 @@ func GetListCollections() (collectionsList []string) {
 // Returns:
 //   - dependenciesIds: the list of dependencies
 func RetrieveDependencies(
+	dbname string,
 	relationshipName string,
 	relationshipDirection string,
 	sourceDocumentId string,
 	nodeTypesFilter sharedtypes.DbArrayFilter,
 	maxHopsNumber int) (dependenciesIds []string) {
 	ctx := &logging.ContextMap{}
+	dbname = graphDbNameOrDefault(dbname)
 	dependenciesIds, err := graphdb.GraphDbDriver.RetrieveDependencies(
 		ctx,
+		dbname,
 		relationshipName,
 		relationshipDirection,
 		sourceDocumentId,
@@ -255,20 +258,21 @@ func AddGraphDbParameter(parameters aali_graphdb.ParameterMap, name string, valu
 //   - @displayName: General Graph DB Query
 //
 // Parameters:
+//   - dbname: the name of the graphdb to target. If not provided, defaults to "aali".
 //   - query: the Cypher query to be executed.
 //   - parameters: parameters to pass to the query during execution
 //   - dbname: the name of the graph database to use (optional, defaults to "aali")
 //
 // Returns:
 //   - databaseResponse: the graph db response
-func GeneralGraphDbQuery(query string, parameters aali_graphdb.ParameterMap, dbname string) []map[string]any {
+func GeneralGraphDbQuery(dbname string, query string, parameters aali_graphdb.ParameterMap) []map[string]any {
 	// Initialize the graph database.
-	logging.Log.Infof(nil, "starting of the flow time %v", time.Now().Format(time.RFC3339))
+	dbname = graphDbNameOrDefault(dbname)
 	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS, dbname)
 	if err != nil {
 		logPanic(nil, "error initializing graphdb: %v", err)
 	}
-	res, err := graphdb.GraphDbDriver.WriteCypherQuery(query, parameters)
+	res, err := graphdb.GraphDbDriver.WriteCypherQuery(dbname, query, parameters)
 	if err != nil {
 		logPanic(nil, "error executing cypher query: %q", err)
 	}

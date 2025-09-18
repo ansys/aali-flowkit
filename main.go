@@ -76,6 +76,9 @@ var rhscFile string
 //go:embed pkg/externalfunctions/ace.go
 var aceFile string
 
+//go:embed pkg/externalfunctions/fluent.go
+var fluentFile string
+
 func init() {
 	// initialize config
 	config.InitConfig([]string{}, map[string]interface{}{
@@ -114,6 +117,7 @@ func main() {
 		"mcp":              mcpFile,
 		"rhsc":             rhscFile,
 		"ace":              aceFile,
+		"fluent":           fluentFile,
 	}
 
 	// Load function definitions

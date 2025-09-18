@@ -31,6 +31,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ansys/aali-sharedtypes/pkg/config"
 	"github.com/ansys/aali-sharedtypes/pkg/logging"
@@ -307,6 +308,7 @@ func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID strin
 //   - modelIds: the model IDs of the LLMs to query
 //   - tokenCountModelName: the model name used for token count calculation
 //   - n: number of parallel requests to perform
+//   - temperature: the temperature setting for the LLM requests
 //   - traceID: the trace ID in decimal format
 //   - spanID: the span ID in decimal format
 //
@@ -314,11 +316,18 @@ func ExtractCriteriaSuggestions(llmResponse string, traceID string, spanID strin
 //   - uniqueCriterion: a deduplicated list of extracted attributes (criteria) from all responses
 //   - tokenCount: the total token count (input tokens × n + combined output tokens)
 //   - childSpanID: the child span ID created for this operation
-func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage, systemPrompt string, modelIds []string, tokenCountModelName string, n int, traceID string, spanID string) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int, childSpanID string) {
+func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(input string, history []sharedtypes.HistoricMessage,
+	systemPrompt string, modelIds []string, tokenCountModelName string, n int, temperature float64, traceID string, spanID string) (uniqueCriterion []sharedtypes.MaterialLlmCriterion, tokenCount int, childSpanID string) {
 	ctx := &logging.ContextMap{}
 	childSpanID = CreateChildSpan(ctx, traceID, spanID)
 
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
+
+	// Create model options with temperature
+	tempFloat32 := float32(temperature)
+	modelOptions := &sharedtypes.ModelOptions{
+		Temperature: &tempFloat32,
+	}
 
 	// Helper function to send a request and get the response as string
 	sendRequest := func() string {
@@ -784,4 +793,118 @@ func AddAvailableAttributesToSystemPrompt(userDesignRequirements string, systemP
 
 	logging.Log.Debugf(ctx, "Successfully created system prompt with %d attributes", len(filteredAttributes))
 	return fullSystemPrompt, childSpanID
+}
+
+// SendLogicAppNotificationEmailToMultipleEmails sends the same email to multiple email addresses
+//
+// Tags:
+//   - @displayName: Send Email to multiple email addresses
+//
+// Parameters:
+//   - logicAppEndpoint: The Logic App email service endpoint
+//   - emails: Array of email addresses to send to
+//   - subject: The email subject
+//   - content: The email content
+func SendLogicAppNotificationEmailToMultipleEmails(logicAppEndpoint string, emails []string, subject string, content string) {
+	for _, email := range emails {
+		if email != "" {
+			SendLogicAppNotificationEmail(logicAppEndpoint, email, subject, content)
+		}
+	}
+}
+
+// ResetTokenCountIfNewMonth resets the token count for a customer if the last update was from a different month or year.
+// For new customers (LastUpdated = 0), it sets the initial timestamp without resetting tokens.
+//
+// Tags:
+//   - @displayName: Reset Token Count if new month
+//
+// Parameters:
+//   - kvdbEndpoint: the KVDB endpoint
+//   - apiKey: The API key of the customer
+//   - traceID: the trace ID in decimal format
+//   - spanID: the span ID in decimal format
+//
+// Returns:
+//   - updatedCustomer: the customer object with potentially reset token count and updated timestamp
+//   - childSpanID: the child span ID created for this operation
+func ResetTokenCountIfNewMonth(kvdbEndpoint string, apiKey string, traceID string, spanID string) (childSpanID string) {
+	ctx := &logging.ContextMap{}
+	childSpanID = CreateChildSpan(ctx, traceID, spanID)
+
+	// Get the latest customer object from KVDB
+	jsonString, exists, err := kvdbGetEntry(kvdbEndpoint, apiKey)
+	if err != nil {
+		logging.Log.Errorf(ctx, "Error getting customer object from KVDB: %v", err)
+		panic(err)
+	}
+	if !exists {
+		logging.Log.Errorf(ctx, "API key does not exist in KVDB: %s", apiKey)
+		panic("API key does not exist in KVDB")
+	}
+
+	// Unmarshal the JSON string into materials customer object
+	var customer materialsCustomerObject
+	err = json.Unmarshal([]byte(jsonString), &customer)
+	if err != nil {
+		logging.Log.Errorf(ctx, "Error unmarshalling JSON string: %v", err)
+		panic(err)
+	}
+
+	now := time.Now()
+	lastUpdated := time.Unix(customer.LastUpdated, 0)
+
+	// Handle case where LastUpdated is 0 (new customer)
+	if customer.LastUpdated == 0 {
+		logging.Log.Debugf(ctx, "New customer with key %s. Setting initial timestamp.", customer.ApiKey)
+		// Don't save any history for initial setup, just set the timestamp
+		customer.LastUpdated = now.Unix()
+
+		updatedJsonString, err := json.Marshal(customer)
+		if err != nil {
+			logging.Log.Errorf(ctx, "Error marshalling updated customer object: %v", err)
+			panic(err)
+		}
+
+		err = kvdbSetEntry(kvdbEndpoint, apiKey, string(updatedJsonString))
+		if err != nil {
+			logging.Log.Errorf(ctx, "Error updating customer timestamp in KVDB: %v", err)
+			panic(err)
+		}
+	} else {
+		// Check if last updated is from a different month or year
+		if now.Year() != lastUpdated.Year() || now.Month() != lastUpdated.Month() {
+			logging.Log.Debugf(ctx, "Token count reset for customer %s. Last updated: %v, Current time: %v",
+				customer.ApiKey, lastUpdated, now)
+
+			historyEntry := materialsCustomerHistoryObject{
+				TotalTokenCount: customer.TotalTokenCount,
+				TokenLimit:      customer.TokenLimit,
+				Timestamp:       customer.LastUpdated,
+			}
+			customer.UsageHistory = append(customer.UsageHistory, historyEntry)
+			logging.Log.Debugf(ctx, "Saved usage history for customer %s: %d tokens (limit: %d) at timestamp %d",
+				customer.ApiKey, customer.TotalTokenCount, customer.TokenLimit, customer.LastUpdated)
+
+			// Reset token count to 0 and update timestamp
+			customer.TotalTokenCount = 0
+			customer.LastUpdated = now.Unix()
+
+			// Marshal updated customer object back to JSON
+			updatedJsonString, err := json.Marshal(customer)
+			if err != nil {
+				logging.Log.Errorf(ctx, "Error marshalling updated customer object: %v", err)
+				panic(err)
+			}
+
+			// Update the KVDB with the reset token count
+			err = kvdbSetEntry(kvdbEndpoint, apiKey, string(updatedJsonString))
+			if err != nil {
+				logging.Log.Errorf(ctx, "Error updating customer token count in KVDB: %v", err)
+				panic(err)
+			}
+		}
+	}
+
+	return childSpanID
 }

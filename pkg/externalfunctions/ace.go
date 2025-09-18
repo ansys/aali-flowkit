@@ -1003,3 +1003,155 @@ func GenerateWelcomeMessage(libraryName string) string {
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_GENERATE_WELCOME_MESSAGE - Output: %s", result)
 	return result
 }
+
+// Make API Request to the URL with given method, headers, and body
+//
+// Tags:
+//   - @displayName: Make API Request
+//
+// Parameters:
+//   - requestType: the type of the request (GET, POST, etc.)
+//   - endpoint: the URL to send the request to
+//   - header: the headers to include in the request
+//   - query: the user query to be used for the query.
+//   - libraryName: the name of the library to be used in the query
+//
+// Returns:
+//   - success: a boolean indicating whether the request was successful
+//   - returnJsonBody: the JSON body of the response as a string
+func MakeAPIRequest(requestType string, endpoint string, header map[string]string, query string, libraryName string) (code string) {
+
+	queryParams := map[string]string{
+		"Content-Type": "application/json",
+	}
+	if libraryName == "" {
+		libraryName = "pyfluent"
+	}
+	// Sample json body
+	// `{"key": "value", "number": 123}`
+	jsonBody := fmt.Sprintf(`{"query": "%s", "product": "%s"}`, query, libraryName)
+	if requestType == "" {
+		requestType = "POST"
+	}
+	if endpoint == "" {
+		endpoint = "https://dev-codegen.azurewebsites.net/code_gen"
+	}
+	success, returnJsonBody := SendRestAPICall(requestType, endpoint, header, queryParams, jsonBody)
+	if !success {
+		logging.Log.Errorf(&logging.ContextMap{}, "API request failed")
+		return ""
+	}
+	// CHeck the returnJsonBody is valid json
+	var result map[string]interface{}
+	err := json.Unmarshal([]byte(returnJsonBody), &result)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error converting response to JSON object: %v", err)
+		return ""
+	}
+	if code, ok := result["code"].(string); ok {
+		logging.Log.Infof(&logging.ContextMap{}, "API request successful, code: %s", code)
+		code = PerformGeneralRequestNoStreaming("The code generated is: "+code, []sharedtypes.HistoricMessage{}, "You are a helpful assistant that helps to generate python code in markdown format. Do not add anything else, do not add any extra keys, no extra texts, or formatting (including no code fences). Remove the docs in the code and only provide the code.")
+		return code
+	}
+	return ""
+}
+
+// API to get the data from congnitive services
+//
+// Tags:
+//   - @displayName: Get Data from Cognitive Services
+//
+// Parameters:
+//   - libraryName: the name of the library to be used in the system message
+//   - userQuery: the user query to be used for the query.
+//   - maxRetrievalCount: the maximum number of results to be retrieved.
+//
+// Returns:
+//   - response: the response from the cognitive services as a string
+func GetDataFromCognitiveServices(libraryName string, userQuery string, maxRetrievalCount int) string {
+	startTime := time.Now()
+	ansysProduct := pyansysProduct[libraryName]
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND GetDataFromCognitiveServices - started %v", time.Now())
+	defer func() {
+		duration := time.Since(startTime)
+		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices COMPLETED - duration: %v", duration)
+	}()
+
+	userMessage := fmt.Sprintf(`In %s: The following user query may be brief, ambiguous, or lacking technical detail.
+		Please rewrite it as a clear, detailed, and specific question suitable for retrieving relevant and precise information from a technical knowledge base about {product}.
+		If necessary, add clarifying context, standard terminology, or related technical concepts commonly used in {product} documentation, without changing the original intent of the user's question.
+
+		User Query: "%s"
+
+		Return your response as a JSON object with a single key "unified_query".
+		For example:
+		"unified_query": "<your generated query here>"`, ansysProduct, userQuery)
+
+	historyMessage := []sharedtypes.HistoricMessage{
+		sharedtypes.HistoricMessage{
+			Role:    "user",
+			Content: userMessage,
+		},
+	}
+
+	// Make llm call to rewrite the query
+	llmStartTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices - LLM request (rewrite query) STARTED")
+	result, _ := PerformGeneralRequest(userQuery, historyMessage, false, "")
+	llmDuration := time.Since(llmStartTime)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices - LLM request (rewrite query) COMPLETED - duration: %v", llmDuration)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND GetDataFromCognitiveServices - llm ended %v", time.Now())
+	messageJSON, err := jsonStringToObject(result)
+	if err != nil {
+		logging.Log.Error(&logging.ContextMap{}, "Error converting message to JSON object: %v", err)
+		return ""
+	}
+	rewrittenQuery, ok := messageJSON["unified_query"].(string)
+	if !ok {
+		logging.Log.Error(&logging.ContextMap{}, "unified_query is not a string")
+		return ""
+	}
+	if rewrittenQuery == "" {
+		logging.Log.Warn(&logging.ContextMap{}, "Rewritten query is empty, using original query: %s", userQuery)
+		rewrittenQuery = userQuery
+	}
+	logging.Log.Infof(&logging.ContextMap{}, "Rewritten query: %s", rewrittenQuery)
+	// Make rest call to cognitive services
+	jsonBody := fmt.Sprintf(`{"query": "%s", "product": "%s", "top_k": %d}`, rewrittenQuery, libraryName, maxRetrievalCount)
+	endpoint := "https://codegen-rm.azurewebsites.net/run_search"
+	header := map[string]string{
+		"Content-Type": "application/json",
+	}
+	success, returnJsonBody := SendRestAPICall("POST", endpoint, header, map[string]string{}, jsonBody)
+	logging.Log.Infof(&logging.ContextMap{}, "success: %v, returnJsonBody: %s", success, returnJsonBody)
+	if !success {
+		logging.Log.Errorf(&logging.ContextMap{}, "API request to cognitive services failed")
+		return ""
+	}
+	// Make llm call to process the response from cognitive services
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND GetDataFromCognitiveServices - rest call ended %v", time.Now())
+	llmProcessingStartTime := time.Now()
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices - LLM request (process response) STARTED")
+	processingMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided.
+		Use the API definition and the related APIs found. Do your best to generate the code based on the information available.
+		API Search Results: %s
+		- STRICT: Only use the context provided in this system message. Do NOT think outside this context, do NOT add anything else, do NOT invent or hallucinate anything beyond the provided information.
+		- Generate the code that solves the user query using only the API Search Results.
+		- If you are not able to generate the code using the context provided, Send "I am not able to generate the code with the information provided."
+		- If you are sure about the code, return the code in markdown format.
+		- If you are not sure about the code, return "Please provide more information about the user query and the methods to be used."
+		Respond with the following format, do not add anything else:
+		The generated Python code only`, ansysProduct, returnJsonBody)
+	processingHistoryMessage := []sharedtypes.HistoricMessage{
+		sharedtypes.HistoricMessage{
+			Role:    "user",
+			Content: processingMessage,
+		},
+	}
+	result, _ = PerformGeneralRequest(userQuery, processingHistoryMessage, false, "")
+	llmProcessingDuration := time.Since(llmProcessingStartTime)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices - LLM request (process response) COMPLETED - duration: %v", llmProcessingDuration)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND GetDataFromCognitiveServices - llm processing ended %v", time.Now())
+	logging.Log.Infof(&logging.ContextMap{}, "result: %s", result)
+	return result
+}

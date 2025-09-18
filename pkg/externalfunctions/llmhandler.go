@@ -1115,14 +1115,29 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 //   - userGuideSearch: include user guide citations
 //   - citations: citations string
 //   - elementContext: String context prompt
-//   - design context: context  from the active design
+//   - design context: context from the active design
 //
 // Returns:
 //   - finalQuery: the final query
-func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse, userGuideSearch bool, citations []string, elementContexts []string, designContext []map[string]any) (finalQuery string) {
+func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse, userGuideSearch bool, citations []string, elementContexts []string, designContext string) (finalQuery string) {
 	finalQuery = "You are a Python expert with experience in writing complete, functional PyAEDT scripts. These scripts typically include python code for tasks such as geometry creation, boundary setup, and analysis setups - especially for HFSS (or other AnsysEM tools as applicable). Your task is to write valid Python code using PyAEDT APIs "
 	// Build the final query using the KnowledgeDB response and the original request
 	// We have to use the text from the DB response and the original request.
+	//
+	// Design context is a string that we get from the AEDT session. It contains
+	// information about the current design, project, application, and PyAEDT version.
+	// It is in the following format:
+	// {'designContext':
+	// 		{
+	// 			'design': 'DESIGN',
+	// 			'project': 'PROJECT',
+	// 			'selections': [],
+	// 			'application': 'APP',
+	// 			'pyaedtVersion': 'x.x.x',
+	// 			'type': 'Generic',
+	// 			'units': 'xxx'
+	// 		}
+	// }
 	//
 	// The prompt should be in the following format:
 	//
@@ -1148,18 +1163,29 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// ...
 	// --- END EXAMPLE {response_n}---
 	//
-	// Generate the Python code for the following request:
+	// Generate the Python code for the following request: {original request}
 	//
-	// >>> Request:
-	// {original_request}
+	// Hard requirements (do not violate):
+	// - Include **all imports** actually used. Follow the template for {Pyaedt version}}: {import template}
+	// - Provide an **Initialization** section that **explicitly** declares the known information as follows:
+	//   - Use PyAEDT version: {Pyaedt version}
+	//   - AEDT version: {AEDT version}
+	//   - Design name: {Design name}
+	//   - Application: {Application name}
+	//   - Project name: {Project name}
+	//   - Selections: {selections, if any}
+	//
+	// The following statements are examples of how to initialize different applications, refer to these examples and initialization accordingly:
+	//  - {application name}: {initialization template}
+	//	- ... (other applications as applicable)
 	// ******************************************************************************
 
-	finalQuery = "You are a Python expert with experience in writing complete, functional PyAEDT scripts. These scripts typically include python code for tasks such as geometry creation, boundary setup, and analysis setups - especially for HFSS (or other AnsysEM tools as applicable). Your task is to write valid Python code using PyAEDT APIs "
+	// Construct final query prompt.
+	finalQuery = "You are a Python expert with experience in writing complete, functional PyAEDT scripts. These scripts typically include python code for tasks such as geometry creation, boundary setup, and analysis setups - especially for HFSS (or other AnsysEM tools as applicable). Your task is to write valid Python code using PyAEDT APIs.\n"
 
-	// If there is no response from the KnowledgeDB, return the original request
-	// Initial request
+	// Get the citations from the user guide search
 	if userGuideSearch {
-		finalQuery += "based on the following pyaedt documentation links\n\n"
+		finalQuery += "\nBased on the following PyAEDT documentation links: \n\n"
 		for i, citation := range citations {
 			finalQuery += "--- REFERENCE LINKS START " + fmt.Sprint(i+1) + " ---\n"
 			finalQuery += citation + "\n"
@@ -1167,20 +1193,20 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		}
 		finalQuery += "And following examples:\n\n"
 	} else {
-		finalQuery += "based on the following examples:\n\n"
+		finalQuery += "\nBased on the following examples:\n\n"
 	}
 
+	// Get the examples from the knowledge DB
 	if len(knowledgedbResponse) > 0 {
 		for i, element := range knowledgedbResponse {
 			// Add the example number
-			logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Reading knowledge DB response")
+			// logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Reading knowledge DB response")
 			finalQuery += "--- START EXAMPLE " + fmt.Sprint(i+1) + "---\n"
-			finalQuery += ">>> Summary:\n" + element.Summary + "\n\n"
-			finalQuery += ">>> Code snippet:\n```python\n" + element.Text + "\n```\n"
+			finalQuery += "* Summary:\n" + element.Summary + "\n\n"
+			finalQuery += "* Code snippet:\n```python\n" + element.Text + "\n```\n"
 			finalQuery += "--- END EXAMPLE " + fmt.Sprint(i+1) + "---\n\n"
-			logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Initial Query %s", finalQuery)
+			// logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Initial Query %s", finalQuery)
 		}
-
 	} else {
 		logging.Log.Debugf(&logging.ContextMap{}, "No relevant examples found in DB.")
 	}
@@ -1188,63 +1214,225 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// Kaumudi: Rephrase
 	new_request := RephraseRequest_kapatil(request)
 
-	// stable_version := "0.19"
+	// Pass in the original request without blank in the front and end
+	finalQuery += "Generate the Python code for the following request: **" + strings.TrimSpace(new_request) + "** \n"
 
-	// TODO: Read from design context.
-	pyaedt_version := "0.19"
-	// aedt_version := "2025.1"
-	// solver := ""
-	// ============================
+	// Convert designContext to a JSON format: map[string]any
+	convertDesignContext := func(designContext string, format string) (any, error) {
+		// Replace single quotes with double quotes for valid JSON
+		designContext = strings.ReplaceAll(designContext, "'", "\"")
 
-	import_templates := map[string]string{
-		"0.19": "```python\n import ansys.aedt.core as pyaedt```",
+		// Fix newline characters in string literals by escaping them
+		designContext = strings.ReplaceAll(designContext, "\n", "\\n")
+
+		// Parse the JSON string into a map
+		var contextData map[string]interface{}
+		err := json.Unmarshal([]byte(designContext), &contextData)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse designContext: %v", err)
+		}
+
+		if format == "JSON" {
+			// Convert back to JSON with indent 2.
+			jsonBytes, err := json.MarshalIndent(contextData, "", "  ")
+			if err != nil {
+				return "", fmt.Errorf("failed to marshal to JSON: %v", err)
+			}
+			return string(jsonBytes), nil
+		} else if format == "Map" {
+			// Convert back to map[string]any format
+			result := make(map[string]any)
+			for key, value := range contextData {
+				result[key] = value
+			}
+			return result, nil
+		} else {
+			return "", fmt.Errorf("unknown format: %s", format)
+		}
+
 	}
 
+	designContextMap, err := convertDesignContext(designContext, "Map")
+	if err != nil {
+		logging.Log.Warn(&logging.ContextMap{}, "Failed to convert designContext to map: %v", err)
+		designContextMap = make(map[string]any)
+	} else {
+		// Successfully converted designContext to map
+		logging.Log.Debugf(&logging.ContextMap{}, "Successfully converted designContext to map: %v", designContextMap)
+	}
+
+	var generationType, design, project, application, pyaedtVersion string
+	var selections []string
+	if designContextMap != nil {
+		if nestedContext, ok := designContextMap.(map[string]any)["designContext"].(map[string]any); ok {
+			// Extract basic context information.
+			if val, ok := nestedContext["type"]; ok {
+				if strVal, ok := val.(string); ok {
+					generationType = strVal
+
+					logging.Log.Info(&logging.ContextMap{}, "Design context generation type: %s", generationType)
+				}
+			} else {
+				logging.Log.Error(&logging.ContextMap{}, "Missing generation type in design context.")
+			}
+
+			// Extract design name
+			if val, ok := nestedContext["design"]; ok {
+				if strVal, ok := val.(string); ok {
+					design = strVal
+				}
+			} else {
+				logging.Log.Debugf(&logging.ContextMap{}, "No design name found in design context. Using default.")
+				design = "MyDesign"
+			}
+
+			// Extract project name.
+			if val, ok := nestedContext["project"]; ok {
+				if strVal, ok := val.(string); ok {
+					project = strVal
+				}
+			} else {
+				logging.Log.Debugf(&logging.ContextMap{}, "No project name found in design context. Using default.")
+				project = "MyProject"
+			}
+
+			// Extract application name.
+			if val, ok := nestedContext["application"]; ok {
+				if strVal, ok := val.(string); ok {
+					application = strVal
+				}
+			} else {
+				logging.Log.Debugf(&logging.ContextMap{}, "No application name found in design context. Using default.")
+				application = "MyApplication"
+			}
+
+			// Extract PyAEDT version.
+			if val, ok := nestedContext["pyaedtVersion"]; ok {
+				if strVal, ok := val.(string); ok {
+					pyaedtVersion = strVal
+				}
+			} else {
+				logging.Log.Debugf(&logging.ContextMap{}, "No PyAEDT version found in design context. Using default.")
+				pyaedtVersion = "0.19.0"
+			}
+
+			// Extract selections.
+			if val, ok := nestedContext["selection"]; ok {
+				if sliceVal, ok := val.([]string); ok {
+					selections = sliceVal
+				}
+			} else {
+				logging.Log.Debugf(&logging.ContextMap{}, "No selections found in design context. Using default.")
+				selections = []string{}
+			}
+
+		} else {
+			logging.Log.Error(&logging.ContextMap{}, "Missing generation type in design context.")
+		}
+	} else {
+		logging.Log.Info(&logging.ContextMap{}, "No design context provided. Using default strings for design, project, application, and pyaedtVersion.")
+		design = "MyDesign"
+		project = "MyProject"
+		application = "MyApplication"
+		pyaedtVersion = "0.19.0" // Default version: the latest one by Sep 2025.
+		selections = []string{}
+	}
+
+	// // ================================
+	// // Store designContext to a JSON file.
+	// designContextJSON, err := convertDesignContext(designContext, "JSON")
+	// if err != nil {
+	// 	logging.Log.Warn(&logging.ContextMap{}, "Failed to convert designContext to JSON: %v", err)
+	// 	designContextJSON = "{}"
+	// } else {
+	// 	logging.Log.Debugf(&logging.ContextMap{}, "Design context as JSON:\n%s", designContextJSON)
+	// }
+
+	// // Dump designContextJSON to file
+	// dumpJSONToFile := func(jsonData, filename string) error {
+	// 	// Create the file
+	// 	file, err := os.Create(filename)
+	// 	if err != nil {
+	// 		return fmt.Errorf("failed to create file: %v", err)
+	// 	}
+	// 	defer file.Close()
+
+	// 	// Write JSON data to file
+	// 	_, err = file.WriteString(jsonData)
+	// 	if err != nil {
+	// 		return fmt.Errorf("failed to write to file: %v", err)
+	// 	}
+
+	// 	return nil
+	// }
+
+	// // Dump to file
+	// fileName := "design_context.json"
+	// // Or use absolute path: fileName := "c:\\temp\\design_context.json"
+	// err = dumpJSONToFile(designContextJSON, fileName)
+	// if err != nil {
+	// 	logging.Log.Warn(&logging.ContextMap{}, "Failed to dump JSON to file: %v", err)
+	// } else {
+	// 	logging.Log.Debugf(&logging.ContextMap{}, "Successfully dumped design context JSON to file: %s", fileName)
+	// }
+	// // ===================================
+
+	// ==============================
+	// Imports and initilization templates for different PyAEDT versions
+	version_mapper := map[string]string{
+		"0.19.0": "2025.1",
+	}
+	import_templates := map[string]string{
+		"0.19.0": "```python\nimport ansys.aedt.core as pyaedt```",
+	}
 	init_templates := map[string]map[string]string{
-		"0.19": {
-			"Desktop":        "```python\nDesktop(version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None)```",
-			"Hfss":           "```python\nHfss(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
-			"Q3d":            "```python\nQ3d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
-			"Q2d":            "```python\nQ2d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
-			"Maxwell2d":      "```python\nMaxwell2d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
-			"Maxwell3d":      "```python\nMaxwell3d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
-			"Icepak":         "```python\nIcepak(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
-			"Hfss3dLayout":   "```python\nHfss3dLayout(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, ic_mode:bool|None, remove_lock:bool|None)```",
-			"Mechanical":     "```python\nMechanical(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
-			"Rmxprt":         "```python\nRmxprt(project:str|None, design:str|None, solution_type:str|None, model_units:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
-			"Circuit":        "```python\nCircuit(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
-			"MaxwellCircuit": "```python\nMaxwellCircuit(project:str|None, design:str|None, solution_type:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
-			"Emit":           "```python\nEmit(project:str|None, design:str|None, solution_type:str|None, version:str|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
-			"TwinBuilder":    "```python\nTwinBuilder(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```",
+		"0.19.0": {
+			"Desktop":        "```\nDesktop(version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None)\n```",
+			"Hfss":           "```\nHfss(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Q3d":            "```\nQ3d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Q2d":            "```\nQ2d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Maxwell2d":      "```\nMaxwell2d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Maxwell3d":      "```\nMaxwell3d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Icepak":         "```\nIcepak(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Hfss3dLayout":   "```\nHfss3dLayout(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, ic_mode:bool|None, remove_lock:bool|None)\n```",
+			"Mechanical":     "```\nMechanical(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Rmxprt":         "```\nRmxprt(project:str|None, design:str|None, solution_type:str|None, model_units:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Circuit":        "```\nCircuit(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"MaxwellCircuit": "```\nMaxwellCircuit(project:str|None, design:str|None, solution_type:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Emit":           "```\nEmit(project:str|None, design:str|None, solution_type:str|None, version:str|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"TwinBuilder":    "```\nTwinBuilder(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
 		},
 	}
-
-	// Pass in the original request
-	finalQuery += "Generate the Python code for the following request:\n>>> Request:\n" + new_request + "\n"
+	// ==============================
 
 	// Include initialization template to prompt.
-	finalQuery += `
-	Requirements:
-	- Include **all imports** actually used. Follow the template for PyAEDT version ` +
-		pyaedt_version + `: ` + import_templates[pyaedt_version] +
-		`
-	- Provide an **Initialization** section that explicitly declares the necessary known information as follows:
-		- AEDT version: 2025.1
-		- Design name: MyFirstDesign
-		- Project name: MyFirstProject
-		The following statements are examples of how to initialization:
+	finalQuery += "\nHard requirements (do not violate):\n- Include **all imports** actually used. Follow the template for PyAEDT version " + pyaedtVersion + ": " + import_templates[pyaedtVersion] + "\n"
+	finalQuery += "- Provide an **Initialization** section that **explicitly** declares the known information as follows:\n"
 
-	`
-	// 	`
-	// - Provide an **Initialization** section that explicitly declares **necessary constructor parameter** ` +
-	// 	`with its type and default values. Follow the below templates for PyAEDT version ` + pyaedt_version +
-	// 	`: ` + "```python\n ClassName(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)```"
+	if _, ok := version_mapper[pyaedtVersion]; !ok {
+		logging.Log.Warnf(&logging.ContextMap{}, "Unknown PyAEDT version: %s. Defaulting to 0.19.0", pyaedtVersion)
+		pyaedtVersion = "0.19.0"
+	}
+	finalQuery += "  - Use PyAEDT version: " + pyaedtVersion + "\n"
+	finalQuery += "  - AEDT version: " + version_mapper[pyaedtVersion] + "\n"
+	finalQuery += "  - Design name: " + design + "\n"
+	finalQuery += "  - Application: " + application + "\n"
 
-	for _, init_template := range init_templates[pyaedt_version] {
-		finalQuery += ", " + init_template
+	// if selections is empty, skip it.
+	if selections != nil && len(selections) > 0 {
+		finalQuery += "  - Selections: " + strings.Join(selections, ", ") + "\n"
+	}
+	finalQuery += "  - Project name: " + project + "\n\n"
+	finalQuery += "The following statements are examples of how to initialize different applications, refer to these examples and initialization accordingly: \n"
+
+	for appName, init_template := range init_templates[pyaedtVersion] {
+		finalQuery += "\n- " + appName + ":\n" + init_template + "\n"
 	}
 
-	logging.Log.Debugf(&logging.ContextMap{}, "=================== Final Query: %s ===================", finalQuery)
+	finalQuery += "\n\n"
+
+	logging.Log.Debugf(&logging.ContextMap{}, "=================== Final Query %v ===================", finalQuery)
+
 	// Return the final query
 	return finalQuery
 }

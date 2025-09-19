@@ -1075,6 +1075,7 @@ func BuildLibraryContext(message string, libraryContext string) (messageWithCont
 //   - @displayName: Final Query (General LLM Request)
 //
 // Parameters:
+
 //   - request: the original request
 //   - knowledgedbResponse: the KnowledgeDB response
 //
@@ -1088,9 +1089,72 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 	}
 
 	// Build the final query using the KnowledgeDB response and the original request
+	// Append all non-empty fields to provide maximum context from comprehensive DbResponse
 	finalQuery = "Based on the following examples:\n\n--- INFO START ---\n"
 	for _, example := range knowledgedbResponse {
-		finalQuery += example.Text + "\n"
+		var contentParts []string
+
+		// CodeGenerationElement fields (likely from API/Element collections)
+		if example.NameFormatted != "" {
+			contentParts = append(contentParts, example.NameFormatted)
+		}
+		if example.NamePseudocode != "" {
+			contentParts = append(contentParts, example.NamePseudocode)
+		}
+		if example.Name != "" {
+			contentParts = append(contentParts, example.Name)
+		}
+		if example.Type != "" {
+			contentParts = append(contentParts, "Type: "+example.Type)
+		}
+		if example.ParentClass != "" {
+			contentParts = append(contentParts, "Parent: "+example.ParentClass)
+		}
+
+		// VectorDatabaseUserGuideSection fields (likely from User Guide collections)
+		if example.Title != "" {
+			contentParts = append(contentParts, example.Title)
+		}
+		if example.SectionName != "" {
+			contentParts = append(contentParts, "Section: "+example.SectionName)
+		}
+		if example.ParentSectionName != "" {
+			contentParts = append(contentParts, "Parent Section: "+example.ParentSectionName)
+		}
+
+		// Common fields (from any collection type)
+		if example.DocumentName != "" {
+			contentParts = append(contentParts, "Document: "+example.DocumentName)
+		}
+		if example.Text != "" {
+			contentParts = append(contentParts, example.Text)
+		}
+		if example.Summary != "" {
+			contentParts = append(contentParts, "Summary: "+example.Summary)
+		}
+		if len(example.Dependencies) > 0 {
+			// Convert []interface{} to []string for joining
+			var deps []string
+			for _, dep := range example.Dependencies {
+				if depStr, ok := dep.(string); ok {
+					deps = append(deps, depStr)
+				}
+			}
+			if len(deps) > 0 {
+				contentParts = append(contentParts, "Dependencies: "+strings.Join(deps, ", "))
+			}
+		}
+		if len(example.Keywords) > 0 {
+			contentParts = append(contentParts, "Keywords: "+strings.Join(example.Keywords, ", "))
+		}
+		if len(example.Tags) > 0 {
+			contentParts = append(contentParts, "Tags: "+strings.Join(example.Tags, ", "))
+		}
+
+		// Add all content with spacing
+		if len(contentParts) > 0 {
+			finalQuery += strings.Join(contentParts, "\n") + "\n\n"
+		}
 	}
 	finalQuery += "--- INFO END ---\n\n" + request + "\n"
 
@@ -1148,8 +1212,75 @@ func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []shar
 		for i, element := range knowledgedbResponse {
 			// Add the example number
 			finalQuery += "--- START EXAMPLE " + fmt.Sprint(i+1) + "---\n"
-			finalQuery += ">>> Summary:\n" + element.Summary + "\n\n"
-			finalQuery += ">>> Code snippet:\n```python\n" + element.Text + "\n```\n"
+
+			// Build summary from all available non-empty fields
+			var summaryParts []string
+
+			// CodeGenerationElement fields (likely from API/Element collections)
+			if element.NameFormatted != "" {
+				summaryParts = append(summaryParts, element.NameFormatted)
+			}
+			if element.Type != "" {
+				summaryParts = append(summaryParts, "Type: "+element.Type)
+			}
+			if element.ParentClass != "" {
+				summaryParts = append(summaryParts, "Parent: "+element.ParentClass)
+			}
+
+			// VectorDatabaseUserGuideSection fields (likely from User Guide collections)
+			if element.Title != "" {
+				summaryParts = append(summaryParts, element.Title)
+			}
+			if element.SectionName != "" {
+				summaryParts = append(summaryParts, "Section: "+element.SectionName)
+			}
+
+			// Common fields
+			if element.DocumentName != "" {
+				summaryParts = append(summaryParts, "Document: "+element.DocumentName)
+			}
+			if element.Summary != "" {
+				summaryParts = append(summaryParts, "Summary: "+element.Summary)
+			}
+			if len(element.Dependencies) > 0 {
+				// Convert []interface{} to []string for joining
+				var deps []string
+				for _, dep := range element.Dependencies {
+					if depStr, ok := dep.(string); ok {
+						deps = append(deps, depStr)
+					}
+				}
+				if len(deps) > 0 {
+					summaryParts = append(summaryParts, "Dependencies: "+strings.Join(deps, ", "))
+				}
+			}
+
+			// Build code content from all available fields
+			var codeParts []string
+
+			if element.NamePseudocode != "" {
+				codeParts = append(codeParts, "# "+element.NamePseudocode)
+			}
+			if element.Name != "" {
+				codeParts = append(codeParts, "# Function: "+element.Name)
+			}
+			if element.Text != "" {
+				codeParts = append(codeParts, element.Text)
+			}
+
+			// Use constructed content or fallback
+			summaryContent := strings.Join(summaryParts, " | ")
+			if summaryContent == "" {
+				summaryContent = "No summary available"
+			}
+
+			codeContent := strings.Join(codeParts, "\n")
+			if codeContent == "" {
+				codeContent = "# No code content available"
+			}
+
+			finalQuery += ">>> Summary:\n" + summaryContent + "\n\n"
+			finalQuery += ">>> Code snippet:\n```python\n" + codeContent + "\n```\n"
 			finalQuery += "--- END EXAMPLE " + fmt.Sprint(i+1) + "---\n\n"
 		}
 	}

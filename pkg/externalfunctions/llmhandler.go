@@ -25,6 +25,7 @@ package externalfunctions
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -1252,7 +1253,38 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 
 	}
 
-	designContextMap, err := convertDesignContext(designContext, "Map")
+	logging.Log.Debugf(&logging.ContextMap{}, "~~~~Raw design context string: %s", designContext)
+
+	// Cutoff designContext and only process generic context.
+	pattern := `'type'\s*:\s*'[^']*'`
+
+	// Use regex to find the pattern
+	re := regexp.MustCompile(pattern)
+	match := re.FindStringIndex(designContext)
+
+	if match == nil {
+		// If pattern not found, try with double quotes format
+		pattern = `"type"\s*:\s*"[^"]*"`
+		re = regexp.MustCompile(pattern)
+		match = re.FindStringIndex(designContext)
+
+		if match == nil {
+			logging.Log.Warnf(&logging.ContextMap{}, "Cutoff pattern 'type' field not found in designContext")
+			return designContext
+		}
+	}
+
+	// Get the end position of the match (after the 'type' field and its value)
+	endPos := match[1]
+
+	// Extract substring up to the end of the 'type' field
+	designContextGeneric := designContext[:endPos]
+
+	// Add proper closing braces
+	designContextGeneric += "}}"
+
+	// Convert designContextGeneric to map[string]any
+	designContextMap, err := convertDesignContext(designContextGeneric, "Map")
 	if err != nil {
 		logging.Log.Warn(&logging.ContextMap{}, "Failed to convert designContext to map: %v", err)
 		designContextMap = make(map[string]any)

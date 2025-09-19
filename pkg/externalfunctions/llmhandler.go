@@ -25,6 +25,7 @@ package externalfunctions
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -1349,15 +1350,26 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 			}
 
 			// Extract selections.
-			if val, ok := nestedContext["selection"]; ok {
-				if sliceVal, ok := val.([]string); ok {
+			if val, ok := nestedContext["selections"]; ok {
+				if interfaceSlice, ok := val.([]interface{}); ok {
+					selections = make([]string, 0, len(interfaceSlice))
+					for _, item := range interfaceSlice {
+						if strItem, ok := item.(string); ok {
+							selections = append(selections, strItem)
+						} else {
+							logging.Log.Warnf(&logging.ContextMap{}, "Selection item is not a string: %v (type: %T)", item, item)
+						}
+					}
+				} else if sliceVal, ok := val.([]string); ok {
 					selections = sliceVal
+				} else {
+					logging.Log.Warnf(&logging.ContextMap{}, "Selections field is not a slice, found type: %T, value: %v", val, val)
+					selections = []string{}
 				}
 			} else {
 				logging.Log.Debugf(&logging.ContextMap{}, "No selections found in design context. Using default.")
 				selections = []string{}
 			}
-
 		} else {
 			logging.Log.Error(&logging.ContextMap{}, "Missing generation type in design context.")
 		}
@@ -1370,44 +1382,57 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		selections = []string{}
 	}
 
-	// // ================================
-	// // Store designContext to a JSON file.
-	// designContextJSON, err := convertDesignContext(designContext, "JSON")
-	// if err != nil {
-	// 	logging.Log.Warn(&logging.ContextMap{}, "Failed to convert designContext to JSON: %v", err)
-	// 	designContextJSON = "{}"
-	// } else {
-	// 	logging.Log.Debugf(&logging.ContextMap{}, "Design context as JSON:\n%s", designContextJSON)
-	// }
+	// Store designContext to a JSON file.
+	dumpJSONToFile := func(jsonData, filename string) error {
+		// Create the file
+		file, err := os.Create(filename)
+		if err != nil {
+			return fmt.Errorf("failed to create file: %v", err)
+		}
+		defer file.Close()
 
-	// // Dump designContextJSON to file
-	// dumpJSONToFile := func(jsonData, filename string) error {
-	// 	// Create the file
-	// 	file, err := os.Create(filename)
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to create file: %v", err)
-	// 	}
-	// 	defer file.Close()
+		// Write JSON data to file
+		_, err = file.WriteString(jsonData)
+		if err != nil {
+			return fmt.Errorf("failed to write to file: %v", err)
+		}
 
-	// 	// Write JSON data to file
-	// 	_, err = file.WriteString(jsonData)
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to write to file: %v", err)
-	// 	}
+		return nil
+	}
 
-	// 	return nil
-	// }
+	// Store designContext to a JSON file.
+	// TODO: accumulate design contexts and store them to a single file with timestamp? Or overwrite the previous one?
+	// For now, overwrite the previous one.
+	designContextJSONResult, err := convertDesignContext(designContextGeneric, "JSON")
+	if err != nil {
+		logging.Log.Warn(&logging.ContextMap{}, "Failed to convert designContext to JSON: %v", err)
+		// Use default empty JSON
+		err = dumpJSONToFile("{}", "design_context.json")
+		if err != nil {
+			logging.Log.Warn(&logging.ContextMap{}, "Failed to dump default JSON to file: %v", err)
+		}
+	} else {
+		// Type assert to string
+		if designContextJSON, ok := designContextJSONResult.(string); ok {
+			logging.Log.Debugf(&logging.ContextMap{}, "Design context as JSON:\n%s", designContextJSON)
 
-	// // Dump to file
-	// fileName := "design_context.json"
-	// // Or use absolute path: fileName := "c:\\temp\\design_context.json"
-	// err = dumpJSONToFile(designContextJSON, fileName)
-	// if err != nil {
-	// 	logging.Log.Warn(&logging.ContextMap{}, "Failed to dump JSON to file: %v", err)
-	// } else {
-	// 	logging.Log.Debugf(&logging.ContextMap{}, "Successfully dumped design context JSON to file: %s", fileName)
-	// }
-	// // ===================================
+			// Dump to file
+			fileName := "design_context.json"
+			err = dumpJSONToFile(designContextJSON, fileName)
+			if err != nil {
+				logging.Log.Warn(&logging.ContextMap{}, "Failed to dump JSON to file: %v", err)
+			} else {
+				logging.Log.Debugf(&logging.ContextMap{}, "Successfully dumped design context JSON to file: %s", fileName)
+			}
+		} else {
+			logging.Log.Warn(&logging.ContextMap{}, "Failed to assert designContext result to string")
+			// Fallback to default
+			err = dumpJSONToFile("{}", "design_context.json")
+			if err != nil {
+				logging.Log.Warn(&logging.ContextMap{}, "Failed to dump fallback JSON to file: %v", err)
+			}
+		}
+	}
 
 	// ==============================
 	// Imports and initilization templates for different PyAEDT versions
@@ -1450,6 +1475,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	finalQuery += "  - Design name: " + design + "\n"
 	finalQuery += "  - Application: " + application + "\n"
 
+	logging.Log.Debugf(&logging.ContextMap{}, "!!!!Selections: %v", selections)
 	// if selections is empty, skip it.
 	if selections != nil && len(selections) > 0 {
 		finalQuery += "  - Selections: " + strings.Join(selections, ", ") + "\n"

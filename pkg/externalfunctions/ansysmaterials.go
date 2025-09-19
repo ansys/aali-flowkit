@@ -47,24 +47,37 @@ type LlmCriteria struct {
 	Criteria []sharedtypes.MaterialLlmCriterion
 }
 
+type DDTags string
+
+const (
+	workflowTag          DDTags = "dd.workflow"
+	LLMAssistedSelection DDTags = "LLMAssistedSelection"
+	apiKeyTag            DDTags = "dd.api_keyVisible"
+	traceIDTag           DDTags = "dd.trace_idVisible"
+	spanIDTag            DDTags = "dd.span_idVisible"
+	parentIDTag          DDTags = "dd.parent_idVisible"
+)
+
 // StartTrace generates a new trace ID and span ID for tracing
 //
 // Tags:
 //   - @displayName: Start new trace
 //
 // Parameters:
-//   - str: a string
+//   - apiKey: the api key used for authentication
 //
 // Returns:
 //   - traceID: a 128-bit trace ID in decimal format
 //   - spanID: a 64-bit span ID in decimal format
-func StartTrace() (traceID string, spanID string) {
+func StartTrace(apiKey string) (traceID string, spanID string) {
 	traceID = generateTraceID()
 	spanID = generateSpanID()
 	ctx := &logging.ContextMap{}
-	ctx.Set(logging.ContextKey("dd.trace_idVisible"), traceID)
-	ctx.Set(logging.ContextKey("dd.span_idVisible"), spanID)
-	logging.Log.Infof(ctx, "Starting new trace with trace ID: %s and span ID: %s", traceID, spanID)
+	ctx.Set(logging.ContextKey(workflowTag), LLMAssistedSelection)
+	ctx.Set(logging.ContextKey(apiKeyTag), apiKey)
+	ctx.Set(logging.ContextKey(traceIDTag), traceID)
+	ctx.Set(logging.ContextKey(spanIDTag), spanID)
+	logging.Log.Infof(ctx, "Starting new trace for ApiKey: %s with trace ID: %s and span ID: %s", apiKey, traceID, spanID)
 
 	return traceID, spanID
 }
@@ -90,9 +103,10 @@ func CreateChildSpan(ctx *logging.ContextMap, traceID string, parentSpanID strin
 	childSpanID = generateSpanID()
 
 	// Update the context with trace and span information
-	ctx.Set(logging.ContextKey("dd.trace_idVisible"), traceID)
-	ctx.Set(logging.ContextKey("dd.span_idVisible"), childSpanID)
-	ctx.Set(logging.ContextKey("dd.parent_idVisible"), parentSpanID)
+	ctx.Set(logging.ContextKey(workflowTag), LLMAssistedSelection)
+	ctx.Set(logging.ContextKey(traceIDTag), traceID)
+	ctx.Set(logging.ContextKey(spanIDTag), childSpanID)
+	ctx.Set(logging.ContextKey(parentIDTag), parentSpanID)
 
 	logging.Log.Infof(ctx, "Starting child span with trace ID: %s, span ID: %s, and parent span ID: %s", traceID, childSpanID, parentSpanID)
 
@@ -308,7 +322,7 @@ func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(inp
 
 	// Helper function to send a request and get the response as string
 	sendRequest := func() string {
-		responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil)
+		responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil, nil)
 		defer close(responseChannel)
 
 		var responseStr string
@@ -325,6 +339,7 @@ func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(inp
 	}
 
 	logging.Log.Debugf(ctx, "System prompt: %s", systemPrompt)
+	logging.Log.Debugf(ctx, "User prompt: %s", input)
 
 	// Collect all responses with child span for parallel execution
 	allResponses := runRequestsInParallel(n, sendRequest, traceID, childSpanID)
@@ -339,14 +354,16 @@ func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(inp
 	}
 
 	// get input token count
-	inputTokenCount, _ := getTokenCount(tokenCountModelName, input, traceID, childSpanID)
-	promptTokenCount, _ := getTokenCount(tokenCountModelName, systemPrompt, traceID, childSpanID)
+	userPromptTokenCount, _ := getTokenCount(tokenCountModelName, input, traceID, childSpanID)
+	systemPromptTokenCount, _ := getTokenCount(tokenCountModelName, systemPrompt, traceID, childSpanID)
+	inputTokenCount := (systemPromptTokenCount + userPromptTokenCount) * n
 
 	// get the output token count
 	combinedResponseText := strings.Join(allResponses, "\n")
 	outputTokenCount, _ := getTokenCount(tokenCountModelName, combinedResponseText, traceID, childSpanID)
 
-	var totalTokenCount = (promptTokenCount+inputTokenCount)*n + outputTokenCount
+	var totalTokenCount = inputTokenCount + outputTokenCount
+	logging.Log.Debugf(ctx, "Input token count: %d", inputTokenCount)
 	logging.Log.Debugf(ctx, "Output token count: %d", outputTokenCount)
 	logging.Log.Debugf(ctx, "Total token count: %d", totalTokenCount)
 

@@ -94,9 +94,9 @@ func parseMessageForType(msgType string, msg string) (finalMsg []string, lineNos
 
 // Parse error String with pyright
 func GetValidationPrompt(errStr string, latestAPISignatures []string) (errPrompt string) {
-	errPrompt = "You are a code debugging expert, following errors and warnings were found in given pyaedt script code. Fix API calls with reference to ansys.aedt.core library latest version of pyaedt. "
+	errPrompt = "You are a code debugging expert, following errors and warnings were found in given python script code. Fix API calls with using ansys.aedt.core library. "
 	if len(latestAPISignatures) > 0 {
-		errPrompt += "Use following latest API reference signatures:\n. Latest API Signatures:\n"
+		errPrompt += "Use following latest API reference signatures:\n. Latest ansys.aedt.core API Signatures:\n"
 		for  _, apis := range latestAPISignatures {
 			errPrompt += apis 
 			errPrompt += "\n"

@@ -953,7 +953,9 @@ func parseAPINames(input string) (listApis []string) {
 	libContext := "ansys.aedt.core"
 	aedtApps := []string{"desktop", "hfss", "maxwell", "circuit", "icepak", "hfss3dlayout", "mechanical", "rmxprt", "emit", "maxwellcircuit",}
 	clearList := strings.ReplaceAll(input, "\n", "")
-	clearList = strings.ReplaceAll(clearList, "```python", "")
+	clearList = strings.ReplaceAll(clearList, "```", "")
+	clearList = strings.ReplaceAll(clearList, "plaintext", "")
+	clearList = strings.ReplaceAll(clearList, "python", "")
 	clearList = strings.ReplaceAll(clearList, "```", "")
 	listRawApis := strings.Split(clearList, ",")// ignore python
 	// add suffix ansys.aedt.core ?
@@ -1012,6 +1014,7 @@ func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessag
 	var responseAsStr string
 	validateCode = true
 	validationCount := 2
+	var pythonCodeTemp string
 	var latestAPISignatures []string
 	for cnt := range validationCount {
 		for response := range responseChannel {
@@ -1030,12 +1033,14 @@ func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessag
 		}
 
 		// Extract the code from the response
+	
 		pythonCode, err := extractPythonCode(responseAsStr)
+		pythonCodeTemp = pythonCode
 		// kapatil: 
 		// Get latest API signatures for all
 		//var latestAPISignatures []string
-		listAPIPrompt := "List PyAEDT APIs used in following python code, provide list as a comma separated list:"
-		listAPIPrompt += "Python Code:\n\n"
+		listAPIPrompt := "For following code, list only apis as comma separated values and do  not explain anyting"
+		//listAPIPrompt += "Python Code:\n"
 		listAPIPrompt += responseAsStr
 		logging.Log.Debugf(&logging.ContextMap{}, "**Query APIs for %s", listAPIPrompt)
 		// API list LLM and send chat request
@@ -1059,20 +1064,27 @@ func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessag
 				// kapatil: redo code generation 
 				// Prompt: Following errors are found in code, fix code w.r.t pyaedt code library
 				errPrompt := GetValidationPrompt(err.Error(), latestAPISignatures)
+				time.Sleep(3 * time.Second)
 				if errPrompt != "" {
-					errPrompt += "Pyaedt script:\n\n " + pythonCode
+					errPrompt += "Pyaedt script:\n " + pythonCode
 					// Set up WebSocket connection with LLM and send chat request
-					responseChannel = sendChatRequest(errPrompt, "code", nil, 0, "", llmHandlerEndpoint, nil, nil, nil)
-					logging.Log.Debugf(&logging.ContextMap{}, "Request review : ",errPrompt)
+					responseChannel = sendChatRequest(errPrompt, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
+					logging.Log.Debugf(&logging.ContextMap{}, "Request review : %v",errPrompt)
 				}
+			} else {
+				break
 			}
 		}
-		logging.Log.Debugf(&logging.ContextMap{}, "***Validation Loop %d", cnt)
+		logging.Log.Debugf(&logging.ContextMap{}, "***Validation Loop %d************************", cnt)
 	}//validationloop
+	logging.Log.Debugf(&logging.ContextMap{}, "Validation done!")	
+	tempPrompt := "return this python code no explaination\n"+ pythonCodeTemp
+	responseChannel = sendChatRequest(tempPrompt, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
 	
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
-		
+		logging.Log.Debugf(&logging.ContextMap{}, "Streaming ..")	
+		validateCode = false
 		// Create a stream channel
 		streamChannel := make(chan string, 400)
 		// Start a goroutine to transfer the data from the response channel to the stream channel

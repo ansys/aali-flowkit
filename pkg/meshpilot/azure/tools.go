@@ -61,9 +61,6 @@ func GetActionsSubworkflows() []struct {
 	}
 
 	for i := 1; i <= toolAmountInt; i++ {
-		if i == 8 { //Connect is remove from the tool list
-			continue // Skip the 8th tool as per the original logic
-		}
 
 		nameKey := fmt.Sprintf("APP_TOOL_ACTION_%d_NAME", i)
 		descKey := fmt.Sprintf("APP_TOOL_ACTION_%d_DESCRIPTION", i)

@@ -47,6 +47,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"ShortenMessageHistory":                                                                     ShortenMessageHistory,
 	"CheckTokenLimitReached":                                                                    CheckTokenLimitReached,
 	"PyaedtBuildFinalQueryForCodeLLMRequest":                                                    PyaedtBuildFinalQueryForCodeLLMRequest,
+	"PyaedtCodeValidationLoop": 								     PyaedtCodeValidationLoop,
 
 	// knowledge db
 	"SendVectorsToKnowledgeDB": SendVectorsToKnowledgeDB,

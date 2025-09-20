@@ -953,13 +953,13 @@ func parseAPINames(input string) (listApis []string) {
 	// expected input
 	// `python \n api1,api2,api3\n`
 	libContext := "ansys.aedt.core"
-	aedtApps := []string{"desktop", "hfss", "maxwell", "circuit", "icepak", "hfss3dlayout", "mechanical", "rmxprt", "emit", "maxwellcircuit",}
+	aedtApps := []string{"desktop", "hfss", "maxwell", "circuit", "icepak", "hfss3dlayout", "mechanical", "rmxprt", "emit", "maxwellcircuit"}
 	clearList := strings.ReplaceAll(input, "\n", "")
 	clearList = strings.ReplaceAll(clearList, "```", "")
 	clearList = strings.ReplaceAll(clearList, "plaintext", "")
 	clearList = strings.ReplaceAll(clearList, "python", "")
 	clearList = strings.ReplaceAll(clearList, "```", "")
-	listRawApis := strings.Split(clearList, ",")// ignore python
+	listRawApis := strings.Split(clearList, ",") // ignore python
 	// add suffix ansys.aedt.core ?
 	// we get imports and function names here
 	// map it as class to function names
@@ -982,7 +982,7 @@ func parseAPINames(input string) (listApis []string) {
 				//check is aaedt app
 				for _, app := range aedtApps {
 					if strings.ToLower(funcName) == app {
-						funcName = libContext + "."+ strings.ToLower(funcName)+ "."+funcName + ".__init__" 
+						funcName = libContext + "." + strings.ToLower(funcName) + "." + funcName + ".__init__"
 					}
 				}
 				listApis = append(listApis, funcName)
@@ -992,7 +992,6 @@ func parseAPINames(input string) (listApis []string) {
 	}
 	return listApis
 }
-
 
 // PyaedtCodeValidationLoop performs a code validation request to LLM
 //
@@ -1012,7 +1011,7 @@ func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessag
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
+	responseChannel := sendChatRequest(input, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil, nil)
 	var responseAsStr string
 	validateCode = true
 	validationCount := 2
@@ -1024,10 +1023,10 @@ func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessag
 			if response.Type == "error" {
 				panic(response.Error)
 			}
-	
+
 			// Accumulate the responses
 			responseAsStr += *(response.ChatData)
-	
+
 			// If we are at the last message, break the loop
 			if *(response.IsLast) {
 				break
@@ -1035,10 +1034,10 @@ func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessag
 		}
 
 		// Extract the code from the response
-	
+
 		pythonCode, err := extractPythonCode(responseAsStr)
 		pythonCodeTemp = pythonCode
-		// kapatil: 
+		// kapatil:
 		// Get latest API signatures for all
 		//var latestAPISignatures []string
 		listAPIPrompt := "For following code, list only apis as comma separated values and do  not explain anyting"
@@ -1046,7 +1045,7 @@ func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessag
 		listAPIPrompt += responseAsStr
 		logging.Log.Debugf(&logging.ContextMap{}, "**Query APIs for %s", listAPIPrompt)
 		// API list LLM and send chat request
-		responseApiList := sendChatRequestNoStreaming(listAPIPrompt, "code", nil, 0, "", llmHandlerEndpoint, nil, nil, nil)
+		responseApiList := sendChatRequestNoStreaming(listAPIPrompt, "code", nil, 0, "", llmHandlerEndpoint, nil, nil, nil, nil)
 		apisUsed := parseAPINames(responseApiList)
 		logging.Log.Debugf(&logging.ContextMap{}, "Apis read: %v", apisUsed)
 		latestAPISignatures = GetLatestApiSignaturesForApis(apisUsed)
@@ -1063,29 +1062,29 @@ func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessag
 			}
 			if err != nil {
 				// parse errors
-				// kapatil: redo code generation 
+				// kapatil: redo code generation
 				// Prompt: Following errors are found in code, fix code w.r.t pyaedt code library
 				errPrompt := GetValidationPrompt(err.Error(), latestAPISignatures)
 				time.Sleep(3 * time.Second)
 				if errPrompt != "" {
 					errPrompt += "Pyaedt script:\n " + pythonCode
 					// Set up WebSocket connection with LLM and send chat request
-					responseChannel = sendChatRequest(errPrompt, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
-					logging.Log.Debugf(&logging.ContextMap{}, "Request review : %v",errPrompt)
+					responseChannel = sendChatRequest(errPrompt, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil, nil)
+					logging.Log.Debugf(&logging.ContextMap{}, "Request review : %v", errPrompt)
 				}
 			} else {
 				break
 			}
 		}
 		logging.Log.Debugf(&logging.ContextMap{}, "***Validation Loop %d************************", cnt)
-	}//validationloop
-	logging.Log.Debugf(&logging.ContextMap{}, "Validation done!")	
-	tempPrompt := "return this python code no explaination\n"+ pythonCodeTemp
-	responseChannel = sendChatRequest(tempPrompt, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
-	
+	} //validationloop
+	logging.Log.Debugf(&logging.ContextMap{}, "Validation done!")
+	tempPrompt := "return this python code no explaination\n" + pythonCodeTemp
+	responseChannel = sendChatRequest(tempPrompt, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil, nil)
+
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
-		logging.Log.Debugf(&logging.ContextMap{}, "Streaming ..")	
+		logging.Log.Debugf(&logging.ContextMap{}, "Streaming ..")
 		validateCode = false
 		// Create a stream channel
 		streamChannel := make(chan string, 400)
@@ -1097,12 +1096,10 @@ func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessag
 
 	// Close the response channel
 	defer close(responseChannel)
-	
 
 	// Return the response
 	return responseAsStr, nil
 }
-
 
 // PerformCodeLLMRequest performs a code generation request to LLM
 //
@@ -1126,7 +1123,7 @@ func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, 
 
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
-		
+
 		// Create a stream channel
 		streamChannel := make(chan string, 400)
 		// Start a goroutine to transfer the data from the response channel to the stream channel
@@ -1137,7 +1134,7 @@ func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, 
 
 	// Close the response channel
 	defer close(responseChannel)
-	
+
 	// else Process all responses
 	var responseAsStr string
 	for response := range responseChannel {
@@ -1177,7 +1174,7 @@ func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, 
 						responseAsStr += "\nCode is valid."
 					}
 				} else {
-					
+
 					responseAsStr += "\nCode is invalid."
 				}
 			}
@@ -1278,7 +1275,7 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 //   - finalQuery: the final query
 func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse, userGuideSearch bool, citations []string, elementContexts []string, designContext string) (finalQuery string) {
 
-	finalQuery = "You are a Python expert with experience in writing complete, functional PyAEDT scripts. These scripts typically include python code for tasks such as geometry creation, boundary setup, and analysis setups - especially for HFSS (or other AnsysEM tools as applicable). Your task is to write valid Python code using PyAEDT APIs." 
+	finalQuery = "You are a Python expert with experience in writing complete, functional PyAEDT scripts. These scripts typically include python code for tasks such as geometry creation, boundary setup, and analysis setups - especially for HFSS (or other AnsysEM tools as applicable). Your task is to write valid Python code using PyAEDT APIs."
 	if len(elementContexts) > 0 {
 		// assuming we get the first element context only
 		finalQuery += elementContexts[0]
@@ -1383,9 +1380,8 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	//newRequest := RephraseRequest_kapatil(request)
 	newRequest := request
 
-
 	// Pass in the original request without blank in the front and end
-	finalQuery += "Generate the Python code for the following request: **" + strings.TrimSpace(new_request) + "** \n"
+	finalQuery += "Generate the Python code for the following request: **" + strings.TrimSpace(newRequest) + "** \n"
 
 	// Convert designContext to a JSON format: map[string]any
 	convertDesignContext := func(designContext string, format string) (any, error) {

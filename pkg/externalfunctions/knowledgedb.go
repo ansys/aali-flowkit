@@ -45,8 +45,9 @@ import (
 // Parameters:
 //   - elementName - string
 //   - elementType - string
-// TODO: Move to pyaedt.go file 
-func PyaedtGetElementContextFromGraphDb(dbResponse sharedtypes.ApiDbResponse) (exampleNames []string , parameters []string, returnTypes []string, pyaedtGroupCaller string){
+//
+// TODO: Move to pyaedt.go file
+func PyaedtGetElementContextFromGraphDb(dbResponse sharedtypes.ApiDbResponse) (exampleNames []string, parameters []string, returnTypes []string, pyaedtGroupCaller string) {
 	ctx := &logging.ContextMap{}
 	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
 	if err != nil {
@@ -55,55 +56,36 @@ func PyaedtGetElementContextFromGraphDb(dbResponse sharedtypes.ApiDbResponse) (e
 	// kapatil : instead of element names, can we use GUID ?
 	// Assuming this is a single entry point
 	//if len(dbResponse) > 0 {
+	elementType := dbResponse.Type
+	elementName := dbResponse.Name
+	logging.Log.Debugf(ctx, "reading entry points %s of type %s", elementName, elementType)
 
-		elementType := dbResponse.Type
-		elementName := dbResponse.Name
-		logging.Log.Debugf(ctx, "reading entry points %s of type %s", elementName, elementType)
+	// Get pyaedt group
+	// if element type = method -> go to class -> check isPyaedtGroup
+	// if element type = class -> check isPyaedtGroup
+	pGroup, err := graphdb.GraphDbDriver.GetPyaedtGroupFromCodeGenerationElement(elementType, elementName)
+	if err != nil {
+		logPanic(ctx, "error Getting pyaedtGroup from code generation element: %v", err)
+	} else {
 
-
-		// Get pyaedt group
-		// if element type = method -> go to class -> check isPyaedtGroup
-		// if element type = class -> check isPyaedtGroup
-		pGroup, err := graphdb.GraphDbDriver.GetPyaedtGroupFromCodeGenerationElement(elementType, elementName)
+		pyaedtGroupCaller, err := graphdb.GraphDbDriver.GetPyaedtGroupCaller(pGroup)
 		if err != nil {
-			logPanic(ctx, "error Getting pyaedtGroup from code generation element: %v", err)
-		} else {
-
-			pyaedtGroupCaller, err := graphdb.GraphDbDriver.GetPyaedtGroupCaller(pGroup)
-		        if err != nil {
-				logPanic(ctx, "error Getting pyaedtGroup Caller from code generation element: %v", err)
-			}
-			logging.Log.Debugf(ctx, "PyaedtCaller Type %s", pyaedtGroupCaller)
-
+			logPanic(ctx, "error Getting pyaedtGroup Caller from code generation element: %v", err)
 		}
+		logging.Log.Debugf(ctx, "PyaedtCaller Type %s", pyaedtGroupCaller)
 
+	}
 
-		//exampleNames, err := graphdb.GraphDbDriver.GetExamplesFromCodeGenerationElement(elementType, elementName)
-		//if err != nil {
-		//	logPanic(ctx, "error Getting examples from code generation element: %v", err)
-		//}
-		if len(exampleNames) > 0 {
-			for ex, _ := range exampleNames {
-				logging.Log.Debugf(ctx, "Reading examples %s", ex)
-	        	}   
-	        } else {
-			logging.Log.Debugf(ctx, "GetExamplesFromGraphDB: No db points for this entry point")
-		}
-		// Get Parameters
-		parameters, err = graphdb.GraphDbDriver.GetParametersFromCodeGenerationElement(elementType, elementName)
-		if err != nil {
-			logPanic(ctx, "error Getting parameters from code generation element: %v", err)
-		}
-		if len(parameters) > 0 {
-			for ex, _ := range parameters {
-				logging.Log.Debugf(ctx, "Reading parameters %s", ex)
-	        	}   
-	        } else {
-			logging.Log.Debugf(ctx, "GetParameters: No db points for this entry point")
-
+	//exampleNames, err := graphdb.GraphDbDriver.GetExamplesFromCodeGenerationElement(elementType, elementName)
+	//if err != nil {
+	//	logPanic(ctx, "error Getting examples from code generation element: %v", err)
+	//}
+	if len(exampleNames) > 0 {
+		for ex, _ := range exampleNames {
+			logging.Log.Debugf(ctx, "Reading examples %s", ex)
 		}
 	} else {
-		logging.Log.Debugf(ctx, "No db points for this entry point")
+		logging.Log.Debugf(ctx, "GetExamplesFromGraphDB: No db points for this entry point")
 	}
 	// Get Parameters
 	parameters, err = graphdb.GraphDbDriver.GetParametersFromCodeGenerationElement(elementType, elementName)
@@ -112,18 +94,23 @@ func PyaedtGetElementContextFromGraphDb(dbResponse sharedtypes.ApiDbResponse) (e
 	}
 	if len(parameters) > 0 {
 		for ex, _ := range parameters {
-			logging.Log.Debugf(ctx, "Reading parameters %v", ex)
-		}
-
-		if len(returnTypes) > 0 {
-			for ex, _ := range returnTypes {
-				logging.Log.Debugf(ctx, "Reading returnTypes %s", ex)
-	        	}   
-	        } else {
-			logging.Log.Debugf(ctx, "GetReturnTypes: No db points for this entry point")
+			logging.Log.Debugf(ctx, "Reading parameters %s", ex)
 		}
 	} else {
-		logging.Log.Debugf(ctx, "No db points for this entry point")
+		logging.Log.Debugf(ctx, "GetParameters: No db points for this entry point")
+	}
+
+	// Get Return types
+	returnTypes, err = graphdb.GraphDbDriver.GetReturnTypeFromCodeGenerationElement(elementType, elementName)
+	if err != nil {
+		logPanic(ctx, "error Getting return types  from code generation element: %v", err)
+	}
+	if len(returnTypes) > 0 {
+		for ex, _ := range returnTypes {
+			logging.Log.Debugf(ctx, "Reading returnTypes %s", ex)
+		}
+	} else {
+		logging.Log.Debugf(ctx, "GetReturnTypes: No db points for this entry point")
 	}
 
 	//} else {
@@ -148,7 +135,7 @@ func PyaedtBatchGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResp
 		logPanic(nil, "error initializing graphdb: %v", err)
 	}
 
-        elementParams := make(map[string][]string) // todo; not sure how to use it
+	elementParams := make(map[string][]string) // todo; not sure how to use it
 	elementReturns := make(map[string][]string)
 	// kapatil : instead of element names, can we use GUID ?
 	// Assuming this is a single entry point
@@ -159,7 +146,7 @@ func PyaedtBatchGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResp
 		logging.Log.Debugf(ctx, "Reading entry points %s of type %s", elementName, elementType)
 
 		tempPrompt := "Possibly make use of this method "
-		tempPrompt +=  elementName 
+		tempPrompt += elementName
 		tempPrompt += "."
 		// Hardcode PyaedtGroups for some classes
 		if elementParentClass == "ansys.aedt.core.Hfss" {
@@ -189,15 +176,15 @@ func PyaedtBatchGetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResp
 				tempPrompt += r
 				tempPrompt += " "
 			}
-			tempPrompt += "." 
-		
+			tempPrompt += "."
+
 		}
 		if dbResponse.PyaedtGroup != pyaedtGroupCallerType {
 			if pyaedtGroupCallerType != "Pyaedt_Application" {
-				tempPrompt += "To call this function a pyaedt application or solver object like Desktop, HFSS,Maxwell, Circuit,Q3d, etc should be passed as an argument..\n" 
+				tempPrompt += "To call this function a pyaedt application or solver object like Desktop, HFSS,Maxwell, Circuit,Q3d, etc should be passed as an argument..\n"
 			}
 		} else {
-			tempPrompt += "To call this function you will need to create or reuse a pyaedt application or solver object like Dekstop,HFSS,Maxwell, Circuit,Q3d,etc.\n" 
+			tempPrompt += "To call this function you will need to create or reuse a pyaedt application or solver object like Dekstop,HFSS,Maxwell, Circuit,Q3d,etc.\n"
 		}
 		logging.Log.Debugf(ctx, "kapatil: Create Context prompt draft: %s", tempPrompt)
 		elementContexts = append(elementContexts, tempPrompt)
@@ -382,7 +369,7 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	scoreThreshold := float32(similaritySearchMinScore)
 
 	var query qdrant.QueryPoints
-	
+
 	// Use fusion if both dense and sparse vectors are available
 	if sparse != nil && len(sparse) > 0 {
 		logging.Log.Debugf(&logging.ContextMap{}, "*********** Sparse query ***********")
@@ -529,8 +516,8 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 		//logging.Log.Debugf(&logging.ContextMap{}, "Similarity pyaedt_group: %v", dbResponse.PyaedtGroup)
 	}
 
-        simElementLogLine := strings.Join(eleNamesOut, ",")
-        logging.Log.Debugf(&logging.ContextMap{}, "Similarity elemnts: %s", simElementLogLine)
+	simElementLogLine := strings.Join(eleNamesOut, ",")
+	logging.Log.Debugf(&logging.ContextMap{}, "Similarity elemnts: %s", simElementLogLine)
 
 	return dbResponses
 }

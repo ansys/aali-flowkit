@@ -72,7 +72,7 @@ func SendVectorsToKnowledgeDB(vector []float32, keywords []string, keywordsSearc
 	var query qdrant.QueryPoints
 
 	// Use fusion if both dense and sparse vectors are available
-	if sparse != nil && len(sparse) > 0 {
+	if len(sparse) > 0 {
 		// Create prefetch queries for hybrid search using RRF (Reciprocal Rank Fusion)
 		prefetchQueries := []*qdrant.PrefetchQuery{
 			// Dense vector search prefetch

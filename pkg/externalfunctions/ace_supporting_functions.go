@@ -258,7 +258,7 @@ func getExampleReferences(baseSearchNodeComplete string, db string) (string, []i
 	escapedName := strings.ReplaceAll(baseSearchNodeComplete, `"`, `\"`)
 	query := fmt.Sprintf(`MATCH (root:Example {name: "%s"})-[r]-(neighbor) RETURN root.name AS rootName, label(r) AS relationshipType, r AS relationshipProps, neighbor.name AS neighborName, label(neighbor) AS neighborLabel, neighbor.parameters AS neighborParameters, neighbor.remarks AS neighborRemarks, neighbor.return_type AS neighborReturn, neighbor.summary AS neighborSummary`, escapedName)
 	parameters := aali_graphdb.ParameterMap{}
-	result := GeneralGraphDbQuery(query, parameters, db)
+	result := GeneralGraphDbQuery(db, query, parameters)
 	for _, relationship := range result {
 		element := relationship["neighborName"]
 		elementType := relationship["neighborLabel"]
@@ -309,7 +309,7 @@ func getExampleNodesFromElement(baseSearchType string, baseSearchNodeComplete st
 
 	parameters := aali_graphdb.ParameterMap{}
 
-	result := GeneralGraphDbQuery(query, parameters, dbname)
+	result := GeneralGraphDbQuery(dbname, query, parameters)
 	preparedExample := []map[string]interface{}{}
 	for _, relationship := range result {
 		element := relationship["example"]
@@ -338,7 +338,7 @@ func queryExample(exampleName string, collectionName string) []map[string]interf
 	client, err := qdrant_utils.QdrantClient()
 
 	if err != nil {
-		logging.Log.Error(&logging.ContextMap{}, "Error creating Qdrant client: %v", err)
+		logging.Log.Infof(&logging.ContextMap{}, "Error creating Qdrant client: %v", err)
 		return []map[string]interface{}{}
 	}
 	resultCount := uint64(1000)
@@ -447,7 +447,7 @@ func getDocumentation(baseSearchNodeComplete string, db string) (string, []inter
 	parameters := aali_graphdb.ParameterMap{}
 
 	// Time the graph database query
-	result := GeneralGraphDbQuery(query, parameters, db)
+	result := GeneralGraphDbQuery(db, query, parameters)
 	for _, relationship := range result {
 		element := relationship["neighborName"]
 		elementType := relationship["neighborLabel"]
@@ -793,15 +793,13 @@ func doHybridQuery(
 	maxRetrievalCount int,
 	outputFields []string,
 	queryString string,
-	denseWeight float64,
-	sparseWeight float64,
 	nodeType string) []*qdrant.ScoredPoint {
 
 	// get the LLM handler endpoint
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send embeddings request
-	responseChannel := sendEmbeddingsRequestWithSparseDense(queryString, llmHandlerEndpoint, true, nil)
+	responseChannel := sendEmbeddingsRequest(queryString, llmHandlerEndpoint, true, nil)
 	defer close(responseChannel)
 
 	// Process the first response and close the channel
@@ -953,7 +951,7 @@ func getElementByName(nodeName string, nodeType string, dbname string) []map[str
 	query := fmt.Sprintf("MATCH (n:Element) WHERE n.name = '%s' AND n.type = '%s' RETURN n", escapedNodeName, escapedNodeType)
 	logging.Log.Infof(&logging.ContextMap{}, "Executing query to get element by name: %s", query)
 
-	result := GeneralGraphDbQuery(query, aali_graphdb.ParameterMap{}, dbname)
+	result := GeneralGraphDbQuery(dbname, query, aali_graphdb.ParameterMap{})
 	return result
 }
 
@@ -964,7 +962,7 @@ func searchExamplesForMethod(collectionName string, ansysProduct string, history
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING FUNC_SEARCH_EXAMPLES_FOR_METHOD - Duration: %v", duration)
 	}()
 
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_SEARCH_EXAMPLES_FOR_METHOD - Input: collectionName=%s, ansysProduct=%s, methodNames=%s, maxExamples=%d, dbname=%s", collectionName, ansysProduct, methodNames, maxExamples, dbname)
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_SEARCH_EXAMPLES_FOR_METHOD - Input: collectionName=%s, ansysProduct=%s, methodNames=%s, maxExamples=%d, dbname=%s histroy=%s", collectionName, ansysProduct, methodNames, maxExamples, dbname, historyMessage)
 
 	var outputBuilder strings.Builder
 	// split ; sperated methodName into parts
@@ -977,17 +975,17 @@ func searchExamplesForMethod(collectionName string, ansysProduct string, history
 			continue
 		}
 
-		result, ok := nresult[0]["n"].(map[string]interface{})
+		result, ok := nresult[0]["n"].(map[string]any)
 		if !ok {
-			logging.Log.Error(&logging.ContextMap{}, "Failed to parse method result for: %s", methodName)
+			logging.Log.Infof(&logging.ContextMap{}, "Failed to parse method result for: %s", methodName)
 			continue
 		}
 
 		apiExample := result["example"]
-		if apiExample == nil {
-			logging.Log.Warnf(&logging.ContextMap{}, "No API example found for method: %s", methodName)
-			continue
-		}
+		// if apiExample == nil {
+		// 	logging.Log.Warnf(&logging.ContextMap{}, "No API example found for method: %s", methodName)
+		// 	continue
+		// }
 
 		examples := getExampleNodesFromElement("Method", methodName, collectionName, dbname)
 		outputBuilder.WriteString(methodName)

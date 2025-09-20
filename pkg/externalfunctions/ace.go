@@ -70,12 +70,13 @@ func RewriteQueryWithHistory(historyMessage []sharedtypes.HistoricMessage, userQ
 //   - maxRetrievalCount: the maximum number of results to be retrieved.
 //   - denseWeight: the weight for the dense vector. (default: 0.9)
 //   - sparseWeight: the weight for the sparse vector. (default: 0.1)
-//   - userQuery: the user query to be used for the query.
+//   - multipleQueries: multiple versions of user qurey to perform search
 //
 // Returns:
 //   - generatedCode: the generated code as a string
-func SearchExamples(libraryName string, maxRetrievalCount int, denseWeight float64, sparseWeight float64, userQuery string) string {
+func SearchExamples(libraryName string, maxRetrievalCount int, denseWeight float64, sparseWeight float64, multipleQueries []string) string {
 	startTime := time.Now()
+	userQuery := joinStrings(multipleQueries, ",")
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_SEARCH_EXAMPLES - Input: libraryName=%s, maxRetrievalCount=%d, denseWeight=%f, sparseWeight=%f, userQuery=%s", libraryName, maxRetrievalCount, denseWeight, sparseWeight, userQuery)
 	defer func() {
 		duration := time.Since(startTime)
@@ -84,7 +85,7 @@ func SearchExamples(libraryName string, maxRetrievalCount int, denseWeight float
 
 	outputFields := []string{"text", "document_name", "previous_chunk", "next_chunk", "guid"}
 	collectionName := fmt.Sprintf("%s_examples", libraryName)
-	scoredPoints := doHybridQuery(collectionName, maxRetrievalCount, outputFields, userQuery, denseWeight, sparseWeight, "")
+	scoredPoints := doHybridQuery(collectionName, maxRetrievalCount, outputFields, userQuery, "")
 
 	if len(scoredPoints) == 0 {
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_SEARCH_EXAMPLES - Output: (empty)")
@@ -149,12 +150,13 @@ func SearchExamples(libraryName string, maxRetrievalCount int, denseWeight float
 //   - maxRetrievalCount: the maximum number of results to be retrieved.
 //   - denseWeight: the weight for the dense vector. (default: 0.9)
 //   - sparseWeight: the weight for the sparse vector. (default: 0.1)
-//   - userQuery: the user query to be used for the query.
+//   - multipleQueries: multiple versions of user qurey to perform search
 //
 // Returns:
 //   - examplesString: the formatted examples string containing the method examples and references
-func SearchMethods(libraryName string, maxRetrievalCount int, denseWeight float64, sparseWeight float64, userQuery string) string {
+func SearchMethods(libraryName string, maxRetrievalCount int, denseWeight float64, sparseWeight float64, multipleQueries []string) string {
 	startTime := time.Now()
+	userQuery := joinStrings(multipleQueries, ",")
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_SEARCH_METHODS - Input: libraryName=%s, maxRetrievalCount=%d, denseWeight=%f, sparseWeight=%f, userQuery=%s", libraryName, maxRetrievalCount, denseWeight, sparseWeight, userQuery)
 	defer func() {
 		duration := time.Since(startTime)
@@ -166,7 +168,7 @@ func SearchMethods(libraryName string, maxRetrievalCount int, denseWeight float6
 	outputFields := []string{"text", "document_name", "previous_chunk", "next_chunk", "guid"}
 
 	collectionName := fmt.Sprintf("%s_elements", libraryName)
-	scoredPoints := doHybridQuery(collectionName, maxRetrievalCount, outputFields, bestQuery, denseWeight, sparseWeight, "")
+	scoredPoints := doHybridQuery(collectionName, maxRetrievalCount, outputFields, bestQuery, "")
 
 	// Format results as requested
 	var exampleBuilder strings.Builder
@@ -200,13 +202,14 @@ func SearchMethods(libraryName string, maxRetrievalCount int, denseWeight float6
 //
 // Parameters:
 //   - libraryName: the name of the library to be used in the system message
-//   - userQuery: the user query to be used for the query.
+//   - multipleQueries: multiple versions of user qurey to perform search
 //   - maxRetrievalCount: the maximum number of results to be retrieved.
 //
 // Returns:
 //   - response: the response from the cognitive services as a string
-func GetRawDataFromCognitiveServicesForDocumentation(libraryName string, userQuery string, maxRetrievalCount int) string {
+func GetRawDataFromCognitiveServicesForDocumentation(libraryName string, multipleQueries []string, maxRetrievalCount int) string {
 	startTime := time.Now()
+	userQuery := joinStrings(multipleQueries, ",")
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_GET_RAW_DATA_COGNITIVE_SERVICES - Input: libraryName=%s, userQuery=%s, maxRetrievalCount=%d", libraryName, userQuery, maxRetrievalCount)
 	defer func() {
 		duration := time.Since(startTime)
@@ -262,7 +265,10 @@ func GetRawDataFromCognitiveServicesForDocumentation(libraryName string, userQue
 	req.Header.Set("api-key", config.GlobalConfig.AZURE_EMBEDDING_TOKEN)
 
 	client := &http.Client{}
-	resp, _ := client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		logging.Log.Infof(&logging.ContextMap{}, "error sending request: %s", err)
+	}
 	defer resp.Body.Close()
 
 	var embResp map[string]interface{}
@@ -355,7 +361,7 @@ func GetRawDataFromCognitiveServicesForDocumentation(libraryName string, userQue
 // Parameters:
 //   - libraryName: the name of the library to be used in the system message
 //   - maxRetrievalCount: the maximum number of results to be retrieved.
-//   - userQuery: the query string to be used for the query.
+//   - multipleQueries: multiple versions of user qurey to perform search
 //   - denseWeight: the weight for the dense vector. (default: 0.9)
 //   - sparseWeight: the weight for the sparse vector. (default: 0.1)
 //   - historyMessage: the history of messages to be used in the query
@@ -363,8 +369,9 @@ func GetRawDataFromCognitiveServicesForDocumentation(libraryName string, userQue
 //
 // Returns:
 //   - userResponse: the formatted user response string
-func SearchDocumentation(libraryName string, maxRetrievalCount int, userQuery string, denseWeight float64, sparseWeight float64, historyMessage []sharedtypes.HistoricMessage, tableOfContentsString string) string {
+func SearchDocumentation(libraryName string, maxRetrievalCount int, multipleQueries []string, denseWeight float64, sparseWeight float64, historyMessage []sharedtypes.HistoricMessage, tableOfContentsString string) string {
 	startTime := time.Now()
+	userQuery := joinStrings(multipleQueries, ",")
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_SEARCH_DOCUMENTATION - Input: libraryName=%s, maxRetrievalCount=%d, userQuery=%s, denseWeight=%f, sparseWeight=%f, historyMessage=%v, tableOfContentsString=%s", libraryName, maxRetrievalCount, userQuery, denseWeight, sparseWeight, historyMessage, tableOfContentsString)
 	defer func() {
 		duration := time.Since(startTime)
@@ -480,7 +487,7 @@ func SearchDocumentation(libraryName string, maxRetrievalCount int, userQuery st
 			escapedSectionName = strings.ReplaceAll(escapedSectionName, `"`, `\"`)
 			query := fmt.Sprintf("MATCH (n:UserGuide {name: \"%s\"})-[:References]->(reference) RETURN reference.name AS section_name LIMIT 5", escapedSectionName)
 			parameters := aali_graphdb.ParameterMap{}
-			result := GeneralGraphDbQuery(query, parameters, libraryName)
+			result := GeneralGraphDbQuery(libraryName, query, parameters)
 
 			for refIdx, reference := range result {
 				if refIdx >= 3 {
@@ -534,12 +541,13 @@ func SearchDocumentation(libraryName string, maxRetrievalCount int, userQuery st
 //   - methodName: the name of the method to be used in the query
 //   - examples : the examples to be used in the query
 //   - historyMessages: the history of messages to be used in the query
-//   - userQuery: the user query to be used for the query
+//   - userQuery: Query provided by user
 //   - libraryName: the name of the library to be used in the query
+//   - developerMode: To return output with context
 //
 // Returns:
 //   - Code as a string
-func GenerateCode(methods string, examples string, methods_from_user_guide string, historyMessages []sharedtypes.HistoricMessage, userQuery string, libraryName string) string {
+func GenerateCode(methods string, examples string, methods_from_user_guide string, historyMessages []sharedtypes.HistoricMessage, userQuery string, libraryName string, developerMode int) string {
 	startTime := time.Now()
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_GENERATE_CODE - Input: methods=%s, examples=%s, methods_from_user_guide=%s, historyMessages=%v, userQuery=%s, libraryName=%s", methods, examples, methods_from_user_guide, historyMessages, userQuery, libraryName)
 	defer func() {
@@ -548,6 +556,7 @@ func GenerateCode(methods string, examples string, methods_from_user_guide strin
 	}()
 
 	ansysProduct := pyansysProduct["name"][libraryName]
+
 	userMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided.
 		Use the API definition and the related APIs found. Do your best to generate the code based on the information available.
 
@@ -565,7 +574,32 @@ func GenerateCode(methods string, examples string, methods_from_user_guide strin
 
 		Respond with the following format, do not add anything else:
 		The generated Python code only`, ansysProduct, methods, examples, methods_from_user_guide)
+	if developerMode == 1 {
+		userMessage = fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided.
+			Use the API definition and the related APIs found. Do your best to generate the code based on the information available.
 
+			Methods: %s
+			Examples: %s
+			Methods from User Guide: %s
+
+			- STRICT: You are a code generation chatbot only create python code with respect to pyansys packages no documentation or reference purely python code
+			- Generate the code that solves the user query using only the Methods, Examples and Methods from User Guide.
+			- If you are not able to generate the code using the context provided, and Methods from User Guide has question instead of required context, Send the question as response.
+			- If you are sure about the code, return the code in markdown format.
+			- If you are not sure about the code and  Methods from User Guide does not have any question, return "Please provide more information about the user query and the methods to be used."
+			- If you think the context provided is okay to create a script, then do so. (Do logical thinking and provide the answer if required but always stay within the context and provide the answer only if you are sure about it.)
+			- DO ONLY what user asks dont add additional parameter or anything else.
+
+			Create a json respose, do not add anything else:
+			json
+			{
+				"Methods": "Methods provided as reference"
+				"Examples": "Examples provided as refernece"
+				"MethodsFromUserGuide": "Methods from User Guide"
+				"Code": "Code"
+			}
+				`, ansysProduct, methods, examples, methods_from_user_guide)
+	}
 	// - STRICT: Only use the context provided in this system message. Do NOT think outside this context, do NOT add anything else, do NOT invent or hallucinate anything beyond the provided information.
 
 	historyMessages = append(historyMessages, sharedtypes.HistoricMessage{
@@ -606,7 +640,7 @@ func QueryUserGuideAndFormat(libraryName string) string {
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING FUNC_QUERY_USER_GUIDE_FORMAT - Duration: %v", duration)
 	}()
 
-	object := GeneralGraphDbQuery("MATCH (chapter:UserGuide {level:1}) WHERE chapter.parent = 'index.md' OPTIONAL MATCH (section:UserGuide {level:2}) WHERE section.parent = chapter.document_name OPTIONAL MATCH (subsection:UserGuide {level:3}) WHERE subsection.parent = section.document_name RETURN chapter.title AS chapter_title, chapter.document_name AS chapter_doc, section.title AS section_title, section.document_name AS section_doc, subsection.title AS subsection_title, subsection.document_name AS subsection_doc ORDER BY chapter.title, section.title, subsection.title", aali_graphdb.ParameterMap{}, libraryName)
+	object := GeneralGraphDbQuery(libraryName, "MATCH (chapter:UserGuide {level:1}) WHERE chapter.parent = 'index.md' OPTIONAL MATCH (section:UserGuide {level:2}) WHERE section.parent = chapter.document_name OPTIONAL MATCH (subsection:UserGuide {level:3}) WHERE subsection.parent = section.document_name RETURN chapter.title AS chapter_title, chapter.document_name AS chapter_doc, section.title AS section_title, section.document_name AS section_doc, subsection.title AS subsection_title, subsection.document_name AS subsection_doc ORDER BY chapter.title, section.title, subsection.title", aali_graphdb.ParameterMap{})
 
 	result := convertJSONToCustomizeHelper(object, 0, "")
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_QUERY_USER_GUIDE_FORMAT - Output: %s", result)
@@ -679,13 +713,14 @@ func MakeAPIRequest(requestType string, endpoint string, header map[string]strin
 //
 // Parameters:
 //   - libraryName: the name of the library to be used in the system message
-//   - userQuery: the user query to be used for the query.
+//   - multipleQueries: multiple versions of user qurey to perform search
 //   - maxRetrievalCount: the maximum number of results to be retrieved.
 //
 // Returns:
 //   - response: the response from the cognitive services as a string
-func GetDataFromCognitiveServices(libraryName string, userQuery string, maxRetrievalCount int) string {
+func GetDataFromCognitiveServices(libraryName string, multipleQueries []string, maxRetrievalCount int) string {
 	startTime := time.Now()
+	userQuery := joinStrings(multipleQueries, ",")
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_GET_DATA_COGNITIVE_SERVICES - Input: libraryName=%s, userQuery=%s, maxRetrievalCount=%d", libraryName, userQuery, maxRetrievalCount)
 	defer func() {
 		duration := time.Since(startTime)
@@ -766,13 +801,14 @@ func GetDataFromCognitiveServices(libraryName string, userQuery string, maxRetri
 //
 // Parameters:
 //   - libraryName: the name of the library to be used in the system message
-//   - userQuery: the user query to be used for the query.
+//   - multipleQueries: multiple versions of user qurey to perform search
 //   - maxRetrievalCount: the maximum number of results to be retrieved.
 //
 // Returns:
 //   - response: the response from the cognitive services as a string
-func GetRawDataFromCognitiveServices(libraryName string, userQuery string, maxRetrievalCount int) string {
+func GetRawDataFromCognitiveServices(libraryName string, multipleQueries []string, maxRetrievalCount int) string {
 	startTime := time.Now()
+	userQuery := joinStrings(multipleQueries, ",")
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_GET_RAW_DATA_COGNITIVE_SERVICES - Input: libraryName=%s, userQuery=%s, maxRetrievalCount=%d", libraryName, userQuery, maxRetrievalCount)
 	defer func() {
 		duration := time.Since(startTime)
@@ -828,7 +864,11 @@ func GetRawDataFromCognitiveServices(libraryName string, userQuery string, maxRe
 	req.Header.Set("api-key", config.GlobalConfig.AZURE_EMBEDDING_TOKEN)
 
 	client := &http.Client{}
-	resp, _ := client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		logging.Log.Infof(&logging.ContextMap{}, "error sending request: %s", err)
+		return ""
+	}
 	defer resp.Body.Close()
 
 	var embResp map[string]interface{}
@@ -914,7 +954,7 @@ func GetRawDataFromCognitiveServices(libraryName string, userQuery string, maxRe
 // Preprocess the user input for better LLM understanding
 //
 // Tags:
-//   - @displayName: User Query Rewriting
+//   - @displayName: User Query Rewrite
 //
 // Parameters:
 // - userQuery: The original user query to be rewritten.
@@ -923,7 +963,9 @@ func GetRawDataFromCognitiveServices(libraryName string, userQuery string, maxRe
 //
 // Returns:
 // - The rewritten user query.
-func PreprocessTheInput(userQuery string, libraryName string, historyMessages []sharedtypes.HistoricMessage) string {
+// Returns:
+// - The rewritten user query and a slice of multiple queries.
+func PreprocessTheInput(userQuery string, libraryName string, historyMessages []sharedtypes.HistoricMessage) (string, []string) {
 	startTime := time.Now()
 	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_PREPROCESS_INPUT - Input: userQuery=%s, libraryName=%s", userQuery, libraryName)
 	defer func() {
@@ -944,15 +986,26 @@ func PreprocessTheInput(userQuery string, libraryName string, historyMessages []
 	// 	For example:
 	// 	"unified_query": "<your generated query here>"`, ansysProduct, ansysProduct, ansysProduct, userQuery)
 
-	userMessage := fmt.Sprintf(`In %s: Your task is to deeply analyze the provided history (last 5 chat messages and assistant responses) to understand the user's context, intent, and requirements. Use this context to rewrite the user query so it is fully optimized for searching the Vector Database for relevant Methods or Examples.
+	userMessage := fmt.Sprintf(`In %s: Your task is to deeply analyze the provided chat history (the last 5 messages, including both user inputs and assistant responses) to fully understand the user's context, intent, and requirements.
+
+Use this context to rewrite the user query as follows:
+1. unified_query - The original user query may be brief, ambiguous, or lack technical detail. Rewrite it as a clear, detailed, and specific question suitable for retrieving precise information from a technical knowledge base about %s. Incorporate clarifying context, standard terminology, and related technical concepts commonly used in %s documentation, without altering the original intent. Start the unified query with "Using %s," if it is not already mentioned.
+
+2. multiple_queries - Generate five concise and assertive variations of the user query optimized for vector search. Each variation should be content-specific, free of unnecessary words, and designed to efficiently retrieve relevant methods or examples from a vector database.
+
+Guidelines:
+* Incorporate relevant information from the chat history if it clarifies or expands the user’s intent.
+* Do not remove any essential details from the original query.
+
+Input:
 History: %v
 User Query: %s
-Do not remove any relevant information from the original query. If the history clarifies or expands the user's intent, incorporate that context into the unified query.
-Return your response as a JSON object with a single key "unified_query".
-Start the unififed query with 'Using %s,' if not mentioned
-For example:
-"unified_query": "<your generated query here>"
-`, ansysProduct, historyMessages, userQuery, libraryName)
+
+Output Format: Return a JSON object with the following keys:
+{
+  "unified_query": "<your generated unified query here>",
+  "multiple_queries": ["query 1", "query 2", "query 3", "query 4", "query 5"]
+}`, ansysProduct, ansysProduct, ansysProduct, libraryName, historyMessages, userQuery)
 	historyMessage := append(historyMessages,
 		sharedtypes.HistoricMessage{
 			Role:    "user",
@@ -965,18 +1018,36 @@ For example:
 	messageJSON, err := jsonStringToObject(result)
 	if err != nil {
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_PREPROCESS_INPUT - Output: %s (JSON parse error)", userQuery)
-		return userQuery
+		return userQuery, []string{userQuery}
 	}
 	rewrittenQuery, ok := messageJSON["unified_query"].(string)
 	if !ok {
 		logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_PREPROCESS_INPUT - Output: %s (unified_query not string)", userQuery)
-		return userQuery
+		rewrittenQuery = userQuery
 	}
 	if rewrittenQuery == "" {
 		rewrittenQuery = userQuery
 	}
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_PREPROCESS_INPUT - Output: %s", rewrittenQuery)
-	return rewrittenQuery
+	multiple_queries, ok := messageJSON["multiple_queries"].(string)
+	if multiple_queries == "" {
+		multiple_queries = rewrittenQuery
+	}
+	var multipleQueries []string
+	if multiple_queries != "" {
+		queries := strings.Split(multiple_queries, ",")
+		for _, q := range queries {
+			trimmed := strings.TrimSpace(q)
+			if trimmed != "" {
+				multipleQueries = append(multipleQueries, trimmed)
+			}
+		}
+	}
+	if len(multipleQueries) == 0 {
+		multipleQueries = []string{rewrittenQuery}
+	}
+
+	logging.Log.Infof(&logging.ContextMap{}, "ACE_OUTPUT FUNC_PREPROCESS_INPUT - Output: %s - multiple queries: %s", rewrittenQuery, multiple_queries)
+	return rewrittenQuery, multipleQueries
 }
 
 // Write welcome message based on library name
@@ -1019,139 +1090,139 @@ func GenerateWelcomeMessage(libraryName string) string {
 // Returns:
 //   - success: a boolean indicating whether the request was successful
 //   - returnJsonBody: the JSON body of the response as a string
-func MakeAPIRequest(requestType string, endpoint string, header map[string]string, query string, libraryName string) (code string) {
+// func MakeAPIRequest(requestType string, endpoint string, header map[string]string, query string, libraryName string) (code string) {
 
-	queryParams := map[string]string{
-		"Content-Type": "application/json",
-	}
-	if libraryName == "" {
-		libraryName = "pyfluent"
-	}
-	// Sample json body
-	// `{"key": "value", "number": 123}`
-	jsonBody := fmt.Sprintf(`{"query": "%s", "product": "%s"}`, query, libraryName)
-	if requestType == "" {
-		requestType = "POST"
-	}
-	if endpoint == "" {
-		endpoint = "https://dev-codegen.azurewebsites.net/code_gen"
-	}
-	success, returnJsonBody := SendRestAPICall(requestType, endpoint, header, queryParams, jsonBody)
-	if !success {
-		logging.Log.Errorf(&logging.ContextMap{}, "API request failed")
-		return ""
-	}
-	// CHeck the returnJsonBody is valid json
-	var result map[string]interface{}
-	err := json.Unmarshal([]byte(returnJsonBody), &result)
-	if err != nil {
-		logging.Log.Errorf(&logging.ContextMap{}, "Error converting response to JSON object: %v", err)
-		return ""
-	}
-	if code, ok := result["code"].(string); ok {
-		logging.Log.Infof(&logging.ContextMap{}, "API request successful, code: %s", code)
-		code = PerformGeneralRequestNoStreaming("The code generated is: "+code, []sharedtypes.HistoricMessage{}, "You are a helpful assistant that helps to generate python code in markdown format. Do not add anything else, do not add any extra keys, no extra texts, or formatting (including no code fences). Remove the docs in the code and only provide the code.")
-		return code
-	}
-	return ""
-}
+// 	queryParams := map[string]string{
+// 		"Content-Type": "application/json",
+// 	}
+// 	if libraryName == "" {
+// 		libraryName = "pyfluent"
+// 	}
+// 	// Sample json body
+// 	// `{"key": "value", "number": 123}`
+// 	jsonBody := fmt.Sprintf(`{"query": "%s", "product": "%s"}`, query, libraryName)
+// 	if requestType == "" {
+// 		requestType = "POST"
+// 	}
+// 	if endpoint == "" {
+// 		endpoint = "https://dev-codegen.azurewebsites.net/code_gen"
+// 	}
+// 	success, returnJsonBody := SendRestAPICall(requestType, endpoint, header, queryParams, jsonBody)
+// 	if !success {
+// 		logging.Log.Errorf(&logging.ContextMap{}, "API request failed")
+// 		return ""
+// 	}
+// 	// CHeck the returnJsonBody is valid json
+// 	var result map[string]interface{}
+// 	err := json.Unmarshal([]byte(returnJsonBody), &result)
+// 	if err != nil {
+// 		logging.Log.Errorf(&logging.ContextMap{}, "Error converting response to JSON object: %v", err)
+// 		return ""
+// 	}
+// 	if code, ok := result["code"].(string); ok {
+// 		logging.Log.Infof(&logging.ContextMap{}, "API request successful, code: %s", code)
+// 		code = PerformGeneralRequestNoStreaming("The code generated is: "+code, []sharedtypes.HistoricMessage{}, "You are a helpful assistant that helps to generate python code in markdown format. Do not add anything else, do not add any extra keys, no extra texts, or formatting (including no code fences). Remove the docs in the code and only provide the code.")
+// 		return code
+// 	}
+// 	return ""
+// }
 
-// API to get the data from congnitive services
-//
-// Tags:
-//   - @displayName: Get Data from Cognitive Services
-//
-// Parameters:
-//   - libraryName: the name of the library to be used in the system message
-//   - userQuery: the user query to be used for the query.
-//   - maxRetrievalCount: the maximum number of results to be retrieved.
-//
-// Returns:
-//   - response: the response from the cognitive services as a string
-func GetDataFromCognitiveServices(libraryName string, userQuery string, maxRetrievalCount int) string {
-	startTime := time.Now()
-	ansysProduct := pyansysProduct[libraryName]
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND GetDataFromCognitiveServices - started %v", time.Now())
-	defer func() {
-		duration := time.Since(startTime)
-		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices COMPLETED - duration: %v", duration)
-	}()
+// // API to get the data from congnitive services
+// //
+// // Tags:
+// //   - @displayName: Get Data from Cognitive Services
+// //
+// // Parameters:
+// //   - libraryName: the name of the library to be used in the system message
+// //   - userQuery: the user query to be used for the query.
+// //   - maxRetrievalCount: the maximum number of results to be retrieved.
+// //
+// // Returns:
+// //   - response: the response from the cognitive services as a string
+// func GetDataFromCognitiveServices(libraryName string, userQuery string, maxRetrievalCount int) string {
+// 	startTime := time.Now()
+// 	ansysProduct := pyansysProduct[libraryName]
+// 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND GetDataFromCognitiveServices - started %v", time.Now())
+// 	defer func() {
+// 		duration := time.Since(startTime)
+// 		logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices COMPLETED - duration: %v", duration)
+// 	}()
 
-	userMessage := fmt.Sprintf(`In %s: The following user query may be brief, ambiguous, or lacking technical detail.
-		Please rewrite it as a clear, detailed, and specific question suitable for retrieving relevant and precise information from a technical knowledge base about {product}.
-		If necessary, add clarifying context, standard terminology, or related technical concepts commonly used in {product} documentation, without changing the original intent of the user's question.
+// 	userMessage := fmt.Sprintf(`In %s: The following user query may be brief, ambiguous, or lacking technical detail.
+// 		Please rewrite it as a clear, detailed, and specific question suitable for retrieving relevant and precise information from a technical knowledge base about {product}.
+// 		If necessary, add clarifying context, standard terminology, or related technical concepts commonly used in {product} documentation, without changing the original intent of the user's question.
 
-		User Query: "%s"
+// 		User Query: "%s"
 
-		Return your response as a JSON object with a single key "unified_query".
-		For example:
-		"unified_query": "<your generated query here>"`, ansysProduct, userQuery)
+// 		Return your response as a JSON object with a single key "unified_query".
+// 		For example:
+// 		"unified_query": "<your generated query here>"`, ansysProduct, userQuery)
 
-	historyMessage := []sharedtypes.HistoricMessage{
-		sharedtypes.HistoricMessage{
-			Role:    "user",
-			Content: userMessage,
-		},
-	}
+// 	historyMessage := []sharedtypes.HistoricMessage{
+// 		sharedtypes.HistoricMessage{
+// 			Role:    "user",
+// 			Content: userMessage,
+// 		},
+// 	}
 
-	// Make llm call to rewrite the query
-	llmStartTime := time.Now()
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices - LLM request (rewrite query) STARTED")
-	result, _ := PerformGeneralRequest(userQuery, historyMessage, false, "")
-	llmDuration := time.Since(llmStartTime)
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices - LLM request (rewrite query) COMPLETED - duration: %v", llmDuration)
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND GetDataFromCognitiveServices - llm ended %v", time.Now())
-	messageJSON, err := jsonStringToObject(result)
-	if err != nil {
-		logging.Log.Error(&logging.ContextMap{}, "Error converting message to JSON object: %v", err)
-		return ""
-	}
-	rewrittenQuery, ok := messageJSON["unified_query"].(string)
-	if !ok {
-		logging.Log.Error(&logging.ContextMap{}, "unified_query is not a string")
-		return ""
-	}
-	if rewrittenQuery == "" {
-		logging.Log.Warn(&logging.ContextMap{}, "Rewritten query is empty, using original query: %s", userQuery)
-		rewrittenQuery = userQuery
-	}
-	logging.Log.Infof(&logging.ContextMap{}, "Rewritten query: %s", rewrittenQuery)
-	// Make rest call to cognitive services
-	jsonBody := fmt.Sprintf(`{"query": "%s", "product": "%s", "top_k": %d}`, rewrittenQuery, libraryName, maxRetrievalCount)
-	endpoint := "https://codegen-rm.azurewebsites.net/run_search"
-	header := map[string]string{
-		"Content-Type": "application/json",
-	}
-	success, returnJsonBody := SendRestAPICall("POST", endpoint, header, map[string]string{}, jsonBody)
-	logging.Log.Infof(&logging.ContextMap{}, "success: %v, returnJsonBody: %s", success, returnJsonBody)
-	if !success {
-		logging.Log.Errorf(&logging.ContextMap{}, "API request to cognitive services failed")
-		return ""
-	}
-	// Make llm call to process the response from cognitive services
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND GetDataFromCognitiveServices - rest call ended %v", time.Now())
-	llmProcessingStartTime := time.Now()
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices - LLM request (process response) STARTED")
-	processingMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided.
-		Use the API definition and the related APIs found. Do your best to generate the code based on the information available.
-		API Search Results: %s
-		- STRICT: Only use the context provided in this system message. Do NOT think outside this context, do NOT add anything else, do NOT invent or hallucinate anything beyond the provided information.
-		- Generate the code that solves the user query using only the API Search Results.
-		- If you are not able to generate the code using the context provided, Send "I am not able to generate the code with the information provided."
-		- If you are sure about the code, return the code in markdown format.
-		- If you are not sure about the code, return "Please provide more information about the user query and the methods to be used."
-		Respond with the following format, do not add anything else:
-		The generated Python code only`, ansysProduct, returnJsonBody)
-	processingHistoryMessage := []sharedtypes.HistoricMessage{
-		sharedtypes.HistoricMessage{
-			Role:    "user",
-			Content: processingMessage,
-		},
-	}
-	result, _ = PerformGeneralRequest(userQuery, processingHistoryMessage, false, "")
-	llmProcessingDuration := time.Since(llmProcessingStartTime)
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices - LLM request (process response) COMPLETED - duration: %v", llmProcessingDuration)
-	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND GetDataFromCognitiveServices - llm processing ended %v", time.Now())
-	logging.Log.Infof(&logging.ContextMap{}, "result: %s", result)
-	return result
-}
+// 	// Make llm call to rewrite the query
+// 	llmStartTime := time.Now()
+// 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices - LLM request (rewrite query) STARTED")
+// 	result, _ := PerformGeneralRequest(userQuery, historyMessage, false, "")
+// 	llmDuration := time.Since(llmStartTime)
+// 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices - LLM request (rewrite query) COMPLETED - duration: %v", llmDuration)
+// 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND GetDataFromCognitiveServices - llm ended %v", time.Now())
+// 	messageJSON, err := jsonStringToObject(result)
+// 	if err != nil {
+// 		logging.Log.Error(&logging.ContextMap{}, "Error converting message to JSON object: %v", err)
+// 		return ""
+// 	}
+// 	rewrittenQuery, ok := messageJSON["unified_query"].(string)
+// 	if !ok {
+// 		logging.Log.Error(&logging.ContextMap{}, "unified_query is not a string")
+// 		return ""
+// 	}
+// 	if rewrittenQuery == "" {
+// 		logging.Log.Warn(&logging.ContextMap{}, "Rewritten query is empty, using original query: %s", userQuery)
+// 		rewrittenQuery = userQuery
+// 	}
+// 	logging.Log.Infof(&logging.ContextMap{}, "Rewritten query: %s", rewrittenQuery)
+// 	// Make rest call to cognitive services
+// 	jsonBody := fmt.Sprintf(`{"query": "%s", "product": "%s", "top_k": %d}`, rewrittenQuery, libraryName, maxRetrievalCount)
+// 	endpoint := "https://codegen-rm.azurewebsites.net/run_search"
+// 	header := map[string]string{
+// 		"Content-Type": "application/json",
+// 	}
+// 	success, returnJsonBody := SendRestAPICall("POST", endpoint, header, map[string]string{}, jsonBody)
+// 	logging.Log.Infof(&logging.ContextMap{}, "success: %v, returnJsonBody: %s", success, returnJsonBody)
+// 	if !success {
+// 		logging.Log.Errorf(&logging.ContextMap{}, "API request to cognitive services failed")
+// 		return ""
+// 	}
+// 	// Make llm call to process the response from cognitive services
+// 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND GetDataFromCognitiveServices - rest call ended %v", time.Now())
+// 	llmProcessingStartTime := time.Now()
+// 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices - LLM request (process response) STARTED")
+// 	processingMessage := fmt.Sprintf(`In %s: You need to create a script to execute the instructions provided.
+// 		Use the API definition and the related APIs found. Do your best to generate the code based on the information available.
+// 		API Search Results: %s
+// 		- STRICT: Only use the context provided in this system message. Do NOT think outside this context, do NOT add anything else, do NOT invent or hallucinate anything beyond the provided information.
+// 		- Generate the code that solves the user query using only the API Search Results.
+// 		- If you are not able to generate the code using the context provided, Send "I am not able to generate the code with the information provided."
+// 		- If you are sure about the code, return the code in markdown format.
+// 		- If you are not sure about the code, return "Please provide more information about the user query and the methods to be used."
+// 		Respond with the following format, do not add anything else:
+// 		The generated Python code only`, ansysProduct, returnJsonBody)
+// 	processingHistoryMessage := []sharedtypes.HistoricMessage{
+// 		sharedtypes.HistoricMessage{
+// 			Role:    "user",
+// 			Content: processingMessage,
+// 		},
+// 	}
+// 	result, _ = PerformGeneralRequest(userQuery, processingHistoryMessage, false, "")
+// 	llmProcessingDuration := time.Since(llmProcessingStartTime)
+// 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING: GetDataFromCognitiveServices - LLM request (process response) COMPLETED - duration: %v", llmProcessingDuration)
+// 	logging.Log.Infof(&logging.ContextMap{}, "ACE_TIMING_IND GetDataFromCognitiveServices - llm processing ended %v", time.Now())
+// 	logging.Log.Infof(&logging.ContextMap{}, "result: %s", result)
+// 	return result
+// }

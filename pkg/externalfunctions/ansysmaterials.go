@@ -324,10 +324,10 @@ func PerformMultipleGeneralRequestsAndExtractAttributesWithOpenAiTokenOutput(inp
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Create model options with temperature
-	tempFloat32 := float32(temperature)
-	modelOptions := &sharedtypes.ModelOptions{
-		Temperature: &tempFloat32,
-	}
+	// tempFloat32 := float32(temperature)
+	// modelOptions := &sharedtypes.ModelOptions{
+	// 	Temperature: &tempFloat32,
+	// }
 
 	// Helper function to send a request and get the response as string
 	sendRequest := func() string {

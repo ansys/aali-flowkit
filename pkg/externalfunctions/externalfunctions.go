@@ -195,4 +195,18 @@ var ExternalFunctionsMap = map[string]interface{}{
 
 	// fluent
 	"FluentCodeGen": FluentCodeGen,
+
+	// ace
+	"RewriteQueryWithHistory": RewriteQueryWithHistory,
+	"SearchExamples":          SearchExamples,
+	"SearchMethods":           SearchMethods,
+	"GetRawDataFromCognitiveServicesForDocumentation": GetRawDataFromCognitiveServicesForDocumentation,
+	"SearchDocumentation":                             SearchDocumentation,
+	"GenerateCode":                                    GenerateCode,
+	"QueryUserGuideAndFormat":                         QueryUserGuideAndFormat,
+	"MakeAPIRequest":                                  MakeAPIRequest,
+	"GetDataFromCognitiveServices":                    GetDataFromCognitiveServices,
+	"GetRawDataFromCognitiveServices":                 GetRawDataFromCognitiveServices,
+	"PreprocessTheInput":                              PreprocessTheInput,
+	"GenerateWelcomeMessage":                          GenerateWelcomeMessage,
 }

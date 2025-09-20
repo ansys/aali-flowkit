@@ -42,6 +42,10 @@ github.com/ansys/aali-sharedtypes v1.0.4-0.20250819081505-2e3ccce5d4ad h1:DPf02K
 github.com/ansys/aali-sharedtypes v1.0.4-0.20250819081505-2e3ccce5d4ad/go.mod h1:cWfGDKNuQQdQzVoRGaz5nLUopFGUME1vHUlgAf8KCxQ=
 github.com/ansys/aali-sharedtypes v1.0.4-0.20250820113216-e3023df3caf4 h1:sUjwaRTFi28gg7mOHK/jr9AdGyz1zcO3Brak6dVQKuk=
 github.com/ansys/aali-sharedtypes v1.0.4-0.20250820113216-e3023df3caf4/go.mod h1:cWfGDKNuQQdQzVoRGaz5nLUopFGUME1vHUlgAf8KCxQ=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250822205559-10e1ebd2a83c h1:tlpcgTSb4pGF+GHvFiVzcqP4n2Gdpk5wfLskRee0LKI=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250822205559-10e1ebd2a83c/go.mod h1:cWfGDKNuQQdQzVoRGaz5nLUopFGUME1vHUlgAf8KCxQ=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250828151552-4892b4d84cad h1:GQ0ajSzJIM/+gsImegchv2YZ9WQUBVkCH+2wDU40cxA=
+github.com/ansys/aali-sharedtypes v1.0.4-0.20250828151552-4892b4d84cad/go.mod h1:Ze0xVXbyl63d/dN95UKHJjoGs7ZmF5OrykBtKQxgO1U=
 github.com/aymerick/douceur v0.2.0 h1:Mv+mAeH1Q+n9Fr+oyamOlAkUNPWPlA8PPGR0QAaYuPk=
 github.com/aymerick/douceur v0.2.0/go.mod h1:wlT5vV2O3h55X9m7iVYN0TBM0NH/MmbLnd30/FjWUq4=
 github.com/cenkalti/backoff v2.2.1+incompatible h1:tNowT99t7UNflLxfYYSlKYsBpXdEet03Pg2g16Swow4=

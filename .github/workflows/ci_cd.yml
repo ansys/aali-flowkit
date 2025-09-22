@@ -29,10 +29,10 @@ jobs:
         sudo snap install golangci-lint --classic
 
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup Python for pre-commit hook
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.MAIN_PYTHON_VERSION }}
 
@@ -44,9 +44,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Setup Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version-file: 'go.mod'
     - name: Compile Project
@@ -59,9 +59,9 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Setup Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version-file: 'go.mod'
     - name: Log in to GitHub Container Registry
@@ -92,7 +92,7 @@ jobs:
       pages: write
     steps:
       - name: Download documentation artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: documentation-html-with-api
           path: ./docs-to-deploy

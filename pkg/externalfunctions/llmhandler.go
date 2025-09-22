@@ -1280,13 +1280,18 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// Design context is a string that we get from the AEDT session. It contains
 	// information about the current design, project, application, and PyAEDT version.
 	// It is in the following format:
+	// "{'designContext': {'design': 'MyDesign', 'project': 'MyProject',
+	// 'selections': [], 'application': 'MyApplication',
+	// 'pyaedtVersion': '0.xx.x', 'type': 'Generic', 'units': 'xx'}}"
+	//
+	// The code will parse this string and extract the information to the final prompt.
 	// {'designContext':
 	// 		{
-	// 			'design': 'DESIGN',
-	// 			'project': 'PROJECT',
+	// 			'design': 'MyDesign',
+	// 			'project': 'MyProject',
 	// 			'selections': [],
-	// 			'application': 'APP',
-	// 			'pyaedtVersion': 'x.x.x',
+	// 			'application': 'MyApplication',
+	// 			'pyaedtVersion': '0.xx.x',
 	// 			'type': 'Generic',
 	// 			'units': 'xxx'
 	// 		}
@@ -1416,49 +1421,54 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 
 	}
 
-	logging.Log.Debugf(&logging.ContextMap{}, "~~~~Raw design context string: %s", designContext)
-
-	// Cutoff designContext and only process generic context.
-	pattern := `'type'\s*:\s*'[^']*'`
-
-	// Use regex to find the pattern
-	re := regexp.MustCompile(pattern)
-	match := re.FindStringIndex(designContext)
-
-	if match == nil {
-		// If pattern not found, try with double quotes format
-		pattern = `"type"\s*:\s*"[^"]*"`
-		re = regexp.MustCompile(pattern)
-		match = re.FindStringIndex(designContext)
-
-		if match == nil {
-			logging.Log.Warnf(&logging.ContextMap{}, "Cutoff pattern 'type' field not found in designContext")
-			return designContext
-		}
-	}
-
-	// Get the end position of the match (after the 'type' field and its value)
-	endPos := match[1]
-
-	// Extract substring up to the end of the 'type' field
-	designContextGeneric := designContext[:endPos]
-
-	// Add proper closing braces
-	designContextGeneric += "}}"
-
-	// Convert designContextGeneric to map[string]any
-	designContextMap, err := convertDesignContext(designContextGeneric, "Map")
-	if err != nil {
-		logging.Log.Warn(&logging.ContextMap{}, "Failed to convert designContext to map: %v", err)
-		designContextMap = make(map[string]any)
-	} else {
-		// Successfully converted designContext to map
-		logging.Log.Debugf(&logging.ContextMap{}, "Successfully converted designContext to map: %v", designContextMap)
-	}
-
 	var generationType, design, project, application, pyaedtVersion string
 	var selections []string
-	if designContextMap != nil {
+	if designContext == "" {
+		logging.Log.Info(&logging.ContextMap{}, "No design context provided. Using default strings for design, project, application, and pyaedtVersion.")
+		design = "MyDesign"
+		project = "MyProject"
+		application = "MyApplication"
+		pyaedtVersion = "0.19.0" // Default version: the latest one by Sep 2025.
+		selections = []string{}
+	} else {
+		// Cutoff designContext and only process generic context.
+		pattern := `'type'\s*:\s*'[^']*'`
+
+		// Use regex to find the pattern
+		re := regexp.MustCompile(pattern)
+		match := re.FindStringIndex(designContext)
+
+		if match == nil {
+			// If pattern not found, try with double quotes format
+			pattern = `"type"\s*:\s*"[^"]*"`
+			re = regexp.MustCompile(pattern)
+			match = re.FindStringIndex(designContext)
+
+			if match == nil {
+				logging.Log.Warnf(&logging.ContextMap{}, "Cutoff pattern 'type' field not found in designContext")
+				return designContext
+			}
+		}
+
+		// Get the end position of the match (after the 'type' field and its value)
+		endPos := match[1]
+
+		// Extract substring up to the end of the 'type' field
+		designContextGeneric := designContext[:endPos]
+
+		// Add proper closing braces
+		designContextGeneric += "}}"
+
+		// Convert designContextGeneric to map[string]any
+		designContextMap, err := convertDesignContext(designContextGeneric, "Map")
+		if err != nil {
+			logging.Log.Warn(&logging.ContextMap{}, "Failed to convert designContext to map: %v", err)
+			designContextMap = make(map[string]any)
+		} else {
+			// Successfully converted designContext to map
+			logging.Log.Debugf(&logging.ContextMap{}, "Successfully converted designContext to map: %v", designContextMap)
+		}
+
 		if nestedContext, ok := designContextMap.(map[string]any)["designContext"].(map[string]any); ok {
 			// Extract basic context information.
 			if val, ok := nestedContext["type"]; ok {
@@ -1535,63 +1545,56 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		} else {
 			logging.Log.Error(&logging.ContextMap{}, "Missing generation type in design context.")
 		}
-	} else {
-		logging.Log.Info(&logging.ContextMap{}, "No design context provided. Using default strings for design, project, application, and pyaedtVersion.")
-		design = "MyDesign"
-		project = "MyProject"
-		application = "MyApplication"
-		pyaedtVersion = "0.19.0" // Default version: the latest one by Sep 2025.
-		selections = []string{}
-	}
 
-	// Store designContext to a JSON file.
-	dumpJSONToFile := func(jsonData, filename string) error {
-		// Create the file
-		file, err := os.Create(filename)
-		if err != nil {
-			return fmt.Errorf("failed to create file: %v", err)
-		}
-		defer file.Close()
-
-		// Write JSON data to file
-		_, err = file.WriteString(jsonData)
-		if err != nil {
-			return fmt.Errorf("failed to write to file: %v", err)
-		}
-
-		return nil
-	}
-
-	// Store designContext to a JSON file.
-	// TODO: accumulate design contexts and store them to a single file with timestamp? Or overwrite the previous one?
-	// For now, overwrite the previous one.
-	designContextJSONResult, err := convertDesignContext(designContextGeneric, "JSON")
-	if err != nil {
-		logging.Log.Warn(&logging.ContextMap{}, "Failed to convert designContext to JSON: %v", err)
-		// Use default empty JSON
-		err = dumpJSONToFile("{}", "design_context.json")
-		if err != nil {
-			logging.Log.Warn(&logging.ContextMap{}, "Failed to dump default JSON to file: %v", err)
-		}
-	} else {
-		// Type assert to string
-		if designContextJSON, ok := designContextJSONResult.(string); ok {
-			logging.Log.Debugf(&logging.ContextMap{}, "Design context as JSON:\n%s", designContextJSON)
-
-			// Dump to file
-			fileName := "design_context.json"
-			err = dumpJSONToFile(designContextJSON, fileName)
+		// Store designContext to a JSON file.
+		dumpJSONToFile := func(jsonData, filename string) error {
+			// Create the file
+			file, err := os.Create(filename)
 			if err != nil {
-				logging.Log.Warn(&logging.ContextMap{}, "Failed to dump JSON to file: %v", err)
-			} else {
-				logging.Log.Debugf(&logging.ContextMap{}, "Successfully dumped design context JSON to file: %s", fileName)
+				return fmt.Errorf("failed to create file: %v", err)
 			}
-		} else {
-			logging.Log.Warn(&logging.ContextMap{}, "Failed to assert designContext result to string")
-			// Fallback to default
+			defer file.Close()
+
+			// Write JSON data to file
+			_, err = file.WriteString(jsonData)
+			if err != nil {
+				return fmt.Errorf("failed to write to file: %v", err)
+			}
+
+			return nil
+		}
+
+		// Store designContext to a JSON file.
+		// TODO: accumulate design contexts and store them to a single file with timestamp? Or overwrite the previous one?
+		// For now, overwrite the previous one.
+		designContextJSONResult, err := convertDesignContext(designContextGeneric, "JSON")
+		if err != nil {
+			logging.Log.Warn(&logging.ContextMap{}, "Failed to convert designContext to JSON: %v", err)
+			// Use default empty JSON
 			err = dumpJSONToFile("{}", "design_context.json")
 			if err != nil {
-				logging.Log.Warn(&logging.ContextMap{}, "Failed to dump fallback JSON to file: %v", err)
+				logging.Log.Warn(&logging.ContextMap{}, "Failed to dump default JSON to file: %v", err)
+			}
+		} else {
+			// Type assert to string
+			if designContextJSON, ok := designContextJSONResult.(string); ok {
+				logging.Log.Debugf(&logging.ContextMap{}, "Design context as JSON:\n%s", designContextJSON)
+
+				// Dump to file
+				fileName := "design_context.json"
+				err = dumpJSONToFile(designContextJSON, fileName)
+				if err != nil {
+					logging.Log.Warn(&logging.ContextMap{}, "Failed to dump JSON to file: %v", err)
+				} else {
+					logging.Log.Debugf(&logging.ContextMap{}, "Successfully dumped design context JSON to file: %s", fileName)
+				}
+			} else {
+				logging.Log.Warn(&logging.ContextMap{}, "Failed to assert designContext result to string")
+				// Fallback to default
+				err = dumpJSONToFile("{}", "design_context.json")
+				if err != nil {
+					logging.Log.Warn(&logging.ContextMap{}, "Failed to dump fallback JSON to file: %v", err)
+				}
 			}
 		}
 	}

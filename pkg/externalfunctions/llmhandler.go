@@ -1247,7 +1247,7 @@ func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []shar
 				collectionType = "API_ELEMENT"
 			} else if element.Title != "" && element.SectionName != "" {
 				collectionType = "USER_GUIDE"
-			} else if element.DocumentName != "" && len(element.Dependencies) > 0 {
+			} else if element.DocumentName != "" {
 				collectionType = "EXAMPLE"
 			}
 

@@ -1091,48 +1091,52 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 	// Build the final query using the KnowledgeDB response and the original request
 	// Append all non-empty fields to provide maximum context from comprehensive DbResponse
 	finalQuery = "Based on the following examples:\n\n--- INFO START ---\n"
-	for _, example := range knowledgedbResponse {
+	for i, example := range knowledgedbResponse {
 		var contentParts []string
 
-		// CodeGenerationElement fields (likely from API/Element collections)
-		if example.NameFormatted != "" {
-			contentParts = append(contentParts, example.NameFormatted)
-		}
-		if example.NamePseudocode != "" {
-			contentParts = append(contentParts, example.NamePseudocode)
-		}
-		if example.Name != "" {
-			contentParts = append(contentParts, example.Name)
-		}
-		if example.Type != "" {
-			contentParts = append(contentParts, "Type: "+example.Type)
-		}
-		if example.ParentClass != "" {
-			contentParts = append(contentParts, "Parent: "+example.ParentClass)
+		// Determine collection type and add appropriate header
+		collectionType := "UNKNOWN"
+		if example.Type != "" && (example.NameFormatted != "" || example.Name != "") {
+			collectionType = "API_ELEMENT"
+		} else if example.Title != "" && example.SectionName != "" {
+			collectionType = "USER_GUIDE"
+		} else if example.DocumentName != "" {
+			collectionType = "EXAMPLE"
 		}
 
-		// VectorDatabaseUserGuideSection fields (likely from User Guide collections)
-		if example.Title != "" {
-			contentParts = append(contentParts, example.Title)
+		contentParts = append(contentParts, fmt.Sprintf("=== %s #%d ===", collectionType, i+1))
+
+		// CodeGenerationElement fields (API/Element collections)
+		if example.Type != "" && (example.NameFormatted != "" || example.Name != "") {
+			if example.NameFormatted != "" {
+				contentParts = append(contentParts, "API: "+example.NameFormatted)
+			}
+			if example.NamePseudocode != "" {
+				contentParts = append(contentParts, "Function: "+example.NamePseudocode)
+			}
+			if example.Name != "" {
+				contentParts = append(contentParts, "Full Name: "+example.Name)
+			}
+			if example.Type != "" {
+				contentParts = append(contentParts, "Type: "+example.Type)
+			}
+			if example.ParentClass != "" {
+				contentParts = append(contentParts, "Parent: "+example.ParentClass)
+			}
 		}
-		if example.SectionName != "" {
+
+		// VectorDatabaseUserGuideSection fields (User Guide collections)
+		if example.Title != "" && example.SectionName != "" {
+			contentParts = append(contentParts, "Guide Title: "+example.Title)
 			contentParts = append(contentParts, "Section: "+example.SectionName)
-		}
-		if example.ParentSectionName != "" {
-			contentParts = append(contentParts, "Parent Section: "+example.ParentSectionName)
+			if example.ParentSectionName != "" {
+				contentParts = append(contentParts, "Parent Section: "+example.ParentSectionName)
+			}
 		}
 
-		// Common fields (from any collection type)
+		// VectorDatabaseExample fields (Example collections)
 		if example.DocumentName != "" {
-			contentParts = append(contentParts, "Document: "+example.DocumentName)
-		}
-		if example.Text != "" {
-			contentParts = append(contentParts, example.Text)
-		}
-		if example.Summary != "" {
-			contentParts = append(contentParts, "Summary: "+example.Summary)
-		}
-		if len(example.Dependencies) > 0 {
+			contentParts = append(contentParts, "Example File: "+example.DocumentName)
 			// Convert []interface{} to []string for joining
 			var deps []string
 			for _, dep := range example.Dependencies {
@@ -1141,8 +1145,16 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 				}
 			}
 			if len(deps) > 0 {
-				contentParts = append(contentParts, "Dependencies: "+strings.Join(deps, ", "))
+				contentParts = append(contentParts, "Uses APIs: "+strings.Join(deps, ", "))
 			}
+		}
+
+		// Common fields
+		if example.DocumentName != "" && collectionType != "EXAMPLE" {
+			contentParts = append(contentParts, "Document: "+example.DocumentName)
+		}
+		if example.Summary != "" {
+			contentParts = append(contentParts, "Summary: "+example.Summary)
 		}
 		if len(example.Keywords) > 0 {
 			contentParts = append(contentParts, "Keywords: "+strings.Join(example.Keywords, ", "))
@@ -1151,14 +1163,33 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 			contentParts = append(contentParts, "Tags: "+strings.Join(example.Tags, ", "))
 		}
 
+		// Handle Text field with proper formatting based on collection type
+		if example.Text != "" {
+			if collectionType == "EXAMPLE" {
+				contentParts = append(contentParts, "Code:")
+				contentParts = append(contentParts, "```python")
+				contentParts = append(contentParts, example.Text)
+				contentParts = append(contentParts, "```")
+			} else {
+				contentParts = append(contentParts, "Content:")
+				contentParts = append(contentParts, example.Text)
+			}
+		}
+
 		// Add all content with spacing
 		if len(contentParts) > 0 {
 			finalQuery += strings.Join(contentParts, "\n") + "\n\n"
 		}
 	}
 	finalQuery += "--- INFO END ---\n\n" + request + "\n"
+	originalQuery := ""
 
 	// Return the final query
+	for _, example := range knowledgedbResponse {
+		originalQuery += example.Text + "\n"
+	}
+	fmt.Printf("Original Query (General LLM Request):\n%s\n", originalQuery)
+	fmt.Printf("Final Query (General LLM Request):\n%s\n", finalQuery)
 	return finalQuery
 }
 
@@ -1210,13 +1241,23 @@ func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []shar
 		finalQuery = "Based on the following examples:\n\n"
 
 		for i, element := range knowledgedbResponse {
-			// Add the example number
-			finalQuery += "--- START EXAMPLE " + fmt.Sprint(i+1) + "---\n"
+			// Determine collection type for better context
+			collectionType := "UNKNOWN"
+			if element.Type != "" && (element.NameFormatted != "" || element.Name != "") {
+				collectionType = "API_ELEMENT"
+			} else if element.Title != "" && element.SectionName != "" {
+				collectionType = "USER_GUIDE"
+			} else if element.DocumentName != "" && len(element.Dependencies) > 0 {
+				collectionType = "EXAMPLE"
+			}
+
+			// Add collection type header
+			finalQuery += "--- START EXAMPLE " + fmt.Sprint(i+1) + " (" + collectionType + ") ---\n"
 
 			// Build summary from all available non-empty fields
 			var summaryParts []string
 
-			// CodeGenerationElement fields (likely from API/Element collections)
+			// CodeGenerationElement fields (from API/Element collections)
 			if element.NameFormatted != "" {
 				summaryParts = append(summaryParts, element.NameFormatted)
 			}
@@ -1227,7 +1268,7 @@ func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []shar
 				summaryParts = append(summaryParts, "Parent: "+element.ParentClass)
 			}
 
-			// VectorDatabaseUserGuideSection fields (likely from User Guide collections)
+			// VectorDatabaseUserGuideSection fields (from User Guide collections)
 			if element.Title != "" {
 				summaryParts = append(summaryParts, element.Title)
 			}
@@ -1235,7 +1276,7 @@ func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []shar
 				summaryParts = append(summaryParts, "Section: "+element.SectionName)
 			}
 
-			// Common fields
+			// VectorDatabaseExample fields (from Example collections)
 			if element.DocumentName != "" {
 				summaryParts = append(summaryParts, "Document: "+element.DocumentName)
 			}
@@ -1255,7 +1296,7 @@ func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []shar
 				}
 			}
 
-			// Build code content from all available fields
+			// Build code content from available fields
 			var codeParts []string
 
 			if element.NamePseudocode != "" {
@@ -1264,6 +1305,8 @@ func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []shar
 			if element.Name != "" {
 				codeParts = append(codeParts, "# Function: "+element.Name)
 			}
+
+			// Handle Text field - all code examples should be properly formatted
 			if element.Text != "" {
 				codeParts = append(codeParts, element.Text)
 			}

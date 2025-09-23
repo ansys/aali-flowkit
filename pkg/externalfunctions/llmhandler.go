@@ -1252,7 +1252,7 @@ func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []shar
 			}
 
 			// Add collection type header
-			finalQuery += "--- START EXAMPLE " + fmt.Sprint(i+1) + " (" + collectionType + ") ---\n"
+			finalQuery += "---  " + collectionType + "  ---\n"
 
 			// Build summary from all available non-empty fields
 			var summaryParts []string
@@ -1324,7 +1324,7 @@ func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []shar
 
 			finalQuery += ">>> Summary:\n" + summaryContent + "\n\n"
 			finalQuery += ">>> Code snippet:\n```python\n" + codeContent + "\n```\n"
-			finalQuery += "--- END EXAMPLE " + fmt.Sprint(i+1) + "---\n\n"
+			finalQuery += "---  END " + fmt.Sprint(i+1) + " ---\n\n"
 		}
 	}
 

@@ -801,6 +801,9 @@ func extractPythonCode(markdown string) (pythonCode string, error error) {
 
 
 func GetLatestApiSignaturesForApis(inputs []string) (ApiSignatures []string) {
+	if len(inputs) == 0 {
+		return
+	}
 	ctx := &logging.ContextMap{}
 	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
 	if err != nil {

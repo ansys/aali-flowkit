@@ -28,7 +28,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	"os"
+	"regexp"
 	"github.com/ansys/aali-sharedtypes/pkg/config"
 	"github.com/ansys/aali-sharedtypes/pkg/logging"
 	"github.com/ansys/aali-sharedtypes/pkg/sharedtypes"
@@ -991,11 +992,87 @@ func parseAPINames(input string) (listApis []string) {
 	return listApis
 }
 
-
-// PyaedtCodeValidationLoop performs a code validation request to LLM
+// PyaedtPerformCodeLLMRequest performs final pyaedt code generation request to LLM and stream
 //
 // Tags:
-//   - @displayName: Pyaedt Code Validation loop
+//   - @displayName: Pyaedt Code LLM Request Streaming
+//
+// Parameters:
+//   - input: the input string
+//   - isStream: the stream flag
+//
+// Returns:
+//   - message: the generated code
+//   - stream: the stream channel
+func PyaedtPerformCodeLLMRequest(input string, /*history []sharedtypes.HistoricMessage,*/ isStream bool, validateCode bool) (message string, stream *chan string) {
+	// get the LLM handler endpoint
+	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
+
+	// Set up WebSocket connection with LLM and send chat request
+	responseChannel := sendChatRequest(input, "code", nil, 0, "", llmHandlerEndpoint, nil, nil, nil)
+	// If isStream is true, create a stream channel and return asap
+	if isStream {
+		
+		// Create a stream channel
+		streamChannel := make(chan string, 400)
+		// Start a goroutine to transfer the data from the response channel to the stream channel
+		go transferDatafromResponseToStreamChannel(&responseChannel, &streamChannel, validateCode, false, "", 0, 0, "", "", "", false, "")
+		// Return the stream channel
+		return "", &streamChannel
+	}
+
+	// Close the response channel
+	defer close(responseChannel)
+	
+	// Return the response
+	return "", nil
+}
+
+
+// PyaedtCodeStreaming performs a code validation request to LLM with streaming
+//
+// Tags:
+//   - @displayName: Pyaedt Code Streaming
+//
+// Parameters:
+//   - input: the input code string
+//   - history: the conversation history
+//   - isStream: the stream flag
+//
+// Returns:
+//   - message: the generated code
+//   - stream: the stream channel
+func PyaedtCodeStreaming(input string) (message string, stream *chan string) {
+	// convert input string to stream and transfer
+	responseAsStr := input
+	// Set up WebSocket connection with LLM and send chat request
+	//responseChannel := sendChatRequest(input, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
+	//if isStream {
+		logging.Log.Debugf(&logging.ContextMap{}, "Streaming ..")	
+	//	validateCode = false
+		// Create a stream channel
+		streamChannel := make(chan string, 400)
+		// Start a goroutine to transfer the data from the response channel to the stream channel
+		//go transferDatafromResponseToStreamChannel(&responseChannel, &streamChannel, validateCode, false, "", 0, 0, "", "", "", false, "")
+		// Return the stream channel
+		go func() {
+			streamChannel <- input
+		}()
+		return input, &streamChannel
+	//}
+
+	// Close the response channel
+	//defer close(responseChannel)
+	
+
+	// Return the response
+	return responseAsStr, nil
+}
+
+// PyaedtCodeValidationLoopWithStreaming performs a code validation request to LLM and returns revised code
+//
+// Tags:
+//   - @displayName: Pyaedt Code Validation loop and Stream result 
 //
 // Parameters:
 //   - input: the input string
@@ -1005,7 +1082,7 @@ func parseAPINames(input string) (listApis []string) {
 // Returns:
 //   - message: the generated code
 //   - stream: the stream channel
-func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessage, isStream bool, validateCode bool) (message string, stream *chan string) {
+func PyaedtCodeValidationLoopWithStreaming(input string, history []sharedtypes.HistoricMessage, isStream bool, validateCode bool) (message string, stream *chan string) {
 	// get the LLM handler endpoint
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
@@ -1099,6 +1176,103 @@ func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessag
 
 	// Return the response
 	return responseAsStr, nil
+}
+
+// PyaedtCodeValidationLoop performs a code validation request to LLM
+//
+// Tags:
+//   - @displayName: Pyaedt Code Validation loop
+//
+// Parameters:
+//   - input: the input string
+//   - history: the conversation history
+//   - isStream: the stream flag
+//
+// Returns:
+//   - message: the generated code
+//   - stream: the stream channel
+func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessage, isStream bool, validateCode bool) (finalPrompt string) {
+	// get the LLM handler endpoint
+	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
+	finalPrompt = input
+	// send chat request - Get initial response
+	responseAsStr := sendChatRequestNoStreaming(input, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
+	//var responseAsStr string
+	validationCount := 3
+	//var pythonCodeTemp string
+	var latestAPISignatures []string
+	//validCode  := false
+	for cnt := range validationCount {
+		pythonCode, err := extractPythonCode(responseAsStr)
+		//pythonCodeTemp = pythonCode
+		// kapatil: 
+		// Get latest API signatures for all
+		//var latestAPISignatures []string
+		listAPIPrompt := "For following code, list only apis as comma separated values and do  not explain anyting\n"
+		//listAPIPrompt += "Python Code:\n"
+		listAPIPrompt += pythonCode
+		// API list LLM and send chat request
+		// TODO: Add your parser instead ?
+		responseApiList := sendChatRequestNoStreaming(listAPIPrompt, "code", nil, 0, "", llmHandlerEndpoint, nil, nil, nil)
+		apisUsed := parseAPINames(responseApiList)
+		logging.Log.Debugf(&logging.ContextMap{}, "Api Signatures to search: %v", apisUsed)
+		latestAPISignatures = GetLatestApiSignaturesForApis(apisUsed)
+
+		if err != nil {
+			logging.Log.Errorf(&logging.ContextMap{}, "Error extracting Python code: %v, Couldn't validate code", err)
+			break
+		} else {
+			// Validate the Python code
+			valid, _, err := validatePythonCode(responseAsStr)
+			logging.Log.Debugf(&logging.ContextMap{}, "Python code is valid %v", valid)
+			if valid {
+				//validCode = true
+				break
+			}
+
+			if err != nil {
+				// parse errors
+				// kapatil: redo code generation 
+				// Prompt: Following errors are found in code, fix code w.r.t pyaedt code library
+				errPrompt := GetValidationPrompt(err.Error(), latestAPISignatures)
+				//time.Sleep(2 * time.Second)
+				if errPrompt != "" {
+					errPrompt += "Pyaedt script:\n " + pythonCode
+					// Set up WebSocket connection with LLM and send chat request
+					finalPrompt = errPrompt
+					responseAsStr = sendChatRequestNoStreaming(errPrompt, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
+					logging.Log.Debugf(&logging.ContextMap{}, "Request review : %v",errPrompt)
+				}
+			} else {
+				break
+			}
+		}
+		logging.Log.Debugf(&logging.ContextMap{}, "***Validation Loop %d************************", cnt)
+	}//validationloop
+	
+	logging.Log.Debugf(&logging.ContextMap{}, "Validation done! %s", responseAsStr)	
+	//time.Sleep(5 * time.Second)
+	//if validCode {
+	//	finalPrompt = "Return this python code no explaination\n"+ pythonCodeTemp
+		//responseChannel = sendChatRequest(tempPrompt, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
+	//}
+	
+	// If isStream is true, create a stream channel and return asap
+	//if isStream {
+	//	logging.Log.Debugf(&logging.ContextMap{}, "Streaming ..")	
+	//	validateCode = false
+	//	// Create a stream channel
+	//	streamChannel := make(chan string, 400)
+	//		// Start a goroutine to transfer the data from the response channel to the stream channel
+	//	go transferDatafromResponseToStreamChannel(&responseChannel, &streamChannel, validateCode, false, "", 0, 0, "", "", "", false, "")
+	//	// Return the stream channel
+	//		return "", &streamChannel
+	//}
+
+	// Close the response channel
+	//defer close(responseChannel)
+	finalPrompt = responseAsStr
+	return finalPrompt
 }
 
 
@@ -1283,6 +1457,21 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// Build the final query using the KnowledgeDB response and the original request
 	// We have to use the text from the DB response and the original request.
 	//
+	// Design context is a string that we get from the AEDT session. It contains
+	// information about the current design, project, application, and PyAEDT version.
+	// It is in the following format:
+	// {'designContext':
+	// 		{
+	// 			'design': 'DESIGN',
+	// 			'project': 'PROJECT',
+	// 			'selections': [],
+	// 			'application': 'APP',
+	// 			'pyaedtVersion': 'x.x.x',
+	// 			'type': 'Generic',
+	// 			'units': 'xxx'
+	// 		}
+	// }
+	//
 	// The prompt should be in the following format:
 	//
 	// ******************************************************************************
@@ -1313,11 +1502,8 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// >>> Request:
 	// {original_request}
 	// ******************************************************************************
-
-	// If there is no response from the KnowledgeDB, return the original request
-	// Initial request
 	if userGuideSearch {
-		finalQuery += "Based on the following pyaedt documentation links\n\n"
+		finalQuery += "\nBased on the following pyaedt documentation links:\n"
 		for i, citation := range citations {
 			finalQuery += "--- REFERENCE LINKS START " + fmt.Sprint(i+1) + " ---\n"
 			finalQuery += citation + "\n"
@@ -1333,8 +1519,8 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 			// Add the example number
 			logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Reading knowledge DB response")
 			finalQuery += "--- START EXAMPLE " + fmt.Sprint(i+1) + "---\n"
-			finalQuery += ">>> Summary:\n" + element.Summary + "\n\n"
-			finalQuery += ">>> Code snippet:\n```python\n" + element.Text + "\n```\n"
+			finalQuery += "* Summary:\n" + element.Summary + "\n\n"
+			finalQuery += "* Code snippet:\n```python\n" + element.Text + "\n```\n"
 			finalQuery += "--- END EXAMPLE " + fmt.Sprint(i+1) + "---\n\n"
 			//logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Initial Query %s", finalQuery)
 		}
@@ -1342,37 +1528,285 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	} else {
 		logging.Log.Debugf(&logging.ContextMap{}, "No relevant examples found in DB.")
 	}
-
-	// Kaumudi: Rephrase
-	//newRequest := RephraseRequest_kapatil(request)
+	
 	newRequest := request
+	// Pass in the original request without blank in the front and end
+	finalQuery += "Generate the Python code for the following request: **" + strings.TrimSpace(newRequest) + "** \n"
 
-	if designContext != "" {
-		newRequest += "The current design has the following context:\n"
-		newRequest += "''' \n" + designContext + "\n'''\n\n"
-		newRequest += "Try to make the code relevant to this design context as much as possible.\n\n"
+	// Convert designContext to a JSON format: map[string]any
+	convertDesignContext := func(designContext string, format string) (any, error) {
+		// Replace single quotes with double quotes for valid JSON
+		designContext = strings.ReplaceAll(designContext, "'", "\"")
+
+		// Fix newline characters in string literals by escaping them
+		designContext = strings.ReplaceAll(designContext, "\n", "\\n")
+
+		// Parse the JSON string into a map
+		var contextData map[string]interface{}
+		err := json.Unmarshal([]byte(designContext), &contextData)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse designContext: %v", err)
+		}
+
+		if format == "JSON" {
+			// Convert back to JSON with indent 2.
+			jsonBytes, err := json.MarshalIndent(contextData, "", "  ")
+			if err != nil {
+				return "", fmt.Errorf("failed to marshal to JSON: %v", err)
+			}
+			return string(jsonBytes), nil
+		} else if format == "Map" {
+			// Convert back to map[string]any format
+			result := make(map[string]any)
+			for key, value := range contextData {
+				result[key] = value
+			}
+			return result, nil
+		} else {
+			return "", fmt.Errorf("unknown format: %s", format)
+		}
+
 	}
-	// Pass in the original request
-	finalQuery += "Generate the PyAEDT code for the following request and list all the APIs used.:\n>>> Request:\n" + newRequest + "\n"
+
+	var generationType, design, project, application, pyaedtVersion string
+	var selections []string
+	if designContext == "" {
+		logging.Log.Info(&logging.ContextMap{}, "No design context provided. Using default strings for design, project, application, and pyaedtVersion.")
+		design = "MyDesign"
+		project = "MyProject"
+		application = "MyApplication"
+		pyaedtVersion = "0.19.0" // Default version: the latest one by Sep 2025.
+		selections = []string{}
+	} else {
+		// Cutoff designContext and only process generic context.
+		pattern := `'type'\s*:\s*'[^']*'`
+
+		// Use regex to find the pattern
+		re := regexp.MustCompile(pattern)
+		match := re.FindStringIndex(designContext)
+
+		if match == nil {
+			// If pattern not found, try with double quotes format
+			pattern = `"type"\s*:\s*"[^"]*"`
+			re = regexp.MustCompile(pattern)
+			match = re.FindStringIndex(designContext)
+
+			if match == nil {
+				logging.Log.Warnf(&logging.ContextMap{}, "Cutoff pattern 'type' field not found in designContext")
+				return designContext
+			}
+		}
+
+		// Get the end position of the match (after the 'type' field and its value)
+		endPos := match[1]
+
+		// Extract substring up to the end of the 'type' field
+		designContextGeneric := designContext[:endPos]
+
+		// Add proper closing braces
+		designContextGeneric += "}}"
+
+		// Convert designContextGeneric to map[string]any
+		designContextMap, err := convertDesignContext(designContextGeneric, "Map")
+		if err != nil {
+			logging.Log.Warn(&logging.ContextMap{}, "Failed to convert designContext to map: %v", err)
+			designContextMap = make(map[string]any)
+		} else {
+			// Successfully converted designContext to map
+			logging.Log.Debugf(&logging.ContextMap{}, "Successfully converted designContext to map: %v", designContextMap)
+		}
+
+		if nestedContext, ok := designContextMap.(map[string]any)["designContext"].(map[string]any); ok {
+			// Extract basic context information.
+			if val, ok := nestedContext["type"]; ok {
+				if strVal, ok := val.(string); ok {
+					generationType = strVal
+
+					logging.Log.Info(&logging.ContextMap{}, "Design context generation type: %s", generationType)
+				}
+			} else {
+				logging.Log.Error(&logging.ContextMap{}, "Missing generation type in design context.")
+			}
+
+			// Extract design name
+			if val, ok := nestedContext["design"]; ok {
+				if strVal, ok := val.(string); ok {
+					design = strVal
+				}
+			} else {
+				logging.Log.Debugf(&logging.ContextMap{}, "No design name found in design context. Using default.")
+				design = "MyDesign"
+			}
+
+			// Extract project name.
+			if val, ok := nestedContext["project"]; ok {
+				if strVal, ok := val.(string); ok {
+					project = strVal
+				}
+			} else {
+				logging.Log.Debugf(&logging.ContextMap{}, "No project name found in design context. Using default.")
+				project = "MyProject"
+			}
+
+			// Extract application name.
+			if val, ok := nestedContext["application"]; ok {
+				if strVal, ok := val.(string); ok {
+					application = strVal
+				}
+			} else {
+				logging.Log.Debugf(&logging.ContextMap{}, "No application name found in design context. Using default.")
+				application = "MyApplication"
+			}
+
+			// Extract PyAEDT version.
+			if val, ok := nestedContext["pyaedtVersion"]; ok {
+				if strVal, ok := val.(string); ok {
+					pyaedtVersion = strVal
+				}
+			} else {
+				logging.Log.Debugf(&logging.ContextMap{}, "No PyAEDT version found in design context. Using default.")
+				pyaedtVersion = "0.19.0"
+			}
+
+			// Extract selections.
+			if val, ok := nestedContext["selections"]; ok {
+				if interfaceSlice, ok := val.([]interface{}); ok {
+					selections = make([]string, 0, len(interfaceSlice))
+					for _, item := range interfaceSlice {
+						if strItem, ok := item.(string); ok {
+							selections = append(selections, strItem)
+						} else {
+							logging.Log.Warnf(&logging.ContextMap{}, "Selection item is not a string: %v (type: %T)", item, item)
+						}
+					}
+				} else if sliceVal, ok := val.([]string); ok {
+					selections = sliceVal
+				} else {
+					logging.Log.Warnf(&logging.ContextMap{}, "Selections field is not a slice, found type: %T, value: %v", val, val)
+					selections = []string{}
+				}
+			} else {
+				logging.Log.Debugf(&logging.ContextMap{}, "No selections found in design context. Using default.")
+				selections = []string{}
+			}
+		} else {
+			logging.Log.Error(&logging.ContextMap{}, "Missing generation type in design context.")
+		}
+
+		// Store designContext to a JSON file.
+		dumpJSONToFile := func(jsonData, filename string) error {
+			// Create the file
+			file, err := os.Create(filename)
+			if err != nil {
+				return fmt.Errorf("failed to create file: %v", err)
+			}
+			defer file.Close()
+
+			// Write JSON data to file
+			_, err = file.WriteString(jsonData)
+			if err != nil {
+				return fmt.Errorf("failed to write to file: %v", err)
+			}
+
+			return nil
+		}
+
+		// Store designContext to a JSON file.
+		// TODO: accumulate design contexts and store them to a single file with timestamp? Or overwrite the previous one?
+		// For now, overwrite the previous one.
+		designContextJSONResult, err := convertDesignContext(designContextGeneric, "JSON")
+		if err != nil {
+			logging.Log.Warn(&logging.ContextMap{}, "Failed to convert designContext to JSON: %v", err)
+			// Use default empty JSON
+			err = dumpJSONToFile("{}", "design_context.json")
+			if err != nil {
+				logging.Log.Warn(&logging.ContextMap{}, "Failed to dump default JSON to file: %v", err)
+			}
+		} else {
+			// Type assert to string
+			if designContextJSON, ok := designContextJSONResult.(string); ok {
+				logging.Log.Debugf(&logging.ContextMap{}, "Design context as JSON:\n%s", designContextJSON)
+
+				// Dump to file
+				fileName := "design_context.json"
+				err = dumpJSONToFile(designContextJSON, fileName)
+				if err != nil {
+					logging.Log.Warn(&logging.ContextMap{}, "Failed to dump JSON to file: %v", err)
+				} else {
+					logging.Log.Debugf(&logging.ContextMap{}, "Successfully dumped design context JSON to file: %s", fileName)
+				}
+			} else {
+				logging.Log.Warn(&logging.ContextMap{}, "Failed to assert designContext result to string")
+				// Fallback to default
+				err = dumpJSONToFile("{}", "design_context.json")
+				if err != nil {
+					logging.Log.Warn(&logging.ContextMap{}, "Failed to dump fallback JSON to file: %v", err)
+				}
+			}
+		}
+	}
+
+	// ==============================
+	// Imports and initilization templates for different PyAEDT versions
+	version_mapper := map[string]string{
+		"0.19.0": "2025.1",
+	}
+	import_templates := map[string]string{
+		"0.19.0": "```python\nimport ansys.aedt.core as pyaedt```",
+	}
+	init_templates := map[string]map[string]string{
+		"0.19.0": {
+			"Desktop":        "```\nDesktop(version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None)\n```",
+			"Hfss":           "```\nHfss(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Q3d":            "```\nQ3d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Q2d":            "```\nQ2d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Maxwell2d":      "```\nMaxwell2d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Maxwell3d":      "```\nMaxwell3d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Icepak":         "```\nIcepak(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Hfss3dLayout":   "```\nHfss3dLayout(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, ic_mode:bool|None, remove_lock:bool|None)\n```",
+			"Mechanical":     "```\nMechanical(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Rmxprt":         "```\nRmxprt(project:str|None, design:str|None, solution_type:str|None, model_units:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Circuit":        "```\nCircuit(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"MaxwellCircuit": "```\nMaxwellCircuit(project:str|None, design:str|None, solution_type:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"Emit":           "```\nEmit(project:str|None, design:str|None, solution_type:str|None, version:str|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+			"TwinBuilder":    "```\nTwinBuilder(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+		},
+	}
+	// ==============================
+
+	// Include initialization template to prompt.
+	finalQuery += "\nHard requirements (do not violate):\n- Include **all imports** actually used. Follow the template for PyAEDT version " + pyaedtVersion + ": " + import_templates[pyaedtVersion] + "\n"
+	finalQuery += "- Provide an **Initialization** section that **explicitly** declares the known information as follows:\n"
+
+	if _, ok := version_mapper[pyaedtVersion]; !ok {
+		logging.Log.Warnf(&logging.ContextMap{}, "Unknown PyAEDT version: %s. Defaulting to 0.19.0", pyaedtVersion)
+		pyaedtVersion = "0.19.0"
+	}
+	finalQuery += "  - Use PyAEDT version: " + pyaedtVersion + "\n"
+	finalQuery += "  - AEDT version: " + version_mapper[pyaedtVersion] + "\n"
+	finalQuery += "  - Design name: " + design + "\n"
+	finalQuery += "  - Application: " + application + "\n"
+
+	logging.Log.Debugf(&logging.ContextMap{}, "!!!!Selections: %v", selections)
+	// if selections is empty, skip it.
+	if selections != nil && len(selections) > 0 {
+		finalQuery += "  - Selections: " + strings.Join(selections, ", ") + "\n"
+	}
+	finalQuery += "  - Project name: " + project + "\n\n"
+	finalQuery += "The following statements are examples of how to initialize different applications, refer to these examples and initialization accordingly: \n"
+
+	for appName, init_template := range init_templates[pyaedtVersion] {
+		finalQuery += "\n- " + appName + ":\n" + init_template + "\n"
+	}
+
+	finalQuery += "\n\n"
+
+	logging.Log.Debugf(&logging.ContextMap{}, "=================== Final Query %v ===================", finalQuery)
 
 	// Return the final query
 	return finalQuery
 }
 
-
-
-func RephraseRequest_kapatil(request string) (result string) {
-        input := strings.ToLower(request)
-        bef, after, found := strings.Cut(input, "launch aedt")
-        if found {
-            result = bef + "create desktop instance" + after
-        } else {
-                result = input
-            }
-
-        return result
-
-}
 
 // BuildFinalQueryForCodeLLMRequest builds the final query for a code generation
 // request to LLM. The final query is a markdown string that contains the
@@ -1436,8 +1870,7 @@ func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []shar
 		logging.Log.Debugf(&logging.ContextMap{}, "Zero knowledge DB reponse found")
 	}
 
-	// Kaumudi: Rephrase
-	new_request := RephraseRequest_kapatil(request)
+	new_request := request
 
 	// Pass in the original request
 	finalQuery += "Generate the Python code for the following request:\n>>> Request:\n" + new_request + "\n"

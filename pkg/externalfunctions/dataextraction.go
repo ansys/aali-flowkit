@@ -881,31 +881,43 @@ func StoreElementsInVectorDatabase(elements []sharedtypes.CodeGenerationElement,
 	}
 }
 
+func graphDbNameOrDefault(dbname string) string {
+	if dbname == "" {
+		logging.Log.Debugf(&logging.ContextMap{}, "No database name provided for aali-graphdb, falling back to default 'aali'")
+		return "aali"
+	} else {
+		return dbname
+	}
+}
+
 // StoreElementsInGraphDatabase stores elements in the graph database.
 //
 // Tags:
 //   - @displayName: Store Elements in Graph Database
 //
 // Parameters:
+//   - dbname: the name of the graphdb to target. If not provided, defaults to "aali".
 //   - elements: code generation elements.
-func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement) {
+func StoreElementsInGraphDatabase(dbname string, elements []sharedtypes.CodeGenerationElement) {
 	ctx := &logging.ContextMap{}
 
+	dbname = graphDbNameOrDefault(dbname)
+
 	// Initialize the graph database.
-	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
+	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS, dbname)
 	if err != nil {
-		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
+		errMsg := fmt.Sprintf("error initializing graphdb %q: %v", dbname, err)
 		logging.Log.Error(ctx, errMsg)
 		panic(errMsg)
 	}
 
-	err = graphdb.GraphDbDriver.CreateSchema()
+	err = graphdb.GraphDbDriver.CreateSchema(dbname)
 	if err != nil {
 		logPanic(ctx, "error error creating aali schema: %v", err)
 	}
 
 	// Add the elements to the graph database.
-	err = graphdb.GraphDbDriver.AddCodeGenerationElementNodes(elements)
+	err = graphdb.GraphDbDriver.AddCodeGenerationElementNodes(dbname, elements)
 	if err != nil {
 		errMsg := fmt.Sprintf("error adding code gen element nodes to graphdb: %v", err)
 		logging.Log.Error(ctx, errMsg)
@@ -913,7 +925,7 @@ func StoreElementsInGraphDatabase(elements []sharedtypes.CodeGenerationElement) 
 	}
 
 	// Add the dependencies to the graph database.
-	err = graphdb.GraphDbDriver.CreateCodeGenerationRelationships(elements)
+	err = graphdb.GraphDbDriver.CreateCodeGenerationRelationships(dbname, elements)
 	if err != nil {
 		errMsg := fmt.Sprintf("error adding code gen relationships to graphdb: %v", err)
 		logging.Log.Error(ctx, errMsg)
@@ -1317,25 +1329,28 @@ func StoreExamplesInVectorDatabase(examples []sharedtypes.CodeGenerationExample,
 //   - @displayName: Store Examples in Graph Database
 //
 // Parameters:
+//   - dbname: the name of the graphdb to target. If not provided, defaults to "aali".
 //   - examples: code generation examples.
-func StoreExamplesInGraphDatabase(examples []sharedtypes.CodeGenerationExample) {
+func StoreExamplesInGraphDatabase(dbname string, examples []sharedtypes.CodeGenerationExample) {
 	ctx := &logging.ContextMap{}
 
+	dbname = graphDbNameOrDefault(dbname)
+
 	// Initialize the graph database.
-	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
+	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS, dbname)
 	if err != nil {
-		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
+		errMsg := fmt.Sprintf("error initializing graphdb %q: %v", dbname, err)
 		logging.Log.Error(ctx, errMsg)
 		panic(errMsg)
 	}
 
-	err = graphdb.GraphDbDriver.CreateSchema()
+	err = graphdb.GraphDbDriver.CreateSchema(dbname)
 	if err != nil {
 		logPanic(ctx, "error error creating aali schema: %v", err)
 	}
 
 	// Add the elements to the graph database.
-	err = graphdb.GraphDbDriver.AddCodeGenerationExampleNodes(examples)
+	err = graphdb.GraphDbDriver.AddCodeGenerationExampleNodes(dbname, examples)
 	if err != nil {
 		errMsg := fmt.Sprintf("error adding code gen example nodes to graphdb: %v", err)
 		logging.Log.Error(ctx, errMsg)
@@ -1343,7 +1358,7 @@ func StoreExamplesInGraphDatabase(examples []sharedtypes.CodeGenerationExample) 
 	}
 
 	// Add the dependencies to the graph database.
-	err = graphdb.GraphDbDriver.CreateCodeGenerationExampleRelationships(examples)
+	err = graphdb.GraphDbDriver.CreateCodeGenerationExampleRelationships(dbname, examples)
 	if err != nil {
 		errMsg := fmt.Sprintf("error adding code gen example relationships to graphdb: %v", err)
 		logging.Log.Error(ctx, errMsg)
@@ -1593,26 +1608,28 @@ func StoreUserGuideSectionsInVectorDatabase(sections []sharedtypes.CodeGeneratio
 //   - @displayName: Store User Guide Sections in Graph Database
 //
 // Parameters:
-//   - elements: user guide sections.
-//   - label: label for the sections (UserGuide by default).
-func StoreUserGuideSectionsInGraphDatabase(sections []sharedtypes.CodeGenerationUserGuideSection) {
+//   - dbname: the name of the graphdb to target. If not provided, defaults to "aali".
+//   - sections: user guide sections.
+func StoreUserGuideSectionsInGraphDatabase(dbname string, sections []sharedtypes.CodeGenerationUserGuideSection) {
 	ctx := &logging.ContextMap{}
 
+	dbname = graphDbNameOrDefault(dbname)
+
 	// Initialize the graph database.
-	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
+	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS, dbname)
 	if err != nil {
 		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
 		logging.Log.Error(ctx, errMsg)
 		panic(errMsg)
 	}
 
-	err = graphdb.GraphDbDriver.CreateSchema()
+	err = graphdb.GraphDbDriver.CreateSchema(dbname)
 	if err != nil {
 		logPanic(ctx, "error error creating aali schema: %v", err)
 	}
 
 	// Add the elements to the graph database.
-	err = graphdb.GraphDbDriver.AddUserGuideSectionNodes(sections)
+	err = graphdb.GraphDbDriver.AddUserGuideSectionNodes(dbname, sections)
 	if err != nil {
 		errMsg := fmt.Sprintf("error adding user guide section nodes to graphdb: %v", err)
 		logging.Log.Error(ctx, errMsg)
@@ -1620,7 +1637,7 @@ func StoreUserGuideSectionsInGraphDatabase(sections []sharedtypes.CodeGeneration
 	}
 
 	// Add the dependencies to the graph database.
-	err = graphdb.GraphDbDriver.CreateUserGuideSectionRelationships(sections)
+	err = graphdb.GraphDbDriver.CreateUserGuideSectionRelationships(dbname, sections)
 	if err != nil {
 		errMsg := fmt.Sprintf("error adding user guide section relationships to graphdb: %v", err)
 		logging.Log.Error(ctx, errMsg)

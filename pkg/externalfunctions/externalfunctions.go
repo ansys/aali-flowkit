@@ -155,7 +155,14 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"SelectedSolution":                          SelectedSolution,
 	"ProcessMainAgentOutput":                    ProcessMainAgentOutput,
 	"GenerateHelperSubWorkflowPrompt":           GenerateHelperSubWorkflowPrompt,
-
+	"PerformSimilaritySearchForSubqueries": 	 PerformSimilaritySearchForSubqueries,
+	"ProcessGetTagsOutput": 					 ProcessGetTagsOutput,
+	"GenerateMKSummariesforTags": 				 GenerateMKSummariesforTags,
+	"GenerateExpandQueryUserPrompt": 			 GenerateExpandQueryUserPrompt,
+	"ProcessExpandQueryllmOutput": 			 	 ProcessExpandQueryllmOutput,
+	"GenerateSynthesizeAnswerfromMetaKnowlwdgeUserPrompt": GenerateSynthesizeAnswerfromMetaKnowlwdgeUserPrompt,
+	"ProcessSynthesizeAnswerFromMetaKnowledgellmOutput": ProcessSynthesizeAnswerFromMetaKnowledgellmOutput,
+	
 	// qdrant
 	"QdrantCreateCollection": QdrantCreateCollection,
 	"QdrantInsertData":       QdrantInsertData,

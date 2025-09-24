@@ -1040,7 +1040,7 @@ func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessag
 		// kapatil:
 		// Get latest API signatures for all
 		//var latestAPISignatures []string
-		listAPIPrompt := "For following code, list only apis as comma separated values and do  not explain anyting"
+		listAPIPrompt := "For following code, list only apis as comma separated values and do not explain anything.\n"
 		//listAPIPrompt += "Python Code:\n"
 		listAPIPrompt += responseAsStr
 		logging.Log.Debugf(&logging.ContextMap{}, "**Query APIs for %s", listAPIPrompt)
@@ -1079,7 +1079,7 @@ func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessag
 		logging.Log.Debugf(&logging.ContextMap{}, "***Validation Loop %d************************", cnt)
 	} //validationloop
 	logging.Log.Debugf(&logging.ContextMap{}, "Validation done!")
-	tempPrompt := "return this python code no explaination\n" + pythonCodeTemp
+	tempPrompt := "return this python code no explanation\n" + pythonCodeTemp
 	responseChannel = sendChatRequest(tempPrompt, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil, nil)
 
 	// If isStream is true, create a stream channel and return asap
@@ -1421,7 +1421,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 
 	}
 
-	var generationType, design, project, application, pyaedtVersion string
+	var generationType, design, project, application, pyaedtVersion, aedtVersion string
 	var selections []string
 	if designContext == "" {
 		logging.Log.Info(&logging.ContextMap{}, "No design context provided. Using default strings for design, project, application, and pyaedtVersion.")
@@ -1429,6 +1429,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		project = "MyProject"
 		application = "MyApplication"
 		pyaedtVersion = "0.19.0" // Default version: the latest one by Sep 2025.
+		aedtVersion = ""         // With default AEDT version if not provided.
 		selections = []string{}
 	} else {
 		// Cutoff designContext and only process generic context.
@@ -1521,6 +1522,16 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 				pyaedtVersion = "0.19.0"
 			}
 
+			// Extract AEDT version.
+			if val, ok := nestedContext["aedtVersion"]; ok {
+				if strVal, ok := val.(string); ok {
+					aedtVersion = strVal
+				}
+			} else {
+				logging.Log.Debugf(&logging.ContextMap{}, "No AEDT version found in design context. Using default.")
+				aedtVersion = ""
+			}
+
 			// Extract selections.
 			if val, ok := nestedContext["selections"]; ok {
 				if interfaceSlice, ok := val.([]interface{}); ok {
@@ -1601,14 +1612,15 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 
 	// ==============================
 	// Imports and initilization templates for different PyAEDT versions
-	version_mapper := map[string]string{
-		"0.19.0": "2025.1",
-	}
 	import_templates := map[string]string{
-		"0.19.0": "```python\nimport ansys.aedt.core as pyaedt```",
+		// Imports templates for different PyAEDT versions:
+		// PyAEDT version bigger than 0.9: use import ansys.aedt.core as pyaedt
+		// PyAEDT version smaller or equal to 0.9: use import pyaedt
+		"older":   "```python\nimport pyaedt\n```",
+		"current": "```python\nimport ansys.aedt.core as pyaedt\n```",
 	}
 	init_templates := map[string]map[string]string{
-		"0.19.0": {
+		"18": {
 			"Desktop":        "```\nDesktop(version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None)\n```",
 			"Hfss":           "```\nHfss(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
 			"Q3d":            "```\nQ3d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
@@ -1627,29 +1639,67 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	}
 	// ==============================
 
-	// Include initialization template to prompt.
-	finalQuery += "\nHard requirements (do not violate):\n- Include **all imports** actually used. Follow the template for PyAEDT version " + pyaedtVersion + ": " + import_templates[pyaedtVersion] + "\n"
-	finalQuery += "- Provide an **Initialization** section that **explicitly** declares the known information as follows:\n"
+	finalQuery += "\nHard requirements (do not violate):\n"
+	finalQuery += "- Include **all imports** actually used. Follow the template for PyAEDT version " + pyaedtVersion + ": "
+	finalQuery += "- Provide the imports in a single code block as follows: \n"
+	// Parse pyaedtVersion to decide which import template to use.
+	versionParts := strings.Split(pyaedtVersion, ".")
 
-	if _, ok := version_mapper[pyaedtVersion]; !ok {
-		logging.Log.Warnf(&logging.ContextMap{}, "Unknown PyAEDT version: %s. Defaulting to 0.19.0", pyaedtVersion)
-		pyaedtVersion = "0.19.0"
+	// Combine first two parts to get major.minor version, eg 0.19 from 0.19.0
+	// If major version is not 0, use default version 0.19
+	if len(versionParts) < 2 || versionParts[0] != "0" {
+		logging.Log.Warnf(&logging.ContextMap{}, "Unexpected PyAEDT major version: %s. Defaulting to 0.19.0", pyaedtVersion)
+		versionParts = []string{"0", "19"}
 	}
-	finalQuery += "  - Use PyAEDT version: " + pyaedtVersion + "\n"
-	finalQuery += "  - AEDT version: " + version_mapper[pyaedtVersion] + "\n"
+
+	// If minor version is less than or equal to 9, use older import template.
+	// If minor version is greater than 9, use current import template.
+	minorVersion, err := strconv.Atoi(versionParts[1])
+	if err != nil {
+		logging.Log.Warnf(&logging.ContextMap{}, "Failed to parse minor version: %v. Defaulting to current template", err)
+		finalQuery += import_templates["current"] + "\n"
+	} else {
+		if minorVersion <= 9 {
+			// older version
+			finalQuery += import_templates["older"] + "\n"
+		} else {
+			// current version
+			finalQuery += import_templates["current"] + "\n"
+		}
+	}
+
+	finalQuery += "- Provide an **Initialization** section that **explicitly** declares the known information as follows:\n"
+	if aedtVersion != "" {
+		finalQuery += "  - AEDT version: " + aedtVersion + "\n"
+	}
+	finalQuery += "  - Project name: " + project + "\n"
 	finalQuery += "  - Design name: " + design + "\n"
 	finalQuery += "  - Application: " + application + "\n"
 
-	logging.Log.Debugf(&logging.ContextMap{}, "!!!!Selections: %v", selections)
 	// if selections is empty, skip it.
 	if selections != nil && len(selections) > 0 {
 		finalQuery += "  - Selections: " + strings.Join(selections, ", ") + "\n"
 	}
-	finalQuery += "  - Project name: " + project + "\n\n"
+
+	finalQuery += "- DO NOT explicitly declare the version of AEDT unless specifically listed in the above known information.\n"
+	finalQuery += "- DO NOT release the AEDT desktop if the request does not explicitly ask for it.\n"
+	finalQuery += "- DO NOT close on exit the AEDT desktop (close_on_exit=False) if the request does not explicitly ask for it.\n"
+
+	if design != "MyDesign" {
+		finalQuery += "- DO NOT setup a new AEDT desktop session (new_desktop=False) if the request does not explicitly ask for it.\n"
+	} else {
+		finalQuery += "- DO setup a new AEDT desktop session (new_desktop=True) if the request does not explicitly ask for it.\n"
+	}
+
+	finalQuery += "- DO show graphical user interface (non-graphical=False) if the request does not explicitly ask for it.\n\n"
+
+	// Include initialization template to prompt.
 	finalQuery += "The following statements are examples of how to initialize different applications, refer to these examples and initialization accordingly: \n"
 
-	for appName, init_template := range init_templates[pyaedtVersion] {
-		finalQuery += "\n- " + appName + ":\n" + init_template + "\n"
+	if minorVersion >= 18 {
+		for appName, init_template := range init_templates["18"] {
+			finalQuery += "\n- " + appName + ":\n" + init_template + "\n"
+		}
 	}
 
 	finalQuery += "\n\n"

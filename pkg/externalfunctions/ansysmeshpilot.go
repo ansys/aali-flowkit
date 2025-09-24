@@ -2290,3 +2290,192 @@ func SelectedSolution(selectedSolution string) (solution string) {
 	solution = selectedSolution
 	return solution
 }
+
+// PerformSimilaritySearchForSubqueries performs similarity search for each sub-query and returns Q&A pairs
+//
+// Tags:
+//   - @displayName: PerformSimilaritySearchForSubqueries
+//
+// Parameters:
+//   - subQueries: the list of expanded sub-queries
+//   - collection: the vector database collection name
+//   - similaritySearchResults: the number of similarity search results
+//   - similaritySearchMinScore: the minimum similarity score threshold
+//
+// Returns:
+//   - uniqueQAPairs: the unique Q&A pairs from similarity search results
+func PerformSimilaritySearchForSubqueries(subQueries []string, collection string, similaritySearchResults int, similaritySearchMinScore float64) (uniqueQAPairs []map[string]interface{}) {
+	ctx := &logging.ContextMap{}
+	uniqueQAPairs = []map[string]interface{}{}
+	uniqueQuestions := make(map[string]bool)
+
+	client, err := qdrant_utils.QdrantClient()
+	if err != nil {
+		logging.Log.Error(ctx, fmt.Sprintf("unable to create qdrant client: %v", err))
+		return
+	}
+
+	for _, subQuery := range subQueries {
+		logging.Log.Debugf(ctx, "Processing sub-query: %s", subQuery)
+		embeddedVector, _ := PerformVectorEmbeddingRequest(subQuery, false)
+		if len(embeddedVector) == 0 {
+			logging.Log.Warnf(ctx, "Failed to get embedding for sub-query: %s", subQuery)
+			continue
+		}
+
+		limit := uint64(similaritySearchResults)
+		scoreThreshold := float32(similaritySearchMinScore)
+		query := qdrant.QueryPoints{
+			CollectionName: collection,
+			Query:          qdrant.NewQueryDense(embeddedVector),
+			Limit:          &limit,
+			ScoreThreshold: &scoreThreshold,
+			WithVectors:    qdrant.NewWithVectorsEnable(false),
+			WithPayload:    qdrant.NewWithPayloadEnable(true),
+		}
+
+		scoredPoints, err := client.Query(context.TODO(), &query)
+		if err != nil {
+			logging.Log.Warnf(ctx, "Qdrant query failed: %v", err)
+			continue
+		}
+
+		for _, scoredPoint := range scoredPoints {
+			payload, err := qdrant_utils.QdrantPayloadToType[map[string]interface{}](scoredPoint.GetPayload())
+			if err != nil {
+				logging.Log.Warnf(ctx, "Failed to parse payload: %v", err)
+				continue
+			}
+			question, _ := payload["question"].(string)
+			answer, _ := payload["answer"].(string)
+			if question == "" {
+				continue
+			}
+			if !uniqueQuestions[question] {
+				qaPair := map[string]interface{}{
+					"question": question,
+					"answer":   answer,
+				}
+				uniqueQAPairs = append(uniqueQAPairs, qaPair)
+				uniqueQuestions[question] = true
+			}
+		}
+	}
+	for i, qa := range uniqueQAPairs {
+		logging.Log.Debugf(ctx, "Unique QA Pair #%d: Question: %s, Answer: %s", i+1, qa["question"], qa["answer"])
+	}
+	logging.Log.Infof(ctx, "Simple similarity search complete. Found %d unique Q&A pairs from %d sub-queries", len(uniqueQAPairs), len(subQueries))
+	return uniqueQAPairs
+}
+
+// ProcessJSONListOutput parses the response and returns the tags slice.
+//
+// Tags:
+//   - @displayName: ProcessJSONListOutput
+//
+// Parameters:
+//   - response: the JSON response string
+//
+// Returns:
+//   - tags: the list of items extracted from the response
+func ProcessJSONListOutput(response string) (generatedList []string) {
+	ctx := &logging.ContextMap{}
+
+	err := json.Unmarshal([]byte(response), &generatedList)
+	if err != nil {
+		logging.Log.Errorf(ctx, "Error decoding JSON response: %v", err)
+		return []string{}
+	}
+	logging.Log.Debugf(ctx, "Generated List: %s", strings.Join(generatedList, ", "))
+	if len(generatedList) == 0 {
+		logging.Log.Error(ctx, "No items generated.")
+		return nil
+	}
+	return generatedList
+}
+
+// GenerateMKSummariesforTags retrieves unique MK summaries for the provided tags from the graph database.
+//
+// Tags:
+//   - @displayName: GenerateMKSummariesforTags
+//
+// Parameters:
+//   - query: the user query
+//   - dbName: the name of the database
+//   - tags: the list of tags
+//
+// Returns:
+//   - allTagsSummaries: the list of unique MK summaries
+
+func GenerateMKSummariesforTags(dbName string, tags []string, GetTagIdByNameQuery string, GetMKSummaryFromDBQuery string) (allTagsSummaries []string) {
+	ctx := &logging.ContextMap{}
+
+	err := ampgraphdb.EstablishConnection(config.GlobalConfig.GRAPHDB_ADDRESS, dbName)
+	if err != nil {
+		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
+	}
+
+	uniqueSummaries := make(map[string]bool)
+	for _, tag := range tags {
+		// Inline GetTagIdByName
+		id, err := ampgraphdb.GraphDbDriver.GetTagIdByName(tag, GetTagIdByNameQuery)
+		if err != nil {
+			logging.Log.Warnf(ctx, "No tag_id found for tag %s (error: %v)", tag, err)
+			continue
+		}
+		if id != "" {
+			logging.Log.Infof(ctx, "Found tag_id %s for tag %s", id, tag)
+			// Inline GetMKSummaryFromDB
+			sum, err := ampgraphdb.GraphDbDriver.GetMKSummaryFromDB(id, GetMKSummaryFromDBQuery)
+			if err != nil {
+				logging.Log.Warnf(ctx, "Error getting MK summary for tag_id %s: %v", id, err)
+				continue
+			}
+			if sum != "" {
+				uniqueSummaries[sum] = true
+			}
+		} else {
+			logging.Log.Warnf(ctx, "No tag_id found for tag %s", tag)
+		}
+	}
+
+	allTagsSummaries = make([]string, 0, len(uniqueSummaries))
+	for summary := range uniqueSummaries {
+		allTagsSummaries = append(allTagsSummaries, summary)
+	}
+
+	logging.Log.Infof(ctx, "Metatag extraction complete. Tags: %v, Summaries found: %d", tags, len(allTagsSummaries))
+	return allTagsSummaries
+}
+
+// GenerateSynthesizeAnswerfromMetaKnowlwdgeUserPrompt generates a user prompt for synthesizing an answer from meta knowledge.
+//
+// Tags:
+//   - @displayName: GenerateSynthesizeAnswerfromMetaKnowlwdgeUserPrompt
+//
+// Parameters:
+//   - SynthesizeAnswerUserPromptTemplate: the template string with placeholders for original query, expanded sub-queries, and retrieved Q&A pairs
+//   - originalQuery: the user's original query
+//   - expandedQueries: the expanded sub-queries
+//   - retrievedQAPairs: the retrieved Q&A pairs
+//
+// Returns:
+//   - userPrompt: the formatted user prompt
+func GenerateSynthesizeAnswerfromMetaKnowlwdgeUserPrompt(
+	SynthesizeAnswerUserPromptTemplate string,
+	originalQuery string,
+	expandedQueries []string,
+	retrievedQAPairs []map[string]interface{},
+) (userPrompt string) {
+	ctx := &logging.ContextMap{}
+
+	expandedQueriesStr := fmt.Sprintf("[%s]", strings.Join(expandedQueries, ", "))
+	qaPairsBytes, _ := json.MarshalIndent(retrievedQAPairs, "", "  ")
+	qaPairsStr := string(qaPairsBytes)
+
+	userPrompt = fmt.Sprintf(SynthesizeAnswerUserPromptTemplate, originalQuery, expandedQueriesStr, qaPairsStr)
+	logging.Log.Debugf(ctx, "Generated Synthesize Answer User Prompt: %s", userPrompt)
+	return
+}

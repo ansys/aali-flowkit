@@ -3,7 +3,7 @@ module github.com/ansys/aali-flowkit
 go 1.24.2
 
 require (
-	github.com/ansys/aali-sharedtypes v1.0.4-0.20250923131529-5014d8346f14
+	github.com/ansys/aali-sharedtypes v1.0.4-0.20250924070211-69c801e57963
 	github.com/google/go-github/v56 v56.0.0
 	github.com/google/uuid v1.6.0
 	github.com/pandodao/tokenizer-go v0.2.0

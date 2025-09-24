@@ -31,6 +31,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/ansys/aali-sharedtypes/pkg/logging"
 	"github.com/ansys/aali-sharedtypes/pkg/sharedtypes"
 	"github.com/google/uuid"
 	"k8s.io/client-go/util/jsonpath"
@@ -268,5 +269,63 @@ func StringFormat(data any, format string) string {
 	if format == "" {
 		format = "%v"
 	}
+	logging.Log.Infof(nil, "Formatting data %v with format %q", data, format)
 	return fmt.Sprintf(format, data)
+}
+
+// ParseSlashCommands parses slash commands from the input string and returns them as a map.
+//
+// Tags:
+//   - @displayName: Parse Slash Commands
+//
+// Parameters:
+//   - input (string): The input string containing slash commands.
+//
+// Returns:
+//   - slashCommands (map[string]string): A map of parsed slash commands. The keys are the scopes and the values are the corresponding commands.
+//     If no scope is provided, the key will be 'global'.
+func ParseSlashCommands(input string) (slashCommands []sharedtypes.SlashCommand) {
+	// Split input into lines to handle multiple commands
+	lines := strings.Split(input, "\n")
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		// Look for slash commands in the line
+		words := strings.Fields(line)
+		var scope string
+		var command string
+
+		for _, word := range words {
+			// Check if this word is a scope (starts with @)
+			if strings.HasPrefix(word, "@") && len(word) > 1 {
+				scope = word[1:] // Remove the @ prefix
+				continue
+			}
+
+			// Check if this word is a slash command
+			if strings.HasPrefix(word, "/") && len(word) > 1 {
+				command = word[1:] // Remove the / prefix
+				break
+			}
+		}
+
+		// If we found a command, add it to the map
+		if command != "" {
+			if scope == "" {
+				scope = "global"
+			}
+			slashCommands = append(slashCommands, sharedtypes.SlashCommand{Scope: scope, Command: command})
+		}
+	}
+
+	// If no commands were found, return nil
+	if len(slashCommands) == 0 {
+		return nil
+	} else {
+		return slashCommands
+	}
 }

@@ -1088,13 +1088,12 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 	}
 
 	// Build the final query using the KnowledgeDB response and the original request
+	// Append all non-empty fields to provide maximum context from comprehensive DbResponse
 	finalQuery = "Based on the following examples:\n\n--- INFO START ---\n"
-	for _, example := range knowledgedbResponse {
-		finalQuery += example.Text + "\n"
+	for i, example := range knowledgedbResponse {
+		finalQuery += dbResponsePromptFormat(example, i+1) + "\n\n"
 	}
 	finalQuery += "--- INFO END ---\n\n" + request + "\n"
-
-	// Return the final query
 	return finalQuery
 }
 
@@ -1112,45 +1111,13 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 // Returns:
 //   - finalQuery: the final query
 func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.DbResponse) (finalQuery string) {
-	// Build the final query using the KnowledgeDB response and the original request
-	// We have to use the text from the DB response and the original request.
-	//
-	// The prompt should be in the following format:
-	//
-	// ******************************************************************************
-	// Based on the following examples:
-	//
-	// --- START EXAMPLE {response_n}---
-	// >>> Summary:
-	// {knowledge_db_response_n_summary}
-	//
-	// >>> Code snippet:
-	// ```python
-	// {knowledge_db_response_n_text}
-	// ```
-	// --- END EXAMPLE {response_n}---
-	//
-	// --- START EXAMPLE {response_n}---
-	// ...
-	// --- END EXAMPLE {response_n}---
-	//
-	// Generate the Python code for the following request:
-	//
-	// >>> Request:
-	// {original_request}
-	// ******************************************************************************
-
 	// If there is no response from the KnowledgeDB, return the original request
 	if len(knowledgedbResponse) > 0 {
 		// Initial request
 		finalQuery = "Based on the following examples:\n\n"
 
 		for i, element := range knowledgedbResponse {
-			// Add the example number
-			finalQuery += "--- START EXAMPLE " + fmt.Sprint(i+1) + "---\n"
-			finalQuery += ">>> Summary:\n" + element.Summary + "\n\n"
-			finalQuery += ">>> Code snippet:\n```python\n" + element.Text + "\n```\n"
-			finalQuery += "--- END EXAMPLE " + fmt.Sprint(i+1) + "---\n\n"
+			finalQuery += dbResponsePromptFormat(element, i+1) + "\n\n"
 		}
 	}
 
@@ -1159,6 +1126,123 @@ func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []shar
 
 	// Return the final query
 	return finalQuery
+}
+
+type CollectionType uint8
+
+const (
+	Unknown CollectionType = iota
+	ApiElement
+	UserGuide
+	Example
+)
+
+func (coll CollectionType) String() string {
+	switch coll {
+	case ApiElement:
+		return "API ELEMENT"
+	case Example:
+		return "EXAMPLE"
+	case UserGuide:
+		return "USER GUIDE"
+	default:
+		return "UNKNOWN"
+	}
+}
+
+// Format a DbResponse as a string to include in the context.
+//
+// This takes a best guess at what type of document the DbResponse represents (API element/user guide/example)
+// and then formats it accordingly.
+func dbResponsePromptFormat(dbresponse sharedtypes.DbResponse, num int) string {
+	var contentParts []string
+
+	// Determine collection type and add appropriate header
+	collectionType := Unknown
+	if dbresponse.Type != "" && (dbresponse.NameFormatted != "" || dbresponse.Name != "") {
+		collectionType = ApiElement
+	} else if dbresponse.Title != "" && dbresponse.SectionName != "" {
+		collectionType = UserGuide
+	} else if dbresponse.DocumentName != "" {
+		collectionType = Example
+	} else {
+		logging.Log.Warnf(&logging.ContextMap{}, "was unable to determine format of DB response for prompt formatting %v", dbresponse)
+	}
+
+	contentParts = append(contentParts, fmt.Sprintf("=== START %s #%d ===", collectionType, num))
+
+	// CodeGenerationElement fields (API/Element collections)
+	if collectionType == ApiElement {
+		if dbresponse.NameFormatted != "" {
+			contentParts = append(contentParts, "API: "+dbresponse.NameFormatted)
+		}
+		if dbresponse.NamePseudocode != "" {
+			contentParts = append(contentParts, "Function: "+dbresponse.NamePseudocode)
+		}
+		if dbresponse.Name != "" {
+			contentParts = append(contentParts, "Full Name: "+dbresponse.Name)
+		}
+		if dbresponse.Type != "" {
+			contentParts = append(contentParts, "Type: "+dbresponse.Type)
+		}
+		if dbresponse.ParentClass != "" {
+			contentParts = append(contentParts, "Parent: "+dbresponse.ParentClass)
+		}
+	}
+
+	// VectorDatabaseUserGuideSection fields (User Guide collections)
+	if collectionType == UserGuide {
+		contentParts = append(contentParts, "Guide Title: "+dbresponse.Title)
+		contentParts = append(contentParts, "Section: "+dbresponse.SectionName)
+		if dbresponse.ParentSectionName != "" {
+			contentParts = append(contentParts, "Parent Section: "+dbresponse.ParentSectionName)
+		}
+	}
+
+	// VectorDatabaseExample fields (Example collections)
+	if collectionType == Example {
+		contentParts = append(contentParts, "Example File: "+dbresponse.DocumentName)
+		// Convert []interface{} to []string for joining
+		var deps []string
+		for _, dep := range dbresponse.Dependencies {
+			if depStr, ok := dep.(string); ok {
+				deps = append(deps, depStr)
+			}
+		}
+		if len(deps) > 0 {
+			contentParts = append(contentParts, "Uses APIs: "+strings.Join(deps, ", "))
+		}
+	}
+
+	// Common fields
+	if dbresponse.DocumentName != "" {
+		contentParts = append(contentParts, "Document: "+dbresponse.DocumentName)
+	}
+	if dbresponse.Summary != "" {
+		contentParts = append(contentParts, "Summary: "+dbresponse.Summary)
+	}
+	if len(dbresponse.Keywords) > 0 {
+		contentParts = append(contentParts, "Keywords: "+strings.Join(dbresponse.Keywords, ", "))
+	}
+	if len(dbresponse.Tags) > 0 {
+		contentParts = append(contentParts, "Tags: "+strings.Join(dbresponse.Tags, ", "))
+	}
+
+	// Handle Text field with proper formatting based on collection type
+	if dbresponse.Text != "" {
+		if collectionType == Example {
+			contentParts = append(contentParts, "Code:")
+			contentParts = append(contentParts, "```python")
+			contentParts = append(contentParts, dbresponse.Text)
+			contentParts = append(contentParts, "```")
+		} else {
+			contentParts = append(contentParts, "Content:")
+			contentParts = append(contentParts, dbresponse.Text)
+		}
+	}
+
+	contentParts = append(contentParts, fmt.Sprintf("=== END %s #%d ===", collectionType, num))
+	return strings.Join(contentParts, "\n")
 }
 
 type AppendMessageHistoryRole string
@@ -1207,6 +1291,28 @@ func AppendMessageHistory(newMessage string, role AppendMessageHistoryRole, hist
 	history = append(history, newMessageHistory)
 
 	return history
+}
+
+// CutLatestMessagesFromHistory cuts the latest messages from the conversation history
+//
+// Tags:
+//   - @displayName: Cut Latest Messages
+//
+// Parameters:
+//   - history: the conversation history
+//   - numberOfMessages: the number of messages to cut from the end of the conversation history
+//
+// Returns:
+//   - updatedHistory: the updated conversation history
+func CutLatestMessagesFromHistory(history []sharedtypes.HistoricMessage, numberOfMessages int) (updatedHistory []sharedtypes.HistoricMessage) {
+	if numberOfMessages <= 0 {
+		return history
+	}
+	if len(history) <= numberOfMessages {
+		return []sharedtypes.HistoricMessage{}
+	}
+
+	return history[:len(history)-numberOfMessages]
 }
 
 // ShortenMessageHistory shortens the conversation history to a maximum length.

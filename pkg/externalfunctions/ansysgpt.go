@@ -447,35 +447,6 @@ func AnsysGPTACSSemanticHybridSearchs(
 	return output
 }
 
-// AnsysGPTRemoveNoneCitationsFromSearchResponse removes none citations from search response
-//
-// Tags:
-//   - @displayName: Remove None Citations
-//
-// Parameters:
-//   - semanticSearchOutput: the search response
-//   - citations: the citations
-//
-// Returns:
-//   - reducedSemanticSearchOutput: the reduced search response
-func AnsysGPTRemoveNoneCitationsFromSearchResponse(semanticSearchOutput []sharedtypes.ACSSearchResponse, citations []sharedtypes.AnsysGPTCitation) (reducedSemanticSearchOutput []sharedtypes.ACSSearchResponse) {
-	// iterate throught search response and keep matches to citations
-	reducedSemanticSearchOutput = make([]sharedtypes.ACSSearchResponse, len(citations))
-	for _, value := range semanticSearchOutput {
-		for _, citation := range citations {
-			if value.SourceURLLvl2 == citation.Title {
-				reducedSemanticSearchOutput = append(reducedSemanticSearchOutput, value)
-			} else if value.SourceURLLvl2 == citation.URL {
-				reducedSemanticSearchOutput = append(reducedSemanticSearchOutput, value)
-			} else if value.SearchRerankerScore == citation.Relevance {
-				reducedSemanticSearchOutput = append(reducedSemanticSearchOutput, value)
-			}
-		}
-	}
-
-	return reducedSemanticSearchOutput
-}
-
 // AnsysGPTReorderSearchResponseAndReturnOnlyTopK reorders the search response
 //
 // Tags:
@@ -900,109 +871,6 @@ func AecGetContextFromRetrieverModule(
 	return context
 }
 
-// GetContextFromDataPlugin retrieves context from a data plugin
-//
-// Tags:
-//   - @displayName: Get Context from Data Plugin
-//
-// Parameters:
-//   - userQuery: the user query
-//   - apiUrl: the API URL of the data plugin
-//   - username: the username for authentication at the data plugin
-//   - password: the password for authentication at the data plugin
-//   - topK: the number of results to be returned
-//   - physics: the physics to be used as filter
-//   - dataSource: the data sources to be used as filter
-//
-// Returns:
-//   - context: the context retrieved from the data plugin
-func GetContextFromDataPlugin(userQuery string, apiUrl string, username string, password string, topK int, physics []string, dataSource []string) (context []sharedtypes.AnsysGPTRetrieverModuleChunk) {
-	// Generate string of comma-separated physics and data sources
-	physicsString := strings.Join(physics, ", ")
-	dataSourceString := strings.Join(dataSource, ", ")
-
-	// Encode the query, max_doc, physics and data sources in base64
-	encodedQuery := base64.StdEncoding.EncodeToString([]byte(userQuery))
-	encodedMaxDoc := base64.StdEncoding.EncodeToString([]byte(strconv.Itoa(topK)))
-	encodedPhysics := base64.StdEncoding.EncodeToString([]byte(physicsString))
-	encodedDataSource := base64.StdEncoding.EncodeToString([]byte(dataSourceString))
-
-	// Prepare form data
-	formData := url.Values{}
-	formData.Set("q", encodedQuery)
-	formData.Set("max_doc", encodedMaxDoc)
-	formData.Set("filter_physics", encodedPhysics)
-	formData.Set("data_source", encodedDataSource)
-
-	// Create the request
-	req, err := http.NewRequest("POST", apiUrl, bytes.NewBufferString(formData.Encode()))
-	if err != nil {
-		panic(fmt.Errorf("error creating request: %v", err))
-	}
-
-	// Set content type for form data
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// Set basic authentication header
-	auth := username + ":" + password
-	encodedAuth := base64.StdEncoding.EncodeToString([]byte(auth))
-	req.Header.Set("Authorization", "Basic "+encodedAuth)
-
-	// Make the request
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		panic(fmt.Errorf("error making request: %v", err))
-	}
-	defer resp.Body.Close()
-
-	// Read the response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		panic(fmt.Errorf("error reading response body: %v", err))
-	}
-
-	// Check status code
-	if resp.StatusCode != 200 {
-		panic(fmt.Errorf("error response from data plugin: %v, body: %s", resp.Status, string(body)))
-	}
-
-	// The response is base64 encoded
-	base64EncodedResponse := string(body)
-
-	// Decode the base64 response
-	decodedResponse, err := base64.StdEncoding.DecodeString(base64EncodedResponse)
-	if err != nil {
-		panic(fmt.Errorf("error decoding base64 response: %v", err))
-	}
-
-	// Unmarshal the response
-	response := map[string]sharedtypes.AnsysGPTRetrieverModuleChunk{}
-	err = json.Unmarshal(decodedResponse, &response)
-	if err != nil {
-		panic(fmt.Errorf("error unmarshalling response: %v", err))
-	}
-	logging.Log.Debugf(&logging.ContextMap{}, "Received response from retriever module: %v", response)
-
-	// Extract the context from the response
-	context = make([]sharedtypes.AnsysGPTRetrieverModuleChunk, len(response))
-	for chunkNum, chunk := range response {
-		// Extract int from chunkNum
-		_, chunkNumstring, found := strings.Cut(chunkNum, "chunk ")
-		if !found {
-			panic(fmt.Errorf("error extracting chunk number from '%v'", chunkNum))
-		}
-		chunkNumInt, err := strconv.Atoi(chunkNumstring)
-		if err != nil {
-			panic(fmt.Errorf("error converting chunk number to int: %v", err))
-		}
-		// Store the chunk in the context slice
-		context[chunkNumInt-1] = chunk
-	}
-
-	return context
-}
-
 // AecPerformLLMFinalRequest performs a final request to LLM
 //
 // Tags:
@@ -1133,6 +1001,370 @@ func AecPerformLLMFinalRequest(systemTemplate string,
 
 	// Start a goroutine to transfer the data from the response channel to the stream channel.
 	go transferDatafromResponseToStreamChannel(&responseChannel, &streamChannel, false, sendTokenCount, tokenCountEndpoint, totalInputTokenCount, previousOutputTokenCount, tokenCountModelName, jwtToken, userEmail, true, contextString)
+
+	return "", &streamChannel
+}
+
+// DataPluginCheckQueryType checks the query type for data plugin
+//
+// Tags:
+//   - @displayName: Data Plugin Check Query Type
+//
+// Parameters:
+//   - queryType: the query type
+//
+// Returns:
+//   - isGreet: the flag indicating whether the query type is greet
+//   - isGated: the flag indicating whether the query type is gated
+//   - errorMessage: the error message
+func DataPluginCheckQueryType(queryType string, errorResponseMessage string) (isGreet bool, isGated bool, errorMessage string) {
+	// check if queryType to lowercase contains any of the following types: "greet", "not_gated", "gated"
+	queryType = strings.ToLower(queryType)
+	switch {
+	case strings.Contains(queryType, "greet"):
+		return true, false, ""
+	case strings.Contains(queryType, "not_gated"):
+		return false, false, ""
+	case strings.Contains(queryType, "gated"):
+		return false, true, errorResponseMessage
+	default:
+		logging.Log.Errorf(&logging.ContextMap{}, "Invalid queryType: %v\n", queryType)
+		panic(fmt.Errorf("invalid queryType: %v", queryType))
+	}
+}
+
+// DataPluginPerformLLMRephraseRequest performs a rephrase request to LLM for data plugin
+//
+// Tags:
+//   - @displayName: Data Plugin Rephrase Request
+//
+// Parameters:
+//   - systemTemplate: the system template for the rephrase request
+//   - userTemplate: the user template for the rephrase request
+//   - query: the user query
+//   - history: the conversation history
+//
+// Returns:
+//   - rephrasedQuery: the rephrased query
+func DataPluginPerformLLMRephraseRequest(systemTemplate string, userTemplate string, query string, history []sharedtypes.HistoricMessage) (rephrasedQuery string) {
+	logging.Log.Debugf(&logging.ContextMap{}, "Performing LLM rephrase request")
+
+	// create "chat_history" string
+	historyMessages := ""
+	for _, message := range history {
+		switch message.Role {
+		case "user":
+			historyMessages += "\"User\": \"" + message.Content + "\"\n"
+		case "assistant":
+			historyMessages += "\"AI\": \"" + message.Content + "\"\n"
+		}
+	}
+
+	// Create map for the data to be used in the template
+	dataMap := make(map[string]string)
+	dataMap["query"] = query
+	dataMap["chat_history"] = historyMessages
+
+	// Format the user and system template
+	userPrompt := formatTemplate(userTemplate, dataMap)
+	logging.Log.Debugf(&logging.ContextMap{}, "User template for repharasing query: %v", userTemplate)
+	systemPrompt := formatTemplate(systemTemplate, dataMap)
+	logging.Log.Debugf(&logging.ContextMap{}, "System template for repharasing query: %v", systemTemplate)
+
+	// create options
+	var maxTokens int32 = 500
+	var temperature float32 = 0.0
+	options := &sharedtypes.ModelOptions{
+		MaxTokens:   &maxTokens,
+		Temperature: &temperature,
+	}
+
+	// Perform the general request
+	rephrasedQuery, _, err := performGeneralRequest(userPrompt, nil, false, systemPrompt, options)
+	if err != nil {
+		panic(err)
+	}
+
+	logging.Log.Debugf(&logging.ContextMap{}, "Rephrased query: %v", rephrasedQuery)
+
+	return rephrasedQuery
+}
+
+// DataPluginConvertCitationsToContext converts citations to context
+//
+// Tags:
+//   - @displayName: Data Plugin Convert Citations to Context
+//
+// Parameters:
+//   - citations: the citations string
+//
+// Returns:
+//   - context: the context extracted from the citations
+func DataPluginConvertCitationsToContext(citations string) (context []sharedtypes.AnsysGPTRetrieverModuleChunk, resetCitations string) {
+	// Unmarschal the citations string
+	citationsMap := map[string]sharedtypes.AnsysGPTRetrieverModuleChunk{}
+	err := json.Unmarshal([]byte(citations), &citationsMap)
+	if err != nil {
+		logging.Log.Errorf(&logging.ContextMap{}, "Error unmarshalling citations: %v", err)
+		panic(fmt.Errorf("error unmarshalling citations: %v", err))
+	}
+
+	// Helper struct to hold chunk number and value for sorting
+	type chunkEntry struct {
+		number int
+		value  sharedtypes.AnsysGPTRetrieverModuleChunk
+	}
+
+	// Create slice of entries
+	entries := make([]chunkEntry, 0, len(citationsMap))
+
+	// Parse chunk numbers and populate entries
+	for chunkNum, chunk := range citationsMap {
+		// Extract int from chunkNum
+		_, chunkNumstring, found := strings.Cut(chunkNum, "chunk ")
+		if !found {
+			logging.Log.Errorf(&logging.ContextMap{}, "Error extracting chunk number from '%v'", chunkNum)
+			panic(fmt.Errorf("error extracting chunk number from '%v'", chunkNum))
+		}
+		chunkNumInt, err := strconv.Atoi(chunkNumstring)
+		if err != nil {
+			logging.Log.Errorf(&logging.ContextMap{}, "Error converting chunk number to int: %v", err)
+			panic(fmt.Errorf("error converting chunk number to int: %v", err))
+		}
+
+		// Append to entries
+		entries = append(entries, chunkEntry{
+			number: chunkNumInt,
+			value:  chunk,
+		})
+	}
+
+	// Sort entries by chunk number
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].number < entries[j].number
+	})
+
+	// Extract values into final slice
+	context = make([]sharedtypes.AnsysGPTRetrieverModuleChunk, len(entries))
+	for i, entry := range entries {
+		context[i] = entry.value
+	}
+
+	return context, ""
+}
+
+// DataPluginGetContext retrieves context from a data plugin
+//
+// Tags:
+//   - @displayName: Data Plugin Get Context
+//
+// Parameters:
+//   - userQuery: the user query
+//   - apiUrl: the API URL of the data plugin
+//   - username: the username for authentication at the data plugin
+//   - password: the password for authentication at the data plugin
+//   - topK: the number of results to be returned
+//   - physics: the physics to be used as filter
+//   - dataSource: the data sources to be used as filter
+//
+// Returns:
+//   - context: the context retrieved from the data plugin
+func DataPluginGetContext(userQuery string, apiUrl string, username string, password string, topK int, physics []string, dataSource []string) (context []sharedtypes.AnsysGPTRetrieverModuleChunk) {
+	// Generate string of comma-separated physics and data sources
+	physicsString := strings.Join(physics, ", ")
+	dataSourceString := strings.Join(dataSource, ", ")
+
+	// Encode the query, max_doc, physics and data sources in base64
+	encodedQuery := base64.StdEncoding.EncodeToString([]byte(userQuery))
+	encodedMaxDoc := base64.StdEncoding.EncodeToString([]byte(strconv.Itoa(topK)))
+	encodedPhysics := base64.StdEncoding.EncodeToString([]byte(physicsString))
+	encodedDataSource := base64.StdEncoding.EncodeToString([]byte(dataSourceString))
+
+	// Prepare form data
+	formData := url.Values{}
+	formData.Set("q", encodedQuery)
+	formData.Set("max_doc", encodedMaxDoc)
+	formData.Set("filter_physics", encodedPhysics)
+	formData.Set("data_source", encodedDataSource)
+
+	// Create the request
+	req, err := http.NewRequest("POST", apiUrl, bytes.NewBufferString(formData.Encode()))
+	if err != nil {
+		panic(fmt.Errorf("error creating request: %v", err))
+	}
+
+	// Set content type for form data
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// Set basic authentication header
+	auth := username + ":" + password
+	encodedAuth := base64.StdEncoding.EncodeToString([]byte(auth))
+	req.Header.Set("Authorization", "Basic "+encodedAuth)
+
+	// Make the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(fmt.Errorf("error making request: %v", err))
+	}
+	defer resp.Body.Close()
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		panic(fmt.Errorf("error reading response body: %v", err))
+	}
+
+	// Check status code
+	if resp.StatusCode != 200 {
+		panic(fmt.Errorf("error response from data plugin: %v, body: %s", resp.Status, string(body)))
+	}
+
+	// The response is base64 encoded
+	base64EncodedResponse := string(body)
+
+	// Decode the base64 response
+	decodedResponse, err := base64.StdEncoding.DecodeString(base64EncodedResponse)
+	if err != nil {
+		panic(fmt.Errorf("error decoding base64 response: %v", err))
+	}
+
+	// Unmarshal the response
+	response := map[string]sharedtypes.AnsysGPTRetrieverModuleChunk{}
+	err = json.Unmarshal(decodedResponse, &response)
+	if err != nil {
+		panic(fmt.Errorf("error unmarshalling response: %v", err))
+	}
+	logging.Log.Debugf(&logging.ContextMap{}, "Received response from retriever module: %v", response)
+
+	// Extract the context from the response
+	context = make([]sharedtypes.AnsysGPTRetrieverModuleChunk, len(response))
+	for chunkNum, chunk := range response {
+		// Extract int from chunkNum
+		_, chunkNumstring, found := strings.Cut(chunkNum, "chunk ")
+		if !found {
+			panic(fmt.Errorf("error extracting chunk number from '%v'", chunkNum))
+		}
+		chunkNumInt, err := strconv.Atoi(chunkNumstring)
+		if err != nil {
+			panic(fmt.Errorf("error converting chunk number to int: %v", err))
+		}
+		// Store the chunk in the context slice
+		context[chunkNumInt-1] = chunk
+	}
+
+	return context
+}
+
+// DataPluginGetFinalSystemPrompt returns the final system prompt for data plugin
+//
+// Tags:
+//   - @displayName: Data Plugin Get Final System Prompt
+//
+// Parameters:
+//   - responseType: the response type
+//   - classicTemplate: the classic template
+//   - listTemplate: the list template
+//
+// Returns:
+//   - systemPrompt: the final system prompt
+func DataPluginGetFinalSystemPrompt(responseType string, classicTemplate string, listTemplate string) (systemPrompt string) {
+	// choose template based on responseType
+	switch strings.ToLower(responseType) {
+	case "list":
+		systemPrompt = listTemplate
+	default:
+		systemPrompt = classicTemplate
+	}
+
+	return systemPrompt
+}
+
+// DataPluginPerformLLMFinalRequest performs a final request to LLM for data plugin
+//
+// Tags:
+//   - @displayName: Data Plugin Final Request
+//
+// Parameters:
+//   - systemTemplate: the system template for the final request
+//   - userTemplate: the user template for the final request
+//   - query: the user query
+//   - history: the conversation history
+//   - prohibitedWords: the list of prohibited words
+//   - isStream: the flag to define if the response should be streamed
+//
+// Returns:
+//   - message: the message
+//   - stream: the stream channel
+func DataPluginPerformLLMFinalRequest(systemTemplate string, userTemplate string, query string, history []sharedtypes.HistoricMessage, context []sharedtypes.AnsysGPTRetrieverModuleChunk, prohibitedWords []string, isStream bool) (message string, stream *chan string) {
+	// create "chat_history" string
+	historyMessages := ""
+	for _, message := range history {
+		switch message.Role {
+		case "user":
+			historyMessages += "`HumanMessage`: `" + message.Content + "`\n"
+		case "assistant":
+			historyMessages += "`AIMessage`: `" + message.Content + "`\n"
+		}
+	}
+
+	// create json string from context
+	contextString := ""
+	if len(context) != 0 {
+		contextString += "{"
+		chunkNr := 1
+		for _, example := range context {
+			json, err := json.Marshal(example)
+			if err != nil {
+				logging.Log.Errorf(&logging.ContextMap{}, "Error marshalling context: %v", err)
+				return "", nil
+			}
+			contextString += fmt.Sprintf("\"chunk %v\": %v", chunkNr, string(json)) + ", "
+			chunkNr++
+		}
+		// remove last comma, then add closing bracket
+		contextString = contextString[:len(contextString)-2]
+		contextString += "}"
+	}
+
+	// create string from prohibited words
+	prohibitedWordsString := ""
+	for _, word := range prohibitedWords {
+		prohibitedWordsString += word + ", "
+	}
+
+	// Create map for the data to be used in the template
+	dataMap := make(map[string]string)
+	dataMap["query"] = query
+	dataMap["chat_history"] = historyMessages
+	dataMap["context"] = contextString
+	dataMap["prohibit_word_list"] = prohibitedWordsString
+
+	// Format the user and system template
+	userPrompt := formatTemplate(userTemplate, dataMap)
+	logging.Log.Debugf(&logging.ContextMap{}, "User template for final query: %v", userPrompt)
+	systemPrompt := formatTemplate(systemTemplate, dataMap)
+	logging.Log.Debugf(&logging.ContextMap{}, "System template for final query: %v", systemPrompt)
+
+	// create options
+	var maxTokens int32 = 2000
+	var temperature float32 = 0.0
+	options := &sharedtypes.ModelOptions{
+		MaxTokens:   &maxTokens,
+		Temperature: &temperature,
+	}
+
+	// get the LLM handler endpoint.
+	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
+
+	// Set up WebSocket connection with LLM and send chat request.
+	responseChannel := sendChatRequest(userPrompt, "general", nil, 0, systemPrompt, llmHandlerEndpoint, nil, nil, options, nil)
+
+	// Create a stream channel
+	streamChannel := make(chan string, 400)
+
+	// Start a goroutine to transfer the data from the response channel to the stream channel.
+	go transferDatafromResponseToStreamChannel(&responseChannel, &streamChannel, false, false, "", 0, 0, "", "", "", true, contextString)
 
 	return "", &streamChannel
 }

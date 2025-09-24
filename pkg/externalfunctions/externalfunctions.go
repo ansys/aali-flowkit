@@ -159,6 +159,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"ProcessJSONListOutput":                       ProcessJSONListOutput,
 	"GenerateMKSummariesforTags": 				 GenerateMKSummariesforTags,
 	"GenerateSynthesizeAnswerfromMetaKnowlwdgeUserPrompt": GenerateSynthesizeAnswerfromMetaKnowlwdgeUserPrompt,
+	
 	// qdrant
 	"QdrantCreateCollection": QdrantCreateCollection,
 	"QdrantInsertData":       QdrantInsertData,

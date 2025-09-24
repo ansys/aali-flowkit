@@ -310,7 +310,9 @@ func (graphdb_context *graphDbContext) GetSolutions(fmFailureCode, primeMeshFail
 }
 
 func (graphdb_context *graphDbContext) GetTagIdByName(tagName string, query string) (tagId string, funcError error) {
+	
 	ctx := &logging.ContextMap{}
+	
 	logging.Log.Debugf(ctx, "Searching for tag: %s", tagName)
 
 	params := aali_graphdb.ParameterMap{
@@ -318,6 +320,7 @@ func (graphdb_context *graphDbContext) GetTagIdByName(tagName string, query stri
 	}
 
 	result, err := aali_graphdb.CypherQueryReadGeneric[map[string]interface{}](graphdb_context.client, graphdb_context.dbname, query, params)
+	
 	if err != nil {
 		logging.Log.Errorf(ctx, "Error executing query: %v", err)
 		return "", err
@@ -336,7 +339,9 @@ func (graphdb_context *graphDbContext) GetTagIdByName(tagName string, query stri
 }
 
 func (graphdb_context *graphDbContext) GetMKSummaryFromDB(tagId string, query string) (summary string, funcError error) {
+	
 	ctx := &logging.ContextMap{}
+	
 	logging.Log.Debugf(ctx, "Getting MK summary for tag ID: %s", tagId)
 
 	params := aali_graphdb.ParameterMap{
@@ -344,6 +349,7 @@ func (graphdb_context *graphDbContext) GetMKSummaryFromDB(tagId string, query st
 	}
 
 	result, err := aali_graphdb.CypherQueryReadGeneric[map[string]interface{}](graphdb_context.client, graphdb_context.dbname, query, params)
+	
 	if err != nil {
 		logging.Log.Errorf(ctx, "Error executing query: %v", err)
 		return "", err
@@ -356,5 +362,6 @@ func (graphdb_context *graphDbContext) GetMKSummaryFromDB(tagId string, query st
 	} else {
 		logging.Log.Warnf(ctx, "No MK summary found for tag ID %s", tagId)
 	}
+
 	return summary, nil
 }

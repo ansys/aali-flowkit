@@ -1075,7 +1075,6 @@ func BuildLibraryContext(message string, libraryContext string) (messageWithCont
 //   - @displayName: Final Query (General LLM Request)
 //
 // Parameters:
-
 //   - request: the original request
 //   - knowledgedbResponse: the KnowledgeDB response
 //

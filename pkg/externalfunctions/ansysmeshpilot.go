@@ -2368,30 +2368,30 @@ func PerformSimilaritySearchForSubqueries(subQueries []string, collection string
     return uniqueQAPairs
 }
 
-// ProcessGetTagsOutput parses the response and returns the tags slice.
+// ProcessJSONListOutput parses the response and returns the tags slice.
 //
 // Tags:
-//   - @displayName: ProcessGetTagsOutput
+//   - @displayName: ProcessJSONListOutput
 //
 // Parameters:
 //   - response: the JSON response string
 //
 // Returns:
-//   - tags: the list of tags
-func ProcessGetTagsOutput(response string) (tags []string) {
+//   - tags: the list of items extracted from the response
+func ProcessJSONListOutput(response string) (generatedList []string) {
     ctx := &logging.ContextMap{}
 
-    err := json.Unmarshal([]byte(response), &tags)
+    err := json.Unmarshal([]byte(response), &generatedList)
     if err != nil {
         logging.Log.Errorf(ctx, "Error decoding JSON response: %v", err)
         return []string{}
     }
-    logging.Log.Debugf(ctx, "Generated Tags: %s", strings.Join(tags, ", "))
-	if len(tags) == 0 {
-		logging.Log.Error(ctx, "No tags generated.")
+    logging.Log.Debugf(ctx, "Generated List: %s", strings.Join(generatedList, ", "))
+	if len(generatedList) == 0 {
+		logging.Log.Error(ctx, "No items generated.")
 		return nil
 	}
-    return tags
+    return generatedList
 }
 
 // GenerateMKSummariesforTags retrieves unique MK summaries for the provided tags from the graph database.
@@ -2450,61 +2450,6 @@ func GenerateMKSummariesforTags(dbName string, tags []string,GetTagIdByNameQuery
     return allTagsSummaries
 }
 
-// GenerateExpandQueryUserPrompt generates a user prompt for query expansion using the provided template.
-//
-// Tags:
-//   - @displayName: GenerateExpandQueryUserPrompt
-//
-// Parameters:
-//   - userPromptTemplate: the template string with placeholders for MK Summary and User Query
-//   - summaries: the MK Summary string
-//   - query: the user query string
-//
-// Returns:
-//   - userPrompt: the formatted user prompt
-func GenerateExpandQueryUserPrompt(userPromptTemplate string, summaries []string, query string) (userPrompt string) {
-    ctx := &logging.ContextMap{}
-
-	allSummariesStr := strings.Join(summaries, "\n")
-    userPrompt = fmt.Sprintf(userPromptTemplate, allSummariesStr, query)
-
-    logging.Log.Debugf(ctx, "Generated Expand Query User Prompt: %s", userPrompt)
-
-    return
-}
-
-// ProcessExpandQueryllmOutput parses the LLM response and returns the sub-queries slice.
-//
-// Tags:
-//   - @displayName: ProcessExpandQueryllmOutput
-//
-// Parameters:
-//   - response: the JSON response stringGenerateExpandQueryUserPrompt
-//
-// Returns:
-//   - subQueries: the list of sub-queries
-func ProcessExpandQueryllmOutput(response string) (subQueries []string) {
-    ctx := &logging.ContextMap{}
-
-    err := json.Unmarshal([]byte(response), &subQueries)
-    if err != nil {
-        logging.Log.Errorf(ctx, "Error decoding JSON response: %v", err)
-        return []string{}
-    }
-
-	if len(subQueries) == 0 {
-		logging.Log.Warn(ctx, "No sub-queries generated from the userquery and summaries.")
-		return []string{}
-	}
-
-	logging.Log.Debugf(ctx, "Generated %d sub-queries", len(subQueries))
-	logging.Log.Debugf(ctx, "Expanded Sub-Queries:")
-	for _, subQuery := range subQueries {
-		logging.Log.Debugf(ctx, "- %s", subQuery)
-	}
-
-    return subQueries
-}
 
 // GenerateSynthesizeAnswerfromMetaKnowlwdgeUserPrompt generates a user prompt for synthesizing an answer from meta knowledge.
 //
@@ -2535,29 +2480,4 @@ func GenerateSynthesizeAnswerfromMetaKnowlwdgeUserPrompt(
 
     logging.Log.Debugf(ctx, "Generated Synthesize Answer User Prompt: %s", userPrompt)
     return
-}
-
-// ProcessSynthesizeAnswerFromMetaKnowledge calls the LLM to synthesize an answer from meta knowledge.
-//
-// Tags:
-//   - @displayName: ProcessSynthesizeAnswerFromMetaKnowledge
-//
-// Parameters:
-//   - userPrompt: the formatted user prompt
-//   - systemPrompt: the system prompt
-//
-// Returns:
-//   - answer: the synthesized answer string
-func ProcessSynthesizeAnswerFromMetaKnowledgellmOutput(response string) (answer string) {
-    ctx := &logging.ContextMap{}
-
-    if response == "" {
-        logging.Log.Warn(ctx, "Generated summary is empty. Returning default message.")
-        return "No relevant information found. Please try a different query."
-    }
-	trimmedResponse := strings.TrimSpace(response)
-	logging.Log.Debugf(ctx, "Trimmed synthesized answer: %s", trimmedResponse)
-	
-    logging.Log.Infof(ctx, "Successfully synthesized answer")
-    return trimmedResponse
 }

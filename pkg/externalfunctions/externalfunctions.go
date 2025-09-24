@@ -69,7 +69,6 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"AnsysGPTPerformLLMRequest":                      AnsysGPTPerformLLMRequest,
 	"AnsysGPTReturnIndexList":                        AnsysGPTReturnIndexList,
 	"AnsysGPTACSSemanticHybridSearchs":               AnsysGPTACSSemanticHybridSearchs,
-	"AnsysGPTRemoveNoneCitationsFromSearchResponse":  AnsysGPTRemoveNoneCitationsFromSearchResponse,
 	"AnsysGPTReorderSearchResponseAndReturnOnlyTopK": AnsysGPTReorderSearchResponseAndReturnOnlyTopK,
 	"AnsysGPTGetSystemPrompt":                        AnsysGPTGetSystemPrompt,
 	"AisPerformLLMRephraseRequest":                   AisPerformLLMRephraseRequest,
@@ -78,7 +77,12 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"AisChangeAcsResponsesByFactor":                  AisChangeAcsResponsesByFactor,
 	"AecGetContextFromRetrieverModule":               AecGetContextFromRetrieverModule,
 	"AecPerformLLMFinalRequest":                      AecPerformLLMFinalRequest,
-	"GetContextFromDataPlugin":                       GetContextFromDataPlugin,
+	"DataPluginGetContext":                           DataPluginGetContext,
+	"DataPluginPerformLLMRephraseRequest":            DataPluginPerformLLMRephraseRequest,
+	"DataPluginCheckQueryType":                       DataPluginCheckQueryType,
+	"DataPluginConvertCitationsToContext":            DataPluginConvertCitationsToContext,
+	"DataPluginGetFinalSystemPrompt":                 DataPluginGetFinalSystemPrompt,
+	"DataPluginPerformLLMFinalRequest":               DataPluginPerformLLMFinalRequest,
 
 	// data extraction
 	"GetGithubFilesToExtract":                    GetGithubFilesToExtract,

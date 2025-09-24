@@ -356,6 +356,5 @@ func (graphdb_context *graphDbContext) GetMKSummaryFromDB(tagId string, query st
 	} else {
 		logging.Log.Warnf(ctx, "No MK summary found for tag ID %s", tagId)
 	}
-
 	return summary, nil
 }

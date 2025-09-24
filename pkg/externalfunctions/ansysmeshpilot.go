@@ -2477,7 +2477,6 @@ func GenerateSynthesizeAnswerfromMetaKnowlwdgeUserPrompt(
     qaPairsStr := string(qaPairsBytes)
 
     userPrompt = fmt.Sprintf(SynthesizeAnswerUserPromptTemplate, originalQuery, expandedQueriesStr, qaPairsStr)
-
     logging.Log.Debugf(ctx, "Generated Synthesize Answer User Prompt: %s", userPrompt)
     return
 }

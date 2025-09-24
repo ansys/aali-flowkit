@@ -80,6 +80,7 @@ func parseMessageForType(msgType string, msg string) (finalMsg []string, lineNos
     var es []string
     es = strings.Split(msg, msgType)
     if len(es) > 1 {
+	    es = es[:len(es)-1]
 	    for _, e:= range es {
 	        if strings.Contains(e, "py:") {
 	            lineNos = append(lineNos, strings.Split(e, "py:")[1])
@@ -103,6 +104,7 @@ func GetValidationPrompt(errStr string, latestAPISignatures []string) (errPrompt
 		}
 	}
 	// Errors
+	logging.Log.Debugf(&logging.ContextMap{}, "errStr = %v", errStr)
 	errMsg, errLine := parseMessageForType("error:", errStr)
 	if len(errMsg) == 0 {
 		return "" // empty prompt, no error found

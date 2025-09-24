@@ -1042,24 +1042,23 @@ func PyaedtPerformCodeLLMRequest(input string, /*history []sharedtypes.HistoricM
 // Returns:
 //   - message: the generated code
 //   - stream: the stream channel
-func PyaedtCodeStreaming(input string) (message string, stream *chan string) {
-	// convert input string to stream and transfer
+func PyaedtCodeStreaming(input string, isStream bool) (message string, stream *chan string) {
 	responseAsStr := input
 	// Set up WebSocket connection with LLM and send chat request
 	//responseChannel := sendChatRequest(input, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
-	//if isStream {
-		logging.Log.Debugf(&logging.ContextMap{}, "Streaming ..")	
+	if isStream {
+		logging.Log.Debugf(&logging.ContextMap{}, "Streaming ..%v", input)	
 	//	validateCode = false
 		// Create a stream channel
 		streamChannel := make(chan string, 400)
 		// Start a goroutine to transfer the data from the response channel to the stream channel
 		//go transferDatafromResponseToStreamChannel(&responseChannel, &streamChannel, validateCode, false, "", 0, 0, "", "", "", false, "")
 		// Return the stream channel
-		go func() {
-			streamChannel <- input
-		}()
-		return input, &streamChannel
-	//}
+		//go func() {
+		streamChannel <- input
+		//}()
+		return responseAsStr, &streamChannel
+	}
 
 	// Close the response channel
 	//defer close(responseChannel)
@@ -1091,28 +1090,26 @@ func PyaedtCodeValidationLoopWithStreaming(input string, history []sharedtypes.H
 	var responseAsStr string
 	validateCode = true
 	validationCount := 2
-	var pythonCodeTemp string
+	for response := range responseChannel {
+		// Check if the response is an error
+		if response.Type == "error" {
+			panic(response.Error)
+		}
+		// Accumulate the responses
+		responseAsStr += *(response.ChatData)
+		// If we are at the last message, break the loop
+		if *(response.IsLast) {
+			break
+		}
+	}
+	//var pythonCodeTemp string
 	var latestAPISignatures []string
 	for cnt := range validationCount {
-		for response := range responseChannel {
-			// Check if the response is an error
-			if response.Type == "error" {
-				panic(response.Error)
-			}
-	
-			// Accumulate the responses
-			responseAsStr += *(response.ChatData)
-	
-			// If we are at the last message, break the loop
-			if *(response.IsLast) {
-				break
-			}
-		}
-
 		// Extract the code from the response
-	
+		responseAsStr = strings.ReplaceAll(responseAsStr,"```", "")
+		responseAsStr = strings.ReplaceAll(responseAsStr, "python", "")
 		pythonCode, err := extractPythonCode(responseAsStr)
-		pythonCodeTemp = pythonCode
+		//pythonCodeTemp = pythonCode
 		// kapatil: 
 		// Get latest API signatures for all
 		//var latestAPISignatures []string
@@ -1141,11 +1138,11 @@ func PyaedtCodeValidationLoopWithStreaming(input string, history []sharedtypes.H
 				// kapatil: redo code generation 
 				// Prompt: Following errors are found in code, fix code w.r.t pyaedt code library
 				errPrompt := GetValidationPrompt(err.Error(), latestAPISignatures)
-				time.Sleep(3 * time.Second)
+				time.Sleep(2 * time.Second)
 				if errPrompt != "" {
 					errPrompt += "Pyaedt script:\n " + pythonCode
 					// Set up WebSocket connection with LLM and send chat request
-					responseChannel = sendChatRequest(errPrompt, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
+					responseAsStr = sendChatRequestNoStreaming(errPrompt, "code", nil, 0, "", llmHandlerEndpoint, nil, nil, nil)
 					logging.Log.Debugf(&logging.ContextMap{}, "Request review : %v",errPrompt)
 				}
 			} else {
@@ -1154,8 +1151,9 @@ func PyaedtCodeValidationLoopWithStreaming(input string, history []sharedtypes.H
 		}
 		logging.Log.Debugf(&logging.ContextMap{}, "***Validation Loop %d************************", cnt)
 	}//validationloop
-	logging.Log.Debugf(&logging.ContextMap{}, "Validation done!")	
-	tempPrompt := "return this python code no explaination\n"+ pythonCodeTemp
+	
+	logging.Log.Debugf(&logging.ContextMap{}, "Validation done! %v", responseAsStr)	
+	tempPrompt := "return this python code no explaination\n"+ responseAsStr
 	responseChannel = sendChatRequest(tempPrompt, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
 	
 	// If isStream is true, create a stream channel and return asap
@@ -1164,6 +1162,7 @@ func PyaedtCodeValidationLoopWithStreaming(input string, history []sharedtypes.H
 		validateCode = false
 		// Create a stream channel
 		streamChannel := make(chan string, 400)
+		//streamChannel <- responseAsStr
 		// Start a goroutine to transfer the data from the response channel to the stream channel
 		go transferDatafromResponseToStreamChannel(&responseChannel, &streamChannel, validateCode, false, "", 0, 0, "", "", "", false, "")
 		// Return the stream channel
@@ -1191,25 +1190,25 @@ func PyaedtCodeValidationLoopWithStreaming(input string, history []sharedtypes.H
 // Returns:
 //   - message: the generated code
 //   - stream: the stream channel
-func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessage, isStream bool, validateCode bool) (finalPrompt string) {
+func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessage, validateCode bool) (finalResponse string) {
 	// get the LLM handler endpoint
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
-	finalPrompt = input
 	// send chat request - Get initial response
 	responseAsStr := sendChatRequestNoStreaming(input, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
-	//var responseAsStr string
+	finalResponse = responseAsStr
+	logging.Log.Debugf(&logging.ContextMap{}, "Initial response ***: %v", responseAsStr)
+	
 	validationCount := 3
 	//var pythonCodeTemp string
 	var latestAPISignatures []string
 	//validCode  := false
 	for cnt := range validationCount {
+		responseAsStr = strings.ReplaceAll(responseAsStr,"```", "")
+		responseAsStr = strings.ReplaceAll(responseAsStr, "python", "")
 		pythonCode, err := extractPythonCode(responseAsStr)
-		//pythonCodeTemp = pythonCode
 		// kapatil: 
 		// Get latest API signatures for all
-		//var latestAPISignatures []string
 		listAPIPrompt := "For following code, list only apis as comma separated values and do  not explain anyting\n"
-		//listAPIPrompt += "Python Code:\n"
 		listAPIPrompt += pythonCode
 		// API list LLM and send chat request
 		// TODO: Add your parser instead ?
@@ -1239,7 +1238,6 @@ func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessag
 				if errPrompt != "" {
 					errPrompt += "Pyaedt script:\n " + pythonCode
 					// Set up WebSocket connection with LLM and send chat request
-					finalPrompt = errPrompt
 					responseAsStr = sendChatRequestNoStreaming(errPrompt, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
 					logging.Log.Debugf(&logging.ContextMap{}, "Request review : %v",errPrompt)
 				}
@@ -1251,28 +1249,8 @@ func PyaedtCodeValidationLoop(input string, history []sharedtypes.HistoricMessag
 	}//validationloop
 	
 	logging.Log.Debugf(&logging.ContextMap{}, "Validation done! %s", responseAsStr)	
-	//time.Sleep(5 * time.Second)
-	//if validCode {
-	//	finalPrompt = "Return this python code no explaination\n"+ pythonCodeTemp
-		//responseChannel = sendChatRequest(tempPrompt, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
-	//}
-	
-	// If isStream is true, create a stream channel and return asap
-	//if isStream {
-	//	logging.Log.Debugf(&logging.ContextMap{}, "Streaming ..")	
-	//	validateCode = false
-	//	// Create a stream channel
-	//	streamChannel := make(chan string, 400)
-	//		// Start a goroutine to transfer the data from the response channel to the stream channel
-	//	go transferDatafromResponseToStreamChannel(&responseChannel, &streamChannel, validateCode, false, "", 0, 0, "", "", "", false, "")
-	//	// Return the stream channel
-	//		return "", &streamChannel
-	//}
-
-	// Close the response channel
-	//defer close(responseChannel)
-	finalPrompt = responseAsStr
-	return finalPrompt
+	finalResponse = responseAsStr
+	return finalResponse
 }
 
 

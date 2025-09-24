@@ -1209,6 +1209,28 @@ func AppendMessageHistory(newMessage string, role AppendMessageHistoryRole, hist
 	return history
 }
 
+// CutLatestMessagesFromHistory cuts the latest messages from the conversation history
+//
+// Tags:
+//   - @displayName: Cut Latest Messages
+//
+// Parameters:
+//   - history: the conversation history
+//   - numberOfMessages: the number of messages to cut from the end of the conversation history
+//
+// Returns:
+//   - updatedHistory: the updated conversation history
+func CutLatestMessagesFromHistory(history []sharedtypes.HistoricMessage, numberOfMessages int) (updatedHistory []sharedtypes.HistoricMessage) {
+	if numberOfMessages <= 0 {
+		return history
+	}
+	if len(history) <= numberOfMessages {
+		return []sharedtypes.HistoricMessage{}
+	}
+
+	return history[:len(history)-numberOfMessages]
+}
+
 // ShortenMessageHistory shortens the conversation history to a maximum length.
 // It will retain only the most recent messages and older messages will be
 // removed.

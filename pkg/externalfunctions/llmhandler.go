@@ -1092,104 +1092,9 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 	// Append all non-empty fields to provide maximum context from comprehensive DbResponse
 	finalQuery = "Based on the following examples:\n\n--- INFO START ---\n"
 	for i, example := range knowledgedbResponse {
-		var contentParts []string
-
-		// Determine collection type and add appropriate header
-		collectionType := "UNKNOWN"
-		if example.Type != "" && (example.NameFormatted != "" || example.Name != "") {
-			collectionType = "API_ELEMENT"
-		} else if example.Title != "" && example.SectionName != "" {
-			collectionType = "USER_GUIDE"
-		} else if example.DocumentName != "" {
-			collectionType = "EXAMPLE"
-		}
-
-		contentParts = append(contentParts, fmt.Sprintf("=== %s #%d ===", collectionType, i+1))
-
-		// CodeGenerationElement fields (API/Element collections)
-		if example.Type != "" && (example.NameFormatted != "" || example.Name != "") {
-			if example.NameFormatted != "" {
-				contentParts = append(contentParts, "API: "+example.NameFormatted)
-			}
-			if example.NamePseudocode != "" {
-				contentParts = append(contentParts, "Function: "+example.NamePseudocode)
-			}
-			if example.Name != "" {
-				contentParts = append(contentParts, "Full Name: "+example.Name)
-			}
-			if example.Type != "" {
-				contentParts = append(contentParts, "Type: "+example.Type)
-			}
-			if example.ParentClass != "" {
-				contentParts = append(contentParts, "Parent: "+example.ParentClass)
-			}
-		}
-
-		// VectorDatabaseUserGuideSection fields (User Guide collections)
-		if example.Title != "" && example.SectionName != "" {
-			contentParts = append(contentParts, "Guide Title: "+example.Title)
-			contentParts = append(contentParts, "Section: "+example.SectionName)
-			if example.ParentSectionName != "" {
-				contentParts = append(contentParts, "Parent Section: "+example.ParentSectionName)
-			}
-		}
-
-		// VectorDatabaseExample fields (Example collections)
-		if example.DocumentName != "" {
-			contentParts = append(contentParts, "Example File: "+example.DocumentName)
-			// Convert []interface{} to []string for joining
-			var deps []string
-			for _, dep := range example.Dependencies {
-				if depStr, ok := dep.(string); ok {
-					deps = append(deps, depStr)
-				}
-			}
-			if len(deps) > 0 {
-				contentParts = append(contentParts, "Uses APIs: "+strings.Join(deps, ", "))
-			}
-		}
-
-		// Common fields
-		if example.DocumentName != "" && collectionType != "EXAMPLE" {
-			contentParts = append(contentParts, "Document: "+example.DocumentName)
-		}
-		if example.Summary != "" {
-			contentParts = append(contentParts, "Summary: "+example.Summary)
-		}
-		if len(example.Keywords) > 0 {
-			contentParts = append(contentParts, "Keywords: "+strings.Join(example.Keywords, ", "))
-		}
-		if len(example.Tags) > 0 {
-			contentParts = append(contentParts, "Tags: "+strings.Join(example.Tags, ", "))
-		}
-
-		// Handle Text field with proper formatting based on collection type
-		if example.Text != "" {
-			if collectionType == "EXAMPLE" {
-				contentParts = append(contentParts, "Code:")
-				contentParts = append(contentParts, "```python")
-				contentParts = append(contentParts, example.Text)
-				contentParts = append(contentParts, "```")
-			} else {
-				contentParts = append(contentParts, "Content:")
-				contentParts = append(contentParts, example.Text)
-			}
-		}
-
-		// Add all content with spacing
-		if len(contentParts) > 0 {
-			finalQuery += strings.Join(contentParts, "\n") + "\n\n"
-		}
+		finalQuery += dbResponsePromptFormat(example, i+1) + "\n\n"
 	}
 	finalQuery += "--- INFO END ---\n\n" + request + "\n"
-	originalQuery := ""
-
-	// Return the final query
-	for _, example := range knowledgedbResponse {
-		originalQuery += example.Text + "\n"
-	}
-	fmt.Printf("Original Query (General LLM Request):\n%s\n", originalQuery)
-	fmt.Printf("Final Query (General LLM Request):\n%s\n", finalQuery)
 	return finalQuery
 }
 
@@ -1207,124 +1112,13 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 // Returns:
 //   - finalQuery: the final query
 func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.DbResponse) (finalQuery string) {
-	// Build the final query using the KnowledgeDB response and the original request
-	// We have to use the text from the DB response and the original request.
-	//
-	// The prompt should be in the following format:
-	//
-	// ******************************************************************************
-	// Based on the following examples:
-	//
-	// --- START EXAMPLE {response_n}---
-	// >>> Summary:
-	// {knowledge_db_response_n_summary}
-	//
-	// >>> Code snippet:
-	// ```python
-	// {knowledge_db_response_n_text}
-	// ```
-	// --- END EXAMPLE {response_n}---
-	//
-	// --- START EXAMPLE {response_n}---
-	// ...
-	// --- END EXAMPLE {response_n}---
-	//
-	// Generate the Python code for the following request:
-	//
-	// >>> Request:
-	// {original_request}
-	// ******************************************************************************
-
 	// If there is no response from the KnowledgeDB, return the original request
 	if len(knowledgedbResponse) > 0 {
 		// Initial request
 		finalQuery = "Based on the following examples:\n\n"
 
 		for i, element := range knowledgedbResponse {
-			// Determine collection type for better context
-			collectionType := "UNKNOWN"
-			if element.Type != "" && (element.NameFormatted != "" || element.Name != "") {
-				collectionType = "API_ELEMENT"
-			} else if element.Title != "" && element.SectionName != "" {
-				collectionType = "USER_GUIDE"
-			} else if element.DocumentName != "" {
-				collectionType = "EXAMPLE"
-			}
-
-			// Add collection type header
-			finalQuery += "---  " + collectionType + "  ---\n"
-
-			// Build summary from all available non-empty fields
-			var summaryParts []string
-
-			// CodeGenerationElement fields (from API/Element collections)
-			if element.NameFormatted != "" {
-				summaryParts = append(summaryParts, element.NameFormatted)
-			}
-			if element.Type != "" {
-				summaryParts = append(summaryParts, "Type: "+element.Type)
-			}
-			if element.ParentClass != "" {
-				summaryParts = append(summaryParts, "Parent: "+element.ParentClass)
-			}
-
-			// VectorDatabaseUserGuideSection fields (from User Guide collections)
-			if element.Title != "" {
-				summaryParts = append(summaryParts, element.Title)
-			}
-			if element.SectionName != "" {
-				summaryParts = append(summaryParts, "Section: "+element.SectionName)
-			}
-
-			// VectorDatabaseExample fields (from Example collections)
-			if element.DocumentName != "" {
-				summaryParts = append(summaryParts, "Document: "+element.DocumentName)
-			}
-			if element.Summary != "" {
-				summaryParts = append(summaryParts, "Summary: "+element.Summary)
-			}
-			if len(element.Dependencies) > 0 {
-				// Convert []interface{} to []string for joining
-				var deps []string
-				for _, dep := range element.Dependencies {
-					if depStr, ok := dep.(string); ok {
-						deps = append(deps, depStr)
-					}
-				}
-				if len(deps) > 0 {
-					summaryParts = append(summaryParts, "Dependencies: "+strings.Join(deps, ", "))
-				}
-			}
-
-			// Build code content from available fields
-			var codeParts []string
-
-			if element.NamePseudocode != "" {
-				codeParts = append(codeParts, "# "+element.NamePseudocode)
-			}
-			if element.Name != "" {
-				codeParts = append(codeParts, "# Function: "+element.Name)
-			}
-
-			// Handle Text field - all code examples should be properly formatted
-			if element.Text != "" {
-				codeParts = append(codeParts, element.Text)
-			}
-
-			// Use constructed content or fallback
-			summaryContent := strings.Join(summaryParts, " | ")
-			if summaryContent == "" {
-				summaryContent = "No summary available"
-			}
-
-			codeContent := strings.Join(codeParts, "\n")
-			if codeContent == "" {
-				codeContent = "# No code content available"
-			}
-
-			finalQuery += ">>> Summary:\n" + summaryContent + "\n\n"
-			finalQuery += ">>> Code snippet:\n```python\n" + codeContent + "\n```\n"
-			finalQuery += "---  END " + fmt.Sprint(i+1) + " ---\n\n"
+			finalQuery += dbResponsePromptFormat(element, i+1) + "\n\n"
 		}
 	}
 
@@ -1333,6 +1127,123 @@ func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []shar
 
 	// Return the final query
 	return finalQuery
+}
+
+type CollectionType uint8
+
+const (
+	Unknown CollectionType = iota
+	ApiElement
+	UserGuide
+	Example
+)
+
+func (coll CollectionType) String() string {
+	switch coll {
+	case ApiElement:
+		return "API ELEMENT"
+	case Example:
+		return "EXAMPLE"
+	case UserGuide:
+		return "USER GUIDE"
+	default:
+		return "UNKNOWN"
+	}
+}
+
+// Format a DbResponse as a string to include in the context.
+//
+// This takes a best guess at what type of document the DbResponse represents (API element/user guide/example)
+// and then formats it accordingly.
+func dbResponsePromptFormat(dbresponse sharedtypes.DbResponse, num int) string {
+	var contentParts []string
+
+	// Determine collection type and add appropriate header
+	collectionType := Unknown
+	if dbresponse.Type != "" && (dbresponse.NameFormatted != "" || dbresponse.Name != "") {
+		collectionType = ApiElement
+	} else if dbresponse.Title != "" && dbresponse.SectionName != "" {
+		collectionType = UserGuide
+	} else if dbresponse.DocumentName != "" {
+		collectionType = Example
+	} else {
+		logging.Log.Warnf(&logging.ContextMap{}, "was unable to determine format of DB response for prompt formatting %v", dbresponse)
+	}
+
+	contentParts = append(contentParts, fmt.Sprintf("=== START %s #%d ===", collectionType, num))
+
+	// CodeGenerationElement fields (API/Element collections)
+	if collectionType == ApiElement {
+		if dbresponse.NameFormatted != "" {
+			contentParts = append(contentParts, "API: "+dbresponse.NameFormatted)
+		}
+		if dbresponse.NamePseudocode != "" {
+			contentParts = append(contentParts, "Function: "+dbresponse.NamePseudocode)
+		}
+		if dbresponse.Name != "" {
+			contentParts = append(contentParts, "Full Name: "+dbresponse.Name)
+		}
+		if dbresponse.Type != "" {
+			contentParts = append(contentParts, "Type: "+dbresponse.Type)
+		}
+		if dbresponse.ParentClass != "" {
+			contentParts = append(contentParts, "Parent: "+dbresponse.ParentClass)
+		}
+	}
+
+	// VectorDatabaseUserGuideSection fields (User Guide collections)
+	if collectionType == UserGuide {
+		contentParts = append(contentParts, "Guide Title: "+dbresponse.Title)
+		contentParts = append(contentParts, "Section: "+dbresponse.SectionName)
+		if dbresponse.ParentSectionName != "" {
+			contentParts = append(contentParts, "Parent Section: "+dbresponse.ParentSectionName)
+		}
+	}
+
+	// VectorDatabaseExample fields (Example collections)
+	if collectionType == Example {
+		contentParts = append(contentParts, "Example File: "+dbresponse.DocumentName)
+		// Convert []interface{} to []string for joining
+		var deps []string
+		for _, dep := range dbresponse.Dependencies {
+			if depStr, ok := dep.(string); ok {
+				deps = append(deps, depStr)
+			}
+		}
+		if len(deps) > 0 {
+			contentParts = append(contentParts, "Uses APIs: "+strings.Join(deps, ", "))
+		}
+	}
+
+	// Common fields
+	if dbresponse.DocumentName != "" {
+		contentParts = append(contentParts, "Document: "+dbresponse.DocumentName)
+	}
+	if dbresponse.Summary != "" {
+		contentParts = append(contentParts, "Summary: "+dbresponse.Summary)
+	}
+	if len(dbresponse.Keywords) > 0 {
+		contentParts = append(contentParts, "Keywords: "+strings.Join(dbresponse.Keywords, ", "))
+	}
+	if len(dbresponse.Tags) > 0 {
+		contentParts = append(contentParts, "Tags: "+strings.Join(dbresponse.Tags, ", "))
+	}
+
+	// Handle Text field with proper formatting based on collection type
+	if dbresponse.Text != "" {
+		if collectionType == Example {
+			contentParts = append(contentParts, "Code:")
+			contentParts = append(contentParts, "```python")
+			contentParts = append(contentParts, dbresponse.Text)
+			contentParts = append(contentParts, "```")
+		} else {
+			contentParts = append(contentParts, "Content:")
+			contentParts = append(contentParts, dbresponse.Text)
+		}
+	}
+
+	contentParts = append(contentParts, fmt.Sprintf("=== END %s #%d ===", collectionType, num))
+	return strings.Join(contentParts, "\n")
 }
 
 type AppendMessageHistoryRole string

@@ -1,0 +1,840 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>codegeneration &#8212; aali-flowkit</title>
+  
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/ansys_sphinx_theme.css?v=0909a4fa" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://www.nerdfonts.com/assets/css/webfont.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+
+  <!-- Include desired assets -->
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  
+
+  
+    <link href="../../../_static/css/breadcrumbs.css" rel="stylesheet" />
+  
+    <script src="../../../_static/documentation_options.js?v=add7db06"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api_reference/privatefunctions/codegeneration/index';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://laughing-guide-5m1lvq6.pages.github.io/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'v1.2';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            false;
+        </script>
+    <link rel="icon" href="../../../_static/ansys-favicon.png"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="generic" href="../generic/index.html" />
+    <link rel="prev" title="externalfunctions" href="../../externalfunctions/index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="v1.2.8" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/pyansys_logo_transparent_black.png" class="logo__image only-light" alt="aali-flowkit - Home"/>
+    <img src="../../../_static/pyansys_logo_transparent_white.png" class="logo__image only-dark pst-js-only" alt="aali-flowkit - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../../index.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+<div class="search-bar pst-js-only" id="search-bar">
+  <form class="bd-search d-flex align-items-center" action="../../../search.html" method="get">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="form-control" name="q" placeholder="Search the docs ..."
+      aria-label="Search the docs ..." autocomplete="off" autocorrect="off"
+      autocapitalize="off" spellcheck="false" />
+    <span class="search-button__kbd-shortcut">
+      <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+    </span>
+  </form>
+  <div id="static-search-results" class="static-search-results" style="display:none;" tabindex="0"></div>
+</div>
+        </div>
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/aali-flowkit" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+<div class="search-bar pst-js-only" id="search-bar">
+  <form class="bd-search d-flex align-items-center" action="../../../search.html" method="get">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="form-control" name="q" placeholder="Search the docs ..."
+      aria-label="Search the docs ..." autocomplete="off" autocorrect="off"
+      autocapitalize="off" spellcheck="false" />
+    <span class="search-button__kbd-shortcut">
+      <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+    </span>
+  </form>
+  <div id="static-search-results" class="static-search-results" style="display:none;" tabindex="0"></div>
+</div>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+  
+    <div id="announcement_msg"></div>
+<script>
+  fetch("announcement.html")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      return response.text();
+    })
+    .then(
+      (text) => (document.getElementById("announcement_msg").innerHTML = text),
+    )
+    .catch((error) => console.error(`Fetch problem: ${error.message}`));
+</script>
+  
+
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../../index.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/aali-flowkit" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Core Packages</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../grpcserver/index.html">grpcserver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../functiondefinitions/index.html">functiondefinitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../internalstates/index.html">internalstates</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Function Packages</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../externalfunctions/index.html">externalfunctions</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Private Functions</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">codegeneration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../generic/index.html">generic</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../graphdb/index.html">graphdb</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../qdrant/index.html">qdrant</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+         
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="https://aali.docs.ansys.com/" class="nav-link">Aali</a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a
+        href="../../../index.html"
+        class="nav-link"
+        aria-label="Home"
+      >
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a href="../../index.html" class="nav-link">API Reference</a>
+    </li>
+      
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">codegeneration</span></li>
+    
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <!-- Code generated by gomarkdoc. DO NOT EDIT -->
+<section id="codegeneration">
+<h1>codegeneration<a class="headerlink" href="#codegeneration" title="Link to this heading">#</a></h1>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>import &quot;github.com/ansys/aali-flowkit/pkg/privatefunctions/codegeneration&quot;
+</pre></div>
+</div>
+<section id="index">
+<h2>Index<a class="headerlink" href="#index" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="#CreateReturnList"><span class="xref myst">func CreateReturnList(returnString string) (returnElementList []string, err error)</span></a></p></li>
+<li><p><a class="reference internal" href="#ProcessElementName"><span class="xref myst">func ProcessElementName(fullName string, dependencies []string) (namePseudocode string, nameFormatted string, err error)</span></a></p></li>
+<li><p><a class="reference internal" href="#RemoveEmptyLines"><span class="xref myst">func RemoveEmptyLines(input string) string</span></a></p></li>
+<li><p><a class="reference internal" href="#SplitByCapitalLetters"><span class="xref myst">func SplitByCapitalLetters(s string) string</span></a></p></li>
+<li><p><a class="reference internal" href="#AssemblyMember"><span class="xref myst">type AssemblyMember</span></a></p></li>
+<li><p><a class="reference internal" href="#CodeGenerationPseudocodeResponse"><span class="xref myst">type CodeGenerationPseudocodeResponse</span></a></p></li>
+<li><p><a class="reference internal" href="#GraphDatabaseElement"><span class="xref myst">type GraphDatabaseElement</span></a></p></li>
+<li><p><a class="reference internal" href="#VectorDatabaseElement"><span class="xref myst">type VectorDatabaseElement</span></a></p></li>
+<li><p><a class="reference internal" href="#VectorDatabaseExample"><span class="xref myst">type VectorDatabaseExample</span></a></p></li>
+<li><p><a class="reference internal" href="#VectorDatabaseUserGuideSection"><span class="xref myst">type VectorDatabaseUserGuideSection</span></a></p></li>
+<li><p><a class="reference internal" href="#XMLAssembly"><span class="xref myst">type XMLAssembly</span></a></p></li>
+<li><p><a class="reference internal" href="#XMLObjectDefinitionDocument"><span class="xref myst">type XMLObjectDefinitionDocument</span></a></p></li>
+</ul>
+<p><a name="CreateReturnList"></a></p>
+</section>
+<section id="func-createreturnlist">
+<h2>func CreateReturnList<a class="headerlink" href="#func-createreturnlist" title="Link to this heading">#</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>func CreateReturnList(returnString string) (returnElementList []string, err error)
+</pre></div>
+</div>
+<p>CreateReturnList creates a list of return elements from a string</p>
+<p>Parameters:</p>
+<ul class="simple">
+<li><p>returnString: the string to create the list from</p></li>
+</ul>
+<p>Returns:</p>
+<ul class="simple">
+<li><p>the list of return elements</p></li>
+<li><p>an error if the string is empty</p></li>
+</ul>
+<p><a name="ProcessElementName"></a></p>
+</section>
+<section id="func-processelementname">
+<h2>func ProcessElementName<a class="headerlink" href="#func-processelementname" title="Link to this heading">#</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>func ProcessElementName(fullName string, dependencies []string) (namePseudocode string, nameFormatted string, err error)
+</pre></div>
+</div>
+<p>ProcessElementName processes an element name</p>
+<p>Parameters:</p>
+<ul class="simple">
+<li><p>fullName: the full name of the element</p></li>
+<li><p>dependencies: the dependencies of the element</p></li>
+</ul>
+<p>Returns:</p>
+<ul class="simple">
+<li><p>the pseudocode name of the element</p></li>
+<li><p>the formatted name of the element</p></li>
+<li><p>an error if the name is empty</p></li>
+</ul>
+<p><a name="RemoveEmptyLines"></a></p>
+</section>
+<section id="func-removeemptylines">
+<h2>func RemoveEmptyLines<a class="headerlink" href="#func-removeemptylines" title="Link to this heading">#</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>func RemoveEmptyLines(input string) string
+</pre></div>
+</div>
+<p>RemoveEmptyLines removes empty lines from a string</p>
+<p>Parameters:</p>
+<ul class="simple">
+<li><p>input: the string to remove empty lines from</p></li>
+</ul>
+<p>Returns:</p>
+<ul class="simple">
+<li><p>the string with empty lines removed</p></li>
+</ul>
+<p><a name="SplitByCapitalLetters"></a></p>
+</section>
+<section id="func-splitbycapitalletters">
+<h2>func SplitByCapitalLetters<a class="headerlink" href="#func-splitbycapitalletters" title="Link to this heading">#</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>func SplitByCapitalLetters(s string) string
+</pre></div>
+</div>
+<p>SplitByCapitalLetters splits a string by capital letters</p>
+<p>Parameters:</p>
+<ul class="simple">
+<li><p>s: the string to split</p></li>
+</ul>
+<p>Returns:</p>
+<ul class="simple">
+<li><p>the string with spaces inserted before capital letters</p></li>
+</ul>
+<p><a name="AssemblyMember"></a></p>
+</section>
+<section id="type-assemblymember">
+<h2>type AssemblyMember<a class="headerlink" href="#type-assemblymember" title="Link to this heading">#</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>type AssemblyMember struct {
+    Name             string                       `xml:&quot;name,attr&quot; json:&quot;name&quot;`
+    Summary          string                       `xml:&quot;summary&quot; json:&quot;summary&quot;`
+    ReturnType       string                       `xml:&quot;returnType&quot; json:&quot;return_type&quot;`
+    Returns          string                       `xml:&quot;returns,omitempty&quot; json:&quot;returns&quot;`
+    Params           []sharedtypes.XMLMemberParam `xml:&quot;param&quot; json:&quot;parameters&quot;`          // Handles multiple &lt;param&gt; elements
+    Example          sharedtypes.XMLMemberExample `xml:&quot;example,omitempty&quot; json:&quot;example&quot;` // Optional &lt;example&gt; element
+    Remarks          string                       `xml:&quot;remarks,omitempty&quot; json:&quot;remarks&quot;` // Optional &lt;remarks&gt; element
+    EnumValues       string                       `xml:&quot;enumValues,omitempty&quot; json:&quot;enum_values&quot;`
+    VectorDBMetadata any                          `xml:&quot;vectorDBMetadata,omitempty&quot; json:&quot;vector_db_metadata&quot;` // Optional &lt;vectorDBMetadata&gt; element
+    GraphDBMetadata  any                          `xml:&quot;graphDBMetadata,omitempty&quot; json:&quot;graph_db_metadata&quot;`   // Optional &lt;graphDBMetadata&gt; element
+}
+</pre></div>
+</div>
+<p><a name="CodeGenerationPseudocodeResponse"></a></p>
+</section>
+<section id="type-codegenerationpseudocoderesponse">
+<h2>type CodeGenerationPseudocodeResponse<a class="headerlink" href="#type-codegenerationpseudocoderesponse" title="Link to this heading">#</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>type CodeGenerationPseudocodeResponse struct {
+    Signature   string `json:&quot;signature&quot;`
+    Description string `json:&quot;description&quot;`
+}
+</pre></div>
+</div>
+<p><a name="GraphDatabaseElement"></a></p>
+</section>
+<section id="type-graphdatabaseelement">
+<h2>type GraphDatabaseElement<a class="headerlink" href="#type-graphdatabaseelement" title="Link to this heading">#</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>type GraphDatabaseElement struct {
+    Guid           uuid.UUID                    `json:&quot;guid&quot;`
+    Type           string                       `json:&quot;type&quot;`
+    NamePseudocode string                       `json:&quot;name_pseudocode&quot;`
+    Description    string                       `json:&quot;description&quot;`
+    Summary        string                       `json:&quot;summary&quot;`
+    Examples       string                       `json:&quot;examples&quot;`
+    Parameters     []sharedtypes.XMLMemberParam `json:&quot;parameters&quot;`
+    Dependencies   []string                     `json:&quot;dependencies&quot;`
+    ReturnType     string                       `json:&quot;returnType&quot;`
+    Remarks        string                       `json:&quot;remarks&quot;`
+}
+</pre></div>
+</div>
+<p><a name="VectorDatabaseElement"></a></p>
+</section>
+<section id="type-vectordatabaseelement">
+<h2>type VectorDatabaseElement<a class="headerlink" href="#type-vectordatabaseelement" title="Link to this heading">#</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>type VectorDatabaseElement struct {
+    Guid           uuid.UUID        `json:&quot;guid&quot;`
+    DenseVector    []float32        `json:&quot;dense_vector&quot;`
+    SparseVector   map[uint]float32 `json:&quot;sparse_vector&quot;`
+    Type           string           `json:&quot;type&quot;`
+    Name           string           `json:&quot;name&quot;`
+    NamePseudocode string           `json:&quot;name_pseudocode&quot;`
+    NameFormatted  string           `json:&quot;name_formatted&quot;`
+    ParentClass    string           `json:&quot;parent_class&quot;`
+}
+</pre></div>
+</div>
+<p><a name="VectorDatabaseExample"></a></p>
+</section>
+<section id="type-vectordatabaseexample">
+<h2>type VectorDatabaseExample<a class="headerlink" href="#type-vectordatabaseexample" title="Link to this heading">#</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>type VectorDatabaseExample struct {
+    Guid                   uuid.UUID         `json:&quot;guid&quot;`
+    DenseVector            []float32         `json:&quot;dense_vector&quot;`
+    SparseVector           map[uint]float32  `json:&quot;sparse_vector&quot;`
+    DocumentName           string            `json:&quot;document_name&quot;`
+    Dependencies           []string          `json:&quot;dependencies&quot;`
+    DependencyEquivalences map[string]string `json:&quot;dependency_equivalences&quot;`
+    Text                   string            `json:&quot;text&quot;`
+    PreviousChunk          *uuid.UUID        `json:&quot;previous_chunk&quot;`
+    NextChunk              *uuid.UUID        `json:&quot;next_chunk&quot;`
+}
+</pre></div>
+</div>
+<p><a name="VectorDatabaseUserGuideSection"></a></p>
+</section>
+<section id="type-vectordatabaseuserguidesection">
+<h2>type VectorDatabaseUserGuideSection<a class="headerlink" href="#type-vectordatabaseuserguidesection" title="Link to this heading">#</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>type VectorDatabaseUserGuideSection struct {
+    Guid              uuid.UUID `json:&quot;guid&quot;`
+    SectionName       string    `json:&quot;section_name&quot;`
+    DocumentName      string    `json:&quot;document_name&quot;`
+    Title             string
+    ParentSectionName string           `json:&quot;parent_section_name&quot;`
+    Text              string           `json:&quot;text&quot;`
+    Level             int              `json:&quot;level&quot;`
+    PreviousChunk     *uuid.UUID       `json:&quot;previous_chunk&quot;`
+    NextChunk         *uuid.UUID       `json:&quot;next_chunk&quot;`
+    DenseVector       []float32        `json:&quot;dense_vector&quot;`
+    SparseVector      map[uint]float32 `json:&quot;sparse_vector&quot;`
+}
+</pre></div>
+</div>
+<p><a name="XMLAssembly"></a></p>
+</section>
+<section id="type-xmlassembly">
+<h2>type XMLAssembly<a class="headerlink" href="#type-xmlassembly" title="Link to this heading">#</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>type XMLAssembly struct {
+    Name string `xml:&quot;name&quot;`
+}
+</pre></div>
+</div>
+<p><a name="XMLObjectDefinitionDocument"></a></p>
+</section>
+<section id="type-xmlobjectdefinitiondocument">
+<h2>type XMLObjectDefinitionDocument<a class="headerlink" href="#type-xmlobjectdefinitiondocument" title="Link to this heading">#</a></h2>
+<p>Structs representing the XML structure</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>type XMLObjectDefinitionDocument struct {
+    XMLName  xml.Name         `xml:&quot;doc&quot;`
+    Assembly XMLAssembly      `xml:&quot;assembly&quot;`
+    Members  []AssemblyMember `xml:&quot;members&gt;member&quot;`
+}
+</pre></div>
+</div>
+<p>Generated by <a class="reference external" href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#index">Index</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#func-createreturnlist">func CreateReturnList</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#func-processelementname">func ProcessElementName</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#func-removeemptylines">func RemoveEmptyLines</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#func-splitbycapitalletters">func SplitByCapitalLetters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#type-assemblymember">type AssemblyMember</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#type-codegenerationpseudocoderesponse">type CodeGenerationPseudocodeResponse</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#type-graphdatabaseelement">type GraphDatabaseElement</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#type-vectordatabaseelement">type VectorDatabaseElement</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#type-vectordatabaseexample">type VectorDatabaseExample</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#type-vectordatabaseuserguidesection">type VectorDatabaseUserGuideSection</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#type-xmlassembly">type XMLAssembly</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#type-xmlobjectdefinitiondocument">type XMLObjectDefinitionDocument</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item"> 
+<div class="tocsection editthispage">
+  <a href="None">
+    <i class="fa-solid fa-pencil"></i>
+       Edit
+    on GitHub  
+  </a>
+</div>
+
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <ul class="this-page-menu">
+      <li><a href="../../../_sources/api_reference/privatefunctions/codegeneration/index.md.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+
+  <!-- Include desired assets -->
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.7/require.min.js"></script>
+
+<script>
+// Passing the search options to the search.js file
+const SEARCH_OPTIONS = JSON.parse('{"keys": ["title", "text"], "limit": 10, "threshold": 0.2}');
+const SEARCH_FILE = "../../../_static/search.json";
+</script>
+
+
+<script src="../../../_static/js/search.js"></script>
+  
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright (c) 2025 ANSYS, Inc. All rights reserved.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the
+  <a href="https://sphinxdocs.ansys.com/version/stable/index.html"
+    >Ansys Sphinx Theme</a
+  >
+  1.3.2. <br />Last updated on
+  <span id="ast_build_date"></span>
+</p>
+<script>
+  var options = { day: "numeric", month: "long", year: "numeric" };
+  var ast_lastModifiedDate = new Date(document.lastModified);
+  var ast_build_date = ast_lastModifiedDate.toLocaleDateString("en-US", options);
+  document.getElementById("ast_build_date").innerHTML = ast_build_date;
+</script></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -335,7 +335,8 @@ func sendChatRequestNoHistory(data string, chatRequestType string, maxKeywordsSe
 	if chatRequestType == "keywords" {
 		data = "You are a keyword extractor, return only keywords with original input format from the following text: " + data
 	}
-	return sendChatRequest(data, chatRequestType, nil, maxKeywordsSearch, "", llmHandlerEndpoint, modelIds, options, nil)
+
+	return sendChatRequest(data, chatRequestType, nil, maxKeywordsSearch, "", llmHandlerEndpoint, modelIds, nil, options, nil)
 }
 
 // sendChatRequest sends a chat request to LLM
@@ -390,8 +391,7 @@ func sendChatRequestNoStreaming(data string, chatRequestType string, history []s
 	go shutdownHandler(c)
 	go listener(c, responseChannel, true)
 	go writer(c, requestChannelChat, responseChannel)
-	//logging.Log.Debugf(&logging.ContextMap{}, "kapatil: send request : chat, data :%s, with max keyword search %d, ", data, maxKeywordsSearch)
-	go sendRequest("chat", data, requestChannelChat, chatRequestType, "false", false, history, maxKeywordsSearch, systemPrompt, responseChannel, modelIds, options, images)
+	go sendRequest("chat", data, requestChannelChat, chatRequestType, "false", false, history, maxKeywordsSearch, systemPrompt, responseChannel, modelIds, modelCategory, options, images)
 
 	// receive single answer from the response channel
 	response := <-responseChannel
@@ -869,13 +869,13 @@ func validatePythonCode(pythonCode string) (bool, bool, error) {
 	}
 
 	// kapatil : Download files
-        outFile := filepath.Join( "/app", "tmp_out1.py")
-        data, err := os.ReadFile(tmpFileName)
-        if err != nil {
-            logging.Log.Debugf(&logging.ContextMap{}, "reading file to copy")
-        }
+	outFile := filepath.Join("/app", "tmp_out1.py")
+	data, err := os.ReadFile(tmpFileName)
+	if err != nil {
+		logging.Log.Debugf(&logging.ContextMap{}, "reading file to copy")
+	}
 
-        err = os.WriteFile(outFile, data, 0644)
+	err = os.WriteFile(outFile, data, 0644)
 	if err != nil {
 		logging.Log.Debugf(&logging.ContextMap{}, "unable to write generated code to output dir: %v", err)
 	}

@@ -79,50 +79,95 @@ func TestSendVectorsToKnowledgeDB(t *testing.T) {
 		// now insert some data
 		data := []any{
 			map[string]any{
-				"id":            uuid.NewString(),
-				"vector":        []float32{0, -1, -2, -3},
-				"document_name": "Doc 1",
-				"keywords":      []any{"kw1", "kw2"},
-				"level":         "leaf",
+				"guid":         uuid.NewString(),
+				"vector":       []float32{0, -1, -2, -3},
+				"name":         "Doc one, ansys.aedt.core",
+				"parent_class": []any{"kw1", "kw2"},
+				"pyaedt_group": "leaf",
 			},
 			map[string]any{
-				"id":            uuid.NewString(),
-				"vector":        []float32{4, 5, 6, 7},
-				"document_name": "Doc 2",
-				"keywords":      []any{"kw2", "kw3", "kw4"},
-				"level":         "leaf",
+				"guid":         uuid.NewString(),
+				"vector":       []float32{4, 5, 6, 7},
+				"name":         "Hey, Doc two, ansys.aedt.core",
+				"parent_class": []any{"kw2", "kw3", "kw4"},
+				"pyaedt_group": "leaf",
 			},
 			map[string]any{
-				"id":            uuid.NewString(),
-				"vector":        []float32{4, 5, 6, 8},
-				"document_name": "Doc 3",
-				"keywords":      []any{"kw5"},
-				"level":         "leaf",
+				"guid":         uuid.NewString(),
+				"vector":       []float32{4, 5, 6, 8},
+				"name":         "Hey, Doc three, ansys.aedt.core",
+				"parent_class": []any{"kw5"},
+				"pyaedt_group": "leaf",
 			},
 		}
-		QdrantInsertData(collection, data, "id", "vector")
+		QdrantInsertData(collection, data, "guid", "vector")
 
 		// create index
-		QdrantCreateIndex(collection, "document_name", "keyword", true)
-		QdrantCreateIndex(collection, "keywords", "keyword", true)
-		QdrantCreateIndex(collection, "level", "keyword", true)
+		// QdrantCreateIndex(collection, "name", "keyword", true)
+		QdrantCreateIndex(collection, "name", "text", true)
+		QdrantCreateIndex(collection, "parent_class", "keyword", true)
+		QdrantCreateIndex(collection, "pyaedt_group", "keyword", true)
+
+		// // verify we can get collection info
+		// resp, err := qdrantClient.GetCollectionInfo(ctx, collection)
+		// require.NoError(err)
+		// logging.Log.Infof(&logging.ContextMap{}, "Collection info: %+v", resp)
 
 		// do a straight up search with an exact match (dense-only)
 		resp := SendVectorsToKnowledgeDB([]float32{0, -1, -2, -3}, []string{}, false, collection, 1, 0, make(map[uint]float32))
 		require.Len(resp, 1, "expected 1 result but got %d", len(resp))
-		assert.Equal("Doc 1", resp[0].DocumentName)
+		assert.Equal("Doc one, ansys.aedt.core", resp[0].Name)
+
+		// resp := SendVectorsToKnowledgeDB([]float32{4, 5, 6, 7}, []string{"two doc"}, true, collection, 1, 0, make(map[uint]float32))
+		resp = SendVectorsToKnowledgeDB([]float32{4, 5, 6, 7}, []string{"Doc two"}, true, collection, 1, 0, make(map[uint]float32))
+		require.Len(resp, 1, "expected 1 result but got %d", len(resp))
+		assert.Equal("Hey, Doc two, ansys.aedt.core", resp[0].Name)
 
 		// do a generalist search (keywords ignored in simplified implementation, still dense-only)
-		resp = SendVectorsToKnowledgeDB([]float32{4, 5, 6, 7}, []string{"kw5"}, true, collection, 1, 0, make(map[uint]float32))
+		resp = SendVectorsToKnowledgeDB([]float32{4, 5, 6, 7}, []string{}, true, collection, 1, 0, make(map[uint]float32))
 		require.Len(resp, 1, "expected 1 result but got %d", len(resp))
-		// Different distance metrics may return different top results, both Doc 2 and Doc 3 are valid
-		assert.Contains([]string{"Doc 2", "Doc 3"}, resp[0].DocumentName)
+		// Different distance metrics may return different top results, both Doc two and Doc three are valid
+		assert.Contains([]string{"Hey, Doc two, ansys.aedt.core", "Hey, Doc three, ansys.aedt.core"}, resp[0].Name)
 
 		// Test explicit empty sparse vector (new caller style)
 		emptySparseVector := make(map[uint]float32)
 		resp = SendVectorsToKnowledgeDB([]float32{4, 5, 6, 7}, []string{}, false, collection, 1, 0, emptySparseVector)
 		require.Len(resp, 1, "expected 1 result but got %d", len(resp))
 		// Should return a valid result with dense-only search
+
+		// Test filtering.
+		// Keywords contains any of 'ansys', 'aedt', 'core', 'ansys.aedt.core', 'ansys.aedt', 'aedt.core' will be filtered out.
+		resp = SendVectorsToKnowledgeDB([]float32{4, 5, 6, 7}, []string{"three", "ansys", "aedt", "core", "ansys.aedt.core", "ansys.aedt", "aedt.core"}, true, collection, 1, 0, make(map[uint]float32))
+		require.Len(resp, 1, "expected 1 result but got %d", len(resp))
+		// Different distance metrics may return different top results, both Doc two and Doc three are valid
+		assert.Equal("Hey, Doc three, ansys.aedt.core", resp[0].Name)
+
+		// Keyword can't find a match, should return non-filtered results, maximum 5 - but return 3 since we only have 3 in total
+		resp = SendVectorsToKnowledgeDB([]float32{0, -1, -2, -3}, []string{"abc"}, true, collection, 5, -100, make(map[uint]float32))
+		require.Len(resp, 3, "expected 3 result but got %d", len(resp))
+		assert.Equal("Doc one, ansys.aedt.core", resp[0].Name)
+		assert.Equal("Hey, Doc two, ansys.aedt.core", resp[1].Name)
+		assert.Equal("Hey, Doc three, ansys.aedt.core", resp[2].Name)
+
+		// Return certain number of results
+		resp = SendVectorsToKnowledgeDB([]float32{4, 5, 6, 7}, []string{"Hey"}, true, collection, 2, -100, make(map[uint]float32))
+		require.Len(resp, 2, "expected 2 result but got %d", len(resp))
+
+		if collection == "dot" {
+			assert.Equal("Hey, Doc two, ansys.aedt.core", resp[0].Name)
+			assert.Equal("Hey, Doc three, ansys.aedt.core", resp[1].Name)
+		}
+
+		if collection == "cosine" {
+			assert.Equal("Hey, Doc two, ansys.aedt.core", resp[1].Name)
+			assert.Equal("Hey, Doc three, ansys.aedt.core", resp[0].Name)
+		}
+
+		// Return certain number of results - no filtering
+		resp = SendVectorsToKnowledgeDB([]float32{0, -1, -2, -3}, []string{}, true, collection, 2, -100, make(map[uint]float32))
+		require.Len(resp, 2, "expected 2 result but got %d", len(resp))
+		assert.Equal("Doc one, ansys.aedt.core", resp[0].Name)
+		assert.Equal("Hey, Doc two, ansys.aedt.core", resp[1].Name)
 	}
 
 	t.Run("cosine", func(t *testing.T) { testcase(t, "cosine", "test-cosine") })

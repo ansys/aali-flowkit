@@ -23,12 +23,9 @@
 package externalfunctions
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"regexp"
 	"strings"
 
@@ -37,7 +34,6 @@ import (
 	"github.com/russross/blackfriday/v2"
 
 	"github.com/ansys/aali-flowkit/pkg/meshpilot/ampgraphdb"
-	"github.com/ansys/aali-flowkit/pkg/meshpilot/azure"
 
 	qdrant_utils "github.com/ansys/aali-flowkit/pkg/privatefunctions/qdrant"
 	"github.com/qdrant/go-client/qdrant"
@@ -45,239 +41,147 @@ import (
 	"github.com/ansys/aali-sharedtypes/pkg/sharedtypes"
 )
 
-// SimilartitySearchOnPathDescriptions do similarity search on path description
+/*************************************************************************/
+/* 						Private Functions 								 */
+/*************************************************************************/
+func cleanJSONBlock(s string) string {
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "```") && strings.HasSuffix(s, "```") {
+		s = strings.TrimPrefix(s, "```json")
+		s = strings.TrimPrefix(s, "```JSON")
+		s = strings.TrimPrefix(s, "```")
+		s = strings.TrimSuffix(s, "```")
+		s = strings.TrimSpace(s)
+	}
+	// Sometimes models wrap whole JSON in quotes
+	s = strings.Trim(s, "\"")
+	return s
+}
+
+// updateActionsMatching applies key/value updates to every action where matchKey == matchValue.
+func updateActionsMatching(actions []map[string]string, matchKey, matchValue string, updates map[string]string) {
+	for i := range actions {
+		if val, ok := actions[i][matchKey]; ok && val == matchValue {
+			for k, v := range updates {
+				actions[i][k] = v
+			}
+		}
+	}
+}
+
+/*************************************************************************/
+/* 						Extract Info from LLM Output 					 */
+/*************************************************************************/
+
+// ExtractMapFieldValueFromJSON finds the relevant description by prompting
 //
 // Tags:
-//   - @displayName: SimilartitySearchOnPathDescriptions
+//   - @displayName: ExtractMapFieldValueFromJSON
 //
 // Parameters:
-//   - instruction: the user query
-//   - toolName: the tool name
+//   - message: the message from llm
+//   - extractField: the field to extract from the llm output
 //
 // Returns:
-//   - descriptions: the list of descriptions
-func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (descriptions []string) {
-	descriptions = []string{}
+//   - fieldValue: the extracted field value
+func ExtractMapFieldValueFromJSON(message, extractField string) (fieldValue interface{}) {
 	ctx := &logging.ContextMap{}
+	parsed := ParseMapFromJSON(message)
 
-	db_endpoint := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["MESHPILOT_DB_ENDPOINT"]
-	logging.Log.Debugf(ctx, "DB Endpoint: %q", db_endpoint)
-
-	toolName1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_1_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool name 1 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
+	fieldValue, ok := parsed[extractField]
+	if !ok {
+		errMsg := fmt.Sprintf("ExtractMapFieldValueFromJSON: %s not found in LLM output", extractField)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
 	}
-
-	toolName2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_1_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool name 2 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolName3, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_3_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool name 3 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolName4, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_2_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool name 4 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolName5, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_3_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool name 5 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolName6, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_4_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool name 6 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolName7, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_5_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool name 7 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolName8, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_6_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool name 8 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolName9, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_19_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool name 9 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolName10, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_8_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool name 10 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	collection1Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["COLLECTION_1_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load collection name 1 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	collection2Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["COLLECTION_2_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load collection name 2 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	collection3Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["COLLECTION_3_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load collection name 3 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	collection4Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["COLLECTION_4_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load collection name 4 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	collection5Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["COLLECTION_5_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load collection name 5 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	collection6Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["COLLECTION_6_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load collection name 6 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	collection7Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["COLLECTION_7_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load collection name 7 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	collection8Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["COLLECTION_8_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load collection name 8 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	collection_name := ""
-	if toolName == toolName5 {
-		collection_name = collection2Name
-	} else if toolName == toolName6 {
-		collection_name = collection3Name
-	} else if toolName == toolName4 {
-		collection_name = collection4Name
-	} else if toolName == toolName7 {
-		collection_name = collection5Name
-	} else if toolName == toolName8 {
-		collection_name = collection6Name
-	} else if toolName == toolName1 ||
-		toolName == toolName2 ||
-		toolName == toolName3 {
-		collection_name = collection1Name
-	} else if toolName == toolName9 {
-		collection_name = collection8Name
-	} else if toolName == toolName10 {
-		collection_name = collection7Name
-	} else {
-		errorMessage := fmt.Sprintf("Invalid Tool Name: %q", toolName)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	db_url := fmt.Sprintf("%s%s%s", db_endpoint, "/qdrant/similar_descriptions/from/", collection_name)
-	logging.Log.Debugf(ctx, "Constructed URL: %s", db_url)
-
-	body := map[string]string{
-		"query": instruction,
-	}
-	bodyBytes, err := json.Marshal(body)
-	if err != nil {
-		errorMessage := fmt.Sprintf("Failed to marshal request body: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-	logging.Log.Debugf(ctx, "Request Body: %s", string(bodyBytes))
-
-	req, err := http.NewRequest("POST", db_url, bytes.NewBuffer(bodyBytes))
-	if err != nil {
-		errorMessage := fmt.Sprintf("Failed to create request: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		errorMessage := fmt.Sprintf("Failed to send request: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		errorMessage := fmt.Sprintf("Unexpected status code: %d", resp.StatusCode)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		errorMessage := fmt.Sprintf("Failed to read response body: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-	logging.Log.Debugf(ctx, "Response: %s", string(responseBody))
-
-	var response struct {
-		Descriptions []string `json:"descriptions"`
-	}
-	err = json.Unmarshal(responseBody, &response)
-	if err != nil {
-		errorMessage := fmt.Sprintf("Failed to unmarshal response: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	descriptions = response.Descriptions
-	logging.Log.Debugf(ctx, "Descriptions: %q", descriptions)
 	return
 }
 
-// FindRelevantPathDescription finds the relevant description by prompting
+// ExtractMapFieldStringValueFromJSON finds the relevant description by prompting
 //
 // Tags:
-//   - @displayName: FindRelevantPathDescription
+//   - @displayName: ExtractMapFieldStringValueFromJSON
+//
+// Parameters:
+//   - message: the message from llm
+//   - extractField: the field to extract from the llm output
+//
+// Returns:
+//   - fieldValue: the extracted field value
+func ExtractMapFieldStringValueFromJSON(message, extractField string) (fieldValue string) {
+	ctx := &logging.ContextMap{}
+	parsed := ParseMapFromJSON(message)
+
+	fieldValue, ok := parsed[extractField].(string)
+	if !ok {
+		errMsg := fmt.Sprintf("ExtractMapFieldStringValueFromJSON: %s not found in LLM output", extractField)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
+	}
+
+	return
+}
+
+// ExtractPropertiesFieldsFromJSON finds the relevant description by prompting
+//
+// Tags:
+//   - @displayName: ExtractPropertiesFromJSON
+//
+// Parameters:
+//   - message: the message from llm
+//   - extractField: the field to extract from the llm output
+//
+// Returns:
+//   - propertyDetails: the extracted field value
+func ExtractPropertiesFromJSON(message string) (propertyDetails []map[string]string) {
+	ctx := &logging.ContextMap{}
+	parsed := ParseMapFromJSON(message)
+
+	propertyDetails = []map[string]string{}
+	for key, value := range parsed {
+		propertyData := map[string]string{}
+		propertyData["PropertyName"] = key
+		propertyData["PropertyUnits"] = ""
+		propertyData["PropertyValue"] = ""
+		switch v := value.(type) {
+		case string:
+		case int, int64, int32:
+			propertyData["PropertyValue"] = fmt.Sprintf("%d", v)
+		case float32, float64:
+			propertyData["PropertyValue"] = fmt.Sprintf("%f", v)
+		case map[string]interface{}:
+			if propertyValue, ok := v["value"].(string); !ok {
+				if intVal, ok := v["value"].(int); ok {
+					propertyData["PropertyValue"] = fmt.Sprintf("%d", intVal)
+				} else if floatVal, ok := v["value"].(float64); ok {
+					propertyData["PropertyValue"] = fmt.Sprintf("%f", floatVal)
+				} else {
+					propertyData["PropertyValue"] = ""
+					logging.Log.Infof(ctx, "Key: %s, Value 'value' is of a different type or missing: %T", key, v["value"])
+				}
+			} else {
+				propertyData["PropertyValue"] = propertyValue
+			}
+
+			if propertyUnits, ok := v["units"].(string); !ok {
+				propertyData["PropertyUnits"] = ""
+				logging.Log.Infof(ctx, "Key: %s, Value 'units' is of a different type or missing: %T", key, v["units"])
+			} else {
+				propertyData["PropertyUnits"] = propertyUnits
+			}
+			propertyDetails = append(propertyDetails, propertyData)
+		default:
+			logging.Log.Infof(ctx, "Key: %s, Value is of a different type: %T", key, v)
+			continue
+		}
+	}
+	return
+}
+
+// FindRelevantDescription finds the relevant description by prompting
+//
+// Tags:
+//   - @displayName: FindRelevantDescription
 //
 // Parameters:
 //   - descriptions: the list of descriptions
@@ -285,7 +189,7 @@ func SimilartitySearchOnPathDescriptions(instruction string, toolName string) (d
 //
 // Returns:
 //   - relevantDescription: the relevant desctiption
-func FindRelevantPathDescription(descriptions []string, message string) (relevantDescription string) {
+func FindRelevantDescription(descriptions []string, message string) (relevantDescription string) {
 
 	relevantDescription = ""
 	ctx := &logging.ContextMap{}
@@ -310,12 +214,7 @@ func FindRelevantPathDescription(descriptions []string, message string) (relevan
 	logging.Log.Debugf(ctx, "Response Content: %s", message)
 
 	// Strip backticks and "json" label from the response content
-	cleanedContent := strings.TrimSpace(message)
-	if strings.HasPrefix(cleanedContent, "```json") && strings.HasSuffix(cleanedContent, "```") {
-		cleanedContent = strings.TrimPrefix(cleanedContent, "```json")
-		cleanedContent = strings.TrimSuffix(cleanedContent, "```")
-		cleanedContent = strings.TrimSpace(cleanedContent)
-	}
+	cleanedContent := cleanJSONBlock(message)
 
 	var output *struct {
 		Index int `json:"index"`
@@ -345,1403 +244,117 @@ func FindRelevantPathDescription(descriptions []string, message string) (relevan
 	return
 }
 
-// FetchPropertiesFromPathDescription get properties from path description
-//
-// Tags:
-//   - @displayName: FetchPropertiesFromPathDescription
-//
-// Parameters:
-//   - description: the desctiption of path
-//
-// Returns:
-//   - properties: the list of descriptions
-func FetchPropertiesFromPathDescription(db_name, description string) (properties []string) {
-
+/*************************************************************************/
+/* 						Update Action Fields 							 */
+/*************************************************************************/
+func UpdateActionField(actions []map[string]string, matchKey, matchValue, updateKey, updateValue string) []map[string]string {
 	ctx := &logging.ContextMap{}
 
-	logging.Log.Infof(ctx, "Fetching Properties From Path Descriptions...")
-
-	err := ampgraphdb.EstablishConnection(config.GlobalConfig.GRAPHDB_ADDRESS, db_name)
-
-	if err != nil {
-		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
-		logging.Log.Error(ctx, errMsg)
-		panic(errMsg)
-	}
-
-	query := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_DATABASE_GET_PROPERTIES_QUERY"]
-
-	properties, err = ampgraphdb.GraphDbDriver.GetProperties(description, query)
-
-	if err != nil {
-		errorMessage := fmt.Sprintf("Error fetching properties from path description: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	logging.Log.Debugf(ctx, "Propetries: %q\n", properties)
-	return
-}
-
-// FetchNodeDescriptionsFromPathDescription get node descriptions from path description
-//
-// Tags:
-//   - @displayName: FetchNodeDescriptionsFromPathDescription
-//
-// Parameters:
-//   - description: the desctiption of path
-//
-// Returns:
-//   - actionDescriptions: action descriptions
-func FetchNodeDescriptionsFromPathDescription(db_name, description string) (actionDescriptions string) {
-
-	ctx := &logging.ContextMap{}
-
-	logging.Log.Infof(ctx, "Fetching Node Descriptions From Path Descriptions...")
-
-	err := ampgraphdb.EstablishConnection(config.GlobalConfig.GRAPHDB_ADDRESS, db_name)
-
-	if err != nil {
-		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
-		logging.Log.Error(ctx, errMsg)
-		panic(errMsg)
-	}
-
-	// Get environment variables
-	query := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_DATABASE_GET_STATE_NODE_QUERY"]
-
-	summaries, err := ampgraphdb.GraphDbDriver.GetSummaries(description, query)
-
-	if err != nil {
-		errorMessage := fmt.Sprintf("Error fetching summaries from path description: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actionDescriptions = summaries
-	logging.Log.Debugf(ctx, "Summaries: %q\n", actionDescriptions)
-
-	return
-}
-
-// FetchActionsPathFromPathDescription fetch actions from path description
-//
-// Tags:
-//   - @displayName: FetchActionsPathFromPathDescription
-//
-// Parameters:
-//   - description: the desctiption of path
-//   - nodeLabel: the label of the node
-//
-// Returns:
-//   - actions: the list of actions to execute
-func FetchActionsPathFromPathDescription(db_name, description, nodeLabel string) (actions []map[string]string) {
-	ctx := &logging.ContextMap{}
-
-	logging.Log.Infof(ctx, "Fetching Actions From Path Descriptions...")
-
-	err := ampgraphdb.EstablishConnection(config.GlobalConfig.GRAPHDB_ADDRESS, db_name)
-
-	if err != nil {
-		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
-		logging.Log.Error(ctx, errMsg)
-		panic(errMsg)
-	}
-
-	// Get the node label 1 from the configuration
-	nodeLabel1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_DATABASE_FETCH_PATH_NODES_QUERY_NODE_LABEL_1"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load node label 1 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get the node label 2 from the configuration
-	nodeLabel2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_DATABASE_FETCH_PATH_NODES_QUERY_NODE_LABEL_2"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load node label 2 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	var query string
-	if nodeLabel == nodeLabel1 {
-		query, exists = config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_DATABASE_GET_ACTIONS_QUERY_LABEL_1"]
-	} else if nodeLabel == nodeLabel2 {
-		query, exists = config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_DATABASE_GET_ACTIONS_QUERY_LABEL_2"]
-	} else {
-		errorMessage := fmt.Sprintf("Invalid Node Label: %q", nodeLabel)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actions, err = ampgraphdb.GraphDbDriver.GetActions(description, query)
-	if err != nil {
-		errorMessage := fmt.Sprintf("Error fetching actions from path description: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	return
-}
-
-// SynthesizeActionsTool2 update action as per user instruction
-//
-// Tags:
-//   - @displayName: SynthesizeActionsTool2
-//
-// Parameters:
-//   - message: the message from the llm
-//   - actions: the list of actions
-//
-// Returns:
-//   - updatedActions: the list of synthesized actions
-func SynthesizeActionsTool2(message string, actions []map[string]string) (updatedActions []map[string]string) {
-
-	ctx := &logging.ContextMap{}
-
-	updatedActions = actions
-
-	if len(message) == 0 {
-		errorMessage := fmt.Sprintf("the message is empty, cannot synthesize actions")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	logging.Log.Debugf(ctx, "The Message: %s\n", message)
-
-	// Clean the response content
-	cleanedContent := strings.TrimSpace(message)
-	if strings.HasPrefix(cleanedContent, "```json") && strings.HasSuffix(cleanedContent, "```") {
-		cleanedContent = strings.TrimPrefix(cleanedContent, "```json")
-		cleanedContent = strings.TrimSuffix(cleanedContent, "```")
-		cleanedContent = strings.TrimSpace(cleanedContent)
-	}
-
-	var output struct {
-		ScopePattern string `json:"ScopePattern"`
-	}
-
-	err := json.Unmarshal([]byte(cleanedContent), &output)
-	if err != nil {
-		errorMessage := fmt.Sprintf("SynthesizeActionsTool2: Failed to unmarshal response: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	scopePattern := output.ScopePattern
-
-	logging.Log.Debugf(ctx, "scopePattern: %q\n", scopePattern)
-
-	// Get synthesize actions find key from configuration
-	synthesizeActionsFindKey, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_FIND_KEY"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load synthesize actions find key from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	synthesizeActionsValue, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_TOOL2_VALUE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load synthesize actions find key from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	synthesizeActionsReplaceKey, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_REPLACE_KEY_1"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load synthesize actions find key from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Updated actions from output
-	for i := 0; i < len(updatedActions); i++ {
-		updateAction := updatedActions[i]
-		for key, value := range updateAction {
-			if key == synthesizeActionsFindKey && value == synthesizeActionsValue {
-				updateAction[synthesizeActionsReplaceKey] = scopePattern
-			}
-		}
-	}
-
-	logging.Log.Debugf(ctx, "The Updated Actions: %q\n", updatedActions)
-
-	return
-}
-
-// SynthesizeActionsTool3 update action as per user instruction
-// // Tags:
-//   - @displayName: SynthesizeActionsTool3
-//
-// Parameters:
-//   - message_1: the first message from the llm
-//   - message_2: the second message from the llm
-//   - actions: the list of actions
-//
-// Returns:
-//   - updatedActions: the list of synthesized actions
-func SynthesizeActionsTool3(message_1 string, message_2 string, target_object string, actions []map[string]string) (updatedActions []map[string]string) {
-	ctx := &logging.ContextMap{}
-
-	// Clean up the input messages
-	message_1 = strings.TrimSpace(strings.Trim(message_1, "\""))
-	message_2 = strings.TrimSpace(strings.Trim(message_2, "\""))
-	target_object = strings.TrimSpace(strings.Trim(target_object, "\""))
-
-	logging.Log.Debugf(ctx, "Tool 3 Synthesize Message 1: %s\n", message_1)
-	logging.Log.Debugf(ctx, "Tool 3 Synthesize Message 2: %s\n", message_2)
-	logging.Log.Debugf(ctx, "Tool 3 Target Object: %s\n", target_object)
-
-	// Get synthesize actions find key from configuration
-	synthesizeActionsFindKey1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_TOOL3_VALUE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load synthesize actions tool 3 find key from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	synthesizeActionsFindKey2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_FIND_KEY"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load synthesize actions tool 3 find key from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	APP_TOOL_ACTIONS_TARGET_5, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_TARGET_5"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_TARGET_5 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	APP_TOOL_ACTIONS_TARGET_6, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_TARGET_6"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_TARGET_6 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Initialize updatedActions with the input actions
-	updatedActions = actions
-
-	if target_object == APP_TOOL_ACTIONS_TARGET_5 {
-		// Check the first dictionary in actions
-		if len(updatedActions) > 0 {
-			firstAction := updatedActions[0]
-			if _, ok := firstAction[synthesizeActionsFindKey1]; ok {
-				// Replace the value with the input message
-				firstAction[synthesizeActionsFindKey1] = message_1
-			}
-
-			if _, ok := firstAction[synthesizeActionsFindKey2]; ok && len(message_2) != 0 {
-				firstAction[synthesizeActionsFindKey2] = message_2
-			}
-		}
-	} else if target_object == APP_TOOL_ACTIONS_TARGET_6 {
-		// Check if there is a third dictionary in actions
-		if len(updatedActions) > 2 {
-			thirdAction := updatedActions[2]
-			if _, ok := thirdAction[synthesizeActionsFindKey1]; ok {
-				// Replace the value with the input message
-				thirdAction[synthesizeActionsFindKey1] = message_1
-			}
-
-			updatedActions = []map[string]string{thirdAction}
-		} else {
-			logging.Log.Warnf(ctx, "No third action found in updatedActions for target_object: %s", target_object)
-		}
-	} else {
-		// Skip if target_object is neither APP_TOOL_ACTIONS_TARGET_5 nor APP_TOOL_ACTIONS_TARGET_6
-		logging.Log.Infof(ctx, "Skipping action synthesis for target_object: %s", target_object)
-	}
-
-	logging.Log.Debugf(ctx, "The Updated Actions: %q\n", updatedActions)
-
-	return
-}
-
-// SynthesizeActionsTool11 synthesize actions based on user instruction
-//
-// Tags:
-//   - @displayName: SynthesizeActionsTool11
-//
-// Parameters:
-//   - content: the llm content
-//
-// Returns:
-//   - result: the synthesized string
-func SynthesizeActionsTool11(content string) (result string) {
-	ctx := &logging.ContextMap{}
-
-	var out struct {
-		UnitSystem string `json:"UnitSystem"`
-	}
-	if err := json.Unmarshal([]byte(content), &out); err != nil {
-		panic(fmt.Sprintf("unmarshal UnitSystem failed: %v", err))
-	}
-	unitSystem := out.UnitSystem
-	logging.Log.Infof(ctx, "Synthesized UnitSystem: %s", unitSystem)
-
-	message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_11_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_ACTION_TOOL_11_SUCCESS_MESSAGE from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actionKey1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_KEY_1"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_KEY_1 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-	actionKey2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_KEY_2"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_KEY_2 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-	actionValue1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_11_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTION_11_NAME from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-	actionValue2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_TARGET_1"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_TARGET_1 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actions := []map[string]string{
-		{
-			actionKey1:      actionValue1,
-			actionKey2:      actionValue2,
-			"ArgumentUnits": unitSystem,
-		},
-	}
-
-	finalMessage := map[string]interface{}{
-		"Message": message,
-		"Actions": actions,
-	}
-
-	resultStream, err := json.Marshal(finalMessage)
-	if err != nil {
-		errorMessage := fmt.Sprintf("failed to marshal final message for tool 11: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	result = string(resultStream)
-	logging.Log.Infof(ctx, "SynthesizeActionsTool11 result: %s", result)
-	logging.Log.Infof(ctx, "successfully synthesized actions for tool 11")
-
-	return
-}
-
-// SynthesizeActionsTool12 synthesize actions based on user instruction
-//
-// Tags:
-//   - @displayName: SynthesizeActionsTool12
-//
-// Parameters:
-//   - content: the llm content
-//
-// Returns:
-//   - result: the synthesized string
-func SynthesizeActionsTool12(content string) (result string) {
-	ctx := &logging.ContextMap{}
-
-	var out struct {
-		Argument string `json:"Argument"`
-	}
-
-	if err := json.Unmarshal([]byte(content), &out); err != nil {
-		panic(fmt.Sprintf("unmarshal Argument failed: %v", err))
-	}
-
-	Argument := out.Argument
-	logging.Log.Infof(ctx, "Synthesized Argument: %s", Argument)
-
-	message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_12_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_ACTION_TOOL_12_SUCCESS_MESSAGE from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actionKey1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_KEY_1"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_KEY_1 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actionKey2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_KEY_2"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_KEY_2 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actionValue1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_12_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTION_12_NAME from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actionValue2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_TARGET_1"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_TARGET_1 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actions := []map[string]string{
-		{
-			actionKey1: actionValue1,
-			actionKey2: actionValue2,
-			"Argument": Argument,
-		},
-	}
-
-	finalMessage := map[string]interface{}{
-		"Message": message,
-		"Actions": actions,
-	}
-
-	resultStream, err := json.Marshal(finalMessage)
-	if err != nil {
-		errorMessage := fmt.Sprintf("failed to marshal final message for tool 12: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	result = string(resultStream)
-	logging.Log.Infof(ctx, "SynthesizeActionsTool12 result: %s", result)
-	logging.Log.Infof(ctx, "successfully synthesized actions for tool 12")
-
-	return result
-}
-
-// SynthesizeActionsTool17 synthesize actions based on user instruction
-//
-// Tags:
-//   - @displayName: SynthesizeActionsTool17
-//
-// Parameters:
-//   - content: the llm content
-//
-// Returns:
-//   - result: the synthesized string
-func SynthesizeActionsTool17(content string) (result string) {
-	ctx := &logging.ContextMap{}
-
-	var out struct {
-		Argument string `json:"Argument"`
-	}
-
-	logging.Log.Infof(ctx, "SynthesizeActionsTool17 content: %s", content)
-
-	if err := json.Unmarshal([]byte(content), &out); err != nil {
-		panic(fmt.Sprintf("unmarshal Argument failed: %v", err))
-	}
-
-	Argument := out.Argument
-	logging.Log.Infof(ctx, "Synthesized Argument: %s", Argument)
-
-	message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_17_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_ACTION_TOOL_17_SUCCESS_MESSAGE from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actionKey1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_KEY_1"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_KEY_1 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actionKey2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_KEY_2"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_KEY_2 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actionValue1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_17_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTION_17_NAME from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actionValue2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_TARGET_1"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_TARGET_1 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actions := []map[string]string{
-		{
-			actionKey1: actionValue1,
-			actionKey2: actionValue2,
-			"Argument": Argument,
-		},
-	}
-
-	finalMessage := map[string]interface{}{
-		"Message": message,
-		"Actions": actions,
-	}
-
-	resultStream, err := json.Marshal(finalMessage)
-	if err != nil {
-		errorMessage := fmt.Sprintf("failed to marshal final message for tool 17: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	result = string(resultStream)
-	logging.Log.Infof(ctx, "SynthesizeActionsTool17 result: %s", result)
-	logging.Log.Infof(ctx, "successfully synthesized actions for tool 17")
-
-	return result
-}
-
-// SynthesizeActions update action as per user instruction
-//
-// Tags:
-//   - @displayName: SynthesizeActions
-//
-// Parameters:
-//   - message: the message from the llm
-//   - properties: the list of properties
-//   - actions: the list of actions
-//
-// Returns:
-//   - updatedActions: the list of synthesized actions
-func SynthesizeActions(message string, properties []string, actions []map[string]string) (updatedActions []map[string]string) {
-
-	ctx := &logging.ContextMap{}
-
-	updatedActions = actions
-
-	if len(properties) == 0 {
-		logging.Log.Infof(ctx, "No properties to synthesize actions")
-		return
-	}
-
-	if len(message) == 0 {
-		errorMessage := fmt.Sprintf("the message is empty, cannot synthesize actions")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	logging.Log.Debugf(ctx, "The Message: %s\n", message)
-
-	var output map[string]interface{}
-
-	// Attempt to unmarshal the response
-	err := json.Unmarshal([]byte(message), &output)
-	if err != nil {
-		// Log the error and fallback to an empty output
-		logging.Log.Errorf(ctx, "Failed to unmarshal response content: %s, error: %v", message, err)
-
-		// Attempt to clean the response and retry unmarshaling
-		cleanedContent := strings.TrimSpace(message)
-		if strings.HasPrefix(cleanedContent, "```json") && strings.HasSuffix(cleanedContent, "```") {
-			cleanedContent = strings.TrimPrefix(cleanedContent, "```json")
-			cleanedContent = strings.TrimSuffix(cleanedContent, "```")
-			cleanedContent = strings.TrimSpace(cleanedContent)
-		}
-
-		err = json.Unmarshal([]byte(cleanedContent), &output)
-		if err != nil {
-			logging.Log.Errorf(ctx, "Failed to unmarshal cleaned response content: %s, error: %v", cleanedContent, err)
-			logging.Log.Warn(ctx, "Returning an empty output as fallback.")
-			output = make(map[string]interface{})
-		}
-	}
-
-	logging.Log.Debugf(ctx, "The LLM Output of properties processing: %q\n", output)
-
-	// Get synthesize actions find key from configuration
-	synthesizeActionsFindKey, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_FIND_KEY"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load synthesize actions find key from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get synthesize actions replace key 1 from configuration
-	synthesizeActionsReplaceKey1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_REPLACE_KEY_1"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load synthesize actions replace key 1 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get synthesize actions replace key 2 from configuration
-	synthesizeActionsReplaceKey2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_ACTION_REPLACE_KEY_2"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load synthesize actions replace key 2 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get synthesize output key 1 from configuration
-	synthesizeOutputKey1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_OUTPUT_KEY_1"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load synthesize output key 1 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get synthesize output key 2 from configuration
-	synthesizeOutputKey2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_PROMPT_TEMPLATE_SYNTHESIZE_OUTPUT_KEY_2"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load synthesize output key 2 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Update the actions
-	for key, value := range output {
-		switch v := value.(type) {
-		case string:
-			updateMeshPilotActionProperty(updatedActions, synthesizeActionsFindKey, key, synthesizeActionsReplaceKey1, v)
-		case int:
-		case int64:
-		case int32:
-			convValue := fmt.Sprintf("%d", v)
-			updateMeshPilotActionProperty(updatedActions, synthesizeActionsFindKey, key, synthesizeActionsReplaceKey1, convValue)
-		case float32:
-		case float64:
-			convValue := fmt.Sprintf("%f", v)
-			updateMeshPilotActionProperty(updatedActions, synthesizeActionsFindKey, key, synthesizeActionsReplaceKey1, convValue)
-		case map[string]interface{}:
-			outerKey := key
-
-			if val, ok := v[synthesizeOutputKey1].(string); ok {
-				updateMeshPilotActionProperty(
-					updatedActions,
-					synthesizeActionsFindKey,
-					outerKey,
-					synthesizeActionsReplaceKey1,
-					val,
-				)
-			}
-			if units, ok := v[synthesizeOutputKey2].(string); ok {
-				updateMeshPilotActionProperty(
-					updatedActions,
-					synthesizeActionsFindKey,
-					outerKey,
-					synthesizeActionsReplaceKey2,
-					units,
-				)
-			}
-		default:
-			logging.Log.Infof(ctx, "Key: %s, Value is of a different type: %T", key, v)
-		}
-	}
-
-	logging.Log.Debugf(ctx, "The SynthesizeActions Updated Actions: %q\n", updatedActions)
-
-	return
-}
-
-// FinalizeResult converts actions to json string to send back data
-//
-// Tags:
-//   - @displayName: FinalizeResult
-//
-// Parameters:
-//   - actions: the executable actions
-//   - toolName: tool name to create customize messages
-//
-// Returns:
-//   - result: the actions in json format
-func FinalizeResult(actions []map[string]string, toolName string) (result string) {
-
-	ctx := &logging.ContextMap{}
-
-	var hasActions bool
-	var message string
-
-	if len(actions) > 0 {
-		hasActions = true
-	} else {
-		hasActions = false
-		actions = make([]map[string]string, 0)
-	}
-
-	// Get tool 2 name from the configuration
-	toolAction1Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_1_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load action tool 1 name from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 4 name from the configuration
-	toolAction2Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_2_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load action tool 2 name from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 5 name from the configuration
-	toolAction3Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_3_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load action tool 3 name from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 6 name from the configuration
-	toolAction4Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_4_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load action tool 4 name from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 7 name from the configuration
-	toolAction5Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_5_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load action tool 5 name from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 8 name from the configuration
-	toolAction6Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_6_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load action tool 6 name from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolAction8Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_8_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load action tool 8 name from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolAction14Name, exexists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_14_NAME"]
-	if !exexists {
-		errorMessage := fmt.Sprintf("failed to load action tool 14 name from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool action success message from configuration
-	toolAction15Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_15_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load action tool 15 name from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolAction19Name, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTION_19_NAME"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load action tool 19 name from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 2 action message from configuration
-	toolAction1Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_1_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load action tool 1 message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 2 no action message from configuration
-	toolAction1NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_1_NO_ACTION_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load action tool 1 no action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolAction2Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_2_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 4 action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 4 no action message from configuration
-	toolAction2NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_2_NO_ACTION_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 4 no action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolAction3Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_3_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 5 action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 5 no action message from configuration
-	toolAction3NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_3_NO_ACTION_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 5 no action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolAction4Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_4_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 6 action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 6 no action message from configuration
-	toolAction4NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_4_NO_ACTION_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 6 no action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolAction5Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_5_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 7 action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 7 no action message from configuration
-	toolAction5NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_5_NO_ACTION_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 7 no action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolAction6Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_6_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 8 action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolAction6NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_6_NO_ACTION_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 8 no action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 8 action message from configuration
-	toolAction8Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_8_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 8 action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolAction8NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_8_NO_ACTION_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 8 no action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolAction14Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_14_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 16 action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolAction14NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_14_NO_ACTION_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 16 no action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolAction15Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_15_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 17 action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	toolAction15NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_15_NO_ACTION_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 17 no action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 19 action message from configuration
-	toolAction19Message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_19_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 19 action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Get tool 19 no action message from configuration
-	toolAction19NoActionMessage, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_19_NO_ACTION_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load tool 19 no action message from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	if toolName == toolAction1Name {
-		if hasActions {
-			message = toolAction1Message
-		} else {
-			message = toolAction1NoActionMessage
-		}
-	} else if toolName == toolAction2Name {
-		if hasActions {
-			message = toolAction2Message
-		} else {
-			message = toolAction2NoActionMessage
-		}
-	} else if toolName == toolAction3Name {
-		if hasActions {
-			message = toolAction3Message
-		} else {
-			message = toolAction3NoActionMessage
-		}
-	} else if toolName == toolAction4Name {
-		if hasActions {
-			message = toolAction4Message
-		} else {
-			message = toolAction4NoActionMessage
-		}
-	} else if toolName == toolAction5Name {
-		if hasActions {
-			message = toolAction5Message
-		} else {
-			message = toolAction5NoActionMessage
-		}
-	} else if toolName == toolAction6Name {
-		if hasActions {
-			message = toolAction6Message
-		} else {
-			message = toolAction6NoActionMessage
-		}
-	} else if toolName == toolAction8Name {
-		if hasActions {
-			message = toolAction8Message
-		} else {
-			message = toolAction8NoActionMessage
-		}
-	} else if toolName == toolAction14Name {
-		if hasActions {
-			message = toolAction14Message
-		} else {
-			message = toolAction14NoActionMessage
-		}
-	} else if toolName == toolAction15Name {
-		if hasActions {
-			message = toolAction15Message
-		} else {
-			message = toolAction15NoActionMessage
-		}
-	} else if toolName == toolAction19Name {
-		if hasActions {
-			message = toolAction19Message
-		} else {
-			message = toolAction19NoActionMessage
-		}
-	} else {
-		errorMessage := fmt.Sprintf("Invalid toolName %s", toolName)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	finalMessage := make(map[string]interface{})
-	finalMessage["Message"] = message
-	finalMessage["Actions"] = actions
-
-	// Marshal the actions
-	bytesStream, err := json.Marshal(finalMessage)
-
-	if err != nil {
-		errorMessage := fmt.Sprintf("failed to convert actions to json: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	result = string(bytesStream)
-	logging.Log.Info(ctx, "successfully converted actions to json")
-
-	return
-}
-
-// GetSolutionsToFixProblem do similarity search on path description
-//
-// Tags:
-//   - @displayName: GetSolutionsToFixProblem
-//
-// Parameters:
-//   - fmFailureCode: FM failure Code
-//   - primeMeshFailureCode: Prime Mesh Failure Code
-//
-// Returns:
-//   - solutions: the list of solutions in json
-func GetSolutionsToFixProblem(db_name, fmFailureCode, primeMeshFailureCode string) (solutions string) {
-
-	ctx := &logging.ContextMap{}
-
-	logging.Log.Infof(ctx, "Get Solutions To Fix Problem...")
-
-	err := ampgraphdb.EstablishConnection(config.GlobalConfig.GRAPHDB_ADDRESS, db_name)
-
-	if err != nil {
-		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
-		logging.Log.Error(ctx, errMsg)
-		panic(errMsg)
-	}
-
-	query, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_DATABASE_GET_SOLUTIONS_QUERY"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load query from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	solutionsVec, err := ampgraphdb.GraphDbDriver.GetSolutions(fmFailureCode, primeMeshFailureCode, query)
-	if err != nil {
-		errorMessage := fmt.Sprintf("Error fetching solutions from path description: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	byteStream, err := json.Marshal(solutionsVec)
-	if err != nil {
-		errorMessage := fmt.Sprintf("Error marshalling solutions: %v\n", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	solutions = string(byteStream)
-	logging.Log.Info(ctx, "found solutions to fix problem...")
-	return
-}
-
-// GetSelectedSolution get user selected solutions from the options provided
-//
-// Tags:
-//   - @displayName: GetSelectedSolution
-//
-// Parameters:
-//   - arguments: these are the arguments ReAct found based on user choice
-//
-// Returns:
-//   - solution: the selected solution
-func GetSelectedSolution(arguments string) (solution string) {
-
-	ctx := &logging.ContextMap{}
-
-	var output struct {
-		Solution string `json:"solution_description"`
-	}
-
-	err := json.Unmarshal([]byte(arguments), &output)
-
-	if err != nil {
-		errorMessage := fmt.Sprintf("failed to un marshal index output")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	solution = output.Solution
-	logging.Log.Infof(ctx, "Selected Solution: %s", solution)
-	return
-}
-
-// AppendToolHistory this function append tool history
-//
-// Tags:
-//   - @displayName: AppendToolHistory
-//
-// Parameters:
-//   - toolHistory: the tool history
-//   - toolId: the tool id
-//   - toolName: the tool name
-//   - toolArguments: the tool arguments
-//   - toolResponse: the tool response
-//
-// Returns:
-//   - updatedToolHistory: the updated tool history
-func AppendToolHistory(toolHistory []map[string]string, toolId, toolName, toolArguments, toolResponse string) (updatedToolHistory []map[string]string) {
-	ctx := &logging.ContextMap{}
-
-	// populate tool history
-	for _, tool := range toolHistory {
-		toolId := tool["toolId"]
-		content := tool["content"]
-		tool := map[string]string{
-			"toolId":  toolId,
-			"content": content,
-		}
-		updatedToolHistory = append(updatedToolHistory, tool)
-	}
-
-	// populate current tool
-	if len(toolId) > 0 && len(toolResponse) > 0 {
-		// append assistant tool call
-		tool := map[string]string{
-			"role":          "assistant",
-			"content":       toolResponse,
-			"toolId":        toolId,
-			"toolName":      toolName,
-			"toolArguments": toolArguments,
-		}
-		updatedToolHistory = append(updatedToolHistory, tool)
-
-		// append tool
-		tool = map[string]string{
-			"role":    "tool",
-			"content": toolResponse,
-			"toolId":  toolId,
-		}
-		updatedToolHistory = append(updatedToolHistory, tool)
-	}
-
-	logging.Log.Info(ctx, fmt.Sprintf("Updated Tool History: %q", updatedToolHistory))
-	return
-}
-
-// AppendMeshPilotHistory this function append mesh pilot history
-//
-// Tags:
-//   - @displayName: AppendMeshPilotHistory
-//
-// Parameters:
-//   - history: the tool history
-//   - role: the tool id
-//   - content: the tool name
-//
-// Returns:
-//   - updatedHistory: the updated mesh pilot history
-func AppendMeshPilotHistory(history []map[string]string, role, content string) (updatedHistory []map[string]string) {
-	ctx := &logging.ContextMap{}
-
-	updatedHistory = []map[string]string{}
-
-	for _, item := range history {
-		updatedHistory = append(updatedHistory, item)
+	if len(actions) == 0 {
+		logging.Log.Warn(ctx, "UpdateAction: no actions to update")
+		return actions
 	}
 
-	updatedHistory = append(updatedHistory, map[string]string{
-		"role":    role,
-		"content": content,
+	updateActionsMatching(actions, matchKey, matchValue, map[string]string{
+		updateKey: updateValue,
 	})
 
-	logging.Log.Debugf(ctx, "Updated history: %q", updatedHistory)
-	return
+	return actions
 }
 
-// ParseHistory this function parses history from json to map
-//
-// Tags:
-//   - @displayName: ParseHistory
-//
-// Parameters:
-//   - historyJson: history in json format
-//
-// Returns:
-//   - history: the parsed history
-func ParseHistory(historyJson string) (history []map[string]string) {
+func UpdateActionFields(actions []map[string]string, matchKey, matchValue string, updates map[string]string) []map[string]string {
 	ctx := &logging.ContextMap{}
 
-	history = []map[string]string{}
-
-	// convert json to map
-	var historyMap []map[string]string
-	err := json.Unmarshal([]byte(historyJson), &historyMap)
-	if err != nil {
-		errorMessage := fmt.Sprintf("failed to unmarshal history json: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
+	if len(actions) == 0 {
+		logging.Log.Warn(ctx, "UpdateAction: no actions to update")
+		return actions
 	}
 
-	// populate history
-	for _, item := range historyMap {
-		history = append(history, item)
-	}
-	logging.Log.Debugf(ctx, "Parsed history: %q", history)
-	return
+	updateActionsMatching(actions, matchKey, matchValue, updates)
+
+	return actions
 }
 
-// FinalizeResult converts actions to json string to send back data
+func UpdateActionsWithProperties(actions []map[string]string, properties []map[string]string, identifierKey string, valueKey string, unitsKey string) []map[string]string {
+	ctx := &logging.ContextMap{}
+
+	if len(actions) == 0 {
+		logging.Log.Warn(ctx, "UpdateActionsWithProperties: no actions to update")
+		return actions
+	}
+
+	if len(properties) == 0 {
+		logging.Log.Warn(ctx, "UpdateActionsWithProperties: no properties to apply")
+		return actions
+	}
+
+	for _, prop := range properties {
+		propName := prop["PropertyName"]
+		propValue := prop["PropertyValue"]
+		propUnits := prop["PropertyUnits"]
+
+		for i := range actions {
+			if actions[i][identifierKey] == propName {
+				if propUnits != "" {
+					actions[i][unitsKey] = propUnits
+				}
+				actions[i][valueKey] = propValue
+			}
+		}
+	}
+
+	return actions
+}
+
+/*************************************************************************/
+/* 						Generate Custom Action 						     */
+/*************************************************************************/
+
+// GenerateAction generates special action based on user inputs
 //
 // Tags:
-//   - @displayName: GetActionsFromConfig
+//   - @displayName: GenerateAction
 //
 // Parameters:
-//   - toolName: tool name to create customize messages
+//   - keys: keys to create customize action
+//   - values: values to create customize action
+//   - message: message to send to the client
 //
 // Returns:
 //   - result: the actions in json format
-func GetActionsFromConfig(toolName string) (result string) {
+func GenerateAction(keys []string, values []string, message string) (actions []map[string]string) {
 	ctx := &logging.ContextMap{}
 
-	logging.Log.Info(ctx, "Get Actions From Config...")
-	logging.Log.Infof(ctx, "Tool Name: %q", toolName)
+	logging.Log.Info(ctx, "Generate Special Action...")
 
-	// Configuration keys for different tools, for now only tool 9 and tool 11
-	configKeys := map[string]map[string]string{
-		"tool7": {
-			"resultName":    "APP_ACTION_TOOL7_RESULT_NAME",
-			"resultMessage": "APP_ACTION_TOOL7_RESULT_MESSAGE",
-			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL7",
-			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_2",
-		},
-		"tool9": {
-			"resultName":    "APP_ACTION_TOOL9_RESULT_NAME",
-			"resultMessage": "APP_ACTION_TOOL9_RESULT_MESSAGE",
-			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL9",
-			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_1",
-		},
-		"tool10": {
-			"resultName":    "APP_ACTION_TOOL10_RESULT_NAME",
-			"resultMessage": "APP_ACTION_TOOL10_RESULT_MESSAGE",
-			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL10",
-			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_2",
-		},
-		"tool13": {
-			"resultName":    "APP_ACTION_TOOL13_RESULT_NAME",
-			"resultMessage": "APP_ACTION_TOOL13_RESULT_MESSAGE",
-			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL13",
-			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_3",
-		},
-		"tool16": {
-			"resultName":    "APP_ACTION_TOOL16_RESULT_NAME",
-			"resultMessage": "APP_ACTION_TOOL16_RESULT_MESSAGE",
-			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL16",
-			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_1",
-		},
-		"tool18": {
-			"resultName":    "APP_ACTION_TOOL18_RESULT_NAME",
-			"resultMessage": "APP_ACTION_TOOL18_RESULT_MESSAGE",
-			"actionValue1":  "APP_ACTIONS_VALUE_1_ACTION_TOOL18",
-			"actionValue2":  "APP_TOOL_ACTIONS_TARGET_1",
-		},
+	if len(keys) != len(values) {
+		errMsg := fmt.Sprintf("keys and values length mismatch: %d vs %d", len(keys), len(values))
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
 	}
 
-	// Help function to get the config value
-	getConfigValue := func(key string, errorMsg string) string {
-		value, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES[key]
-		if !exists {
-			errorMessage := fmt.Sprintf("%s: %s", errorMsg, key)
-			logging.Log.Error(ctx, errorMessage)
-			panic(errorMessage)
+	// Validate keys to contain only letters
+	validKey := regexp.MustCompile(`^[a-zA-Z]+$`)
+	for _, key := range keys {
+		if !validKey.MatchString(key) {
+			errMsg := fmt.Sprintf("invalid key format: %s", key)
+			logging.Log.Error(ctx, errMsg)
+			panic(errMsg)
 		}
-		return value
 	}
 
-	// Get tool result name from the configuration
-	tool7ResultName := getConfigValue(configKeys["tool7"]["resultName"], "failed to load tool 7 result name from the configuration")
-	tool9ResultName := getConfigValue(configKeys["tool9"]["resultName"], "failed to load tool 9 result name from the configuration")
-	tool10ResultName := getConfigValue(configKeys["tool10"]["resultName"], "failed to load tool 10 result name from the configuration")
-	tool13ResultName := getConfigValue(configKeys["tool13"]["resultName"], "failed to load tool 13 result name from the configuration")
-	tool16ResultName := getConfigValue(configKeys["tool16"]["resultName"], "failed to load tool 16 result name from the configuration")
-	tool18ResultName := getConfigValue(configKeys["tool18"]["resultName"], "failed to load tool 18 result name from the configuration")
-
-	// Get tool result message from the configuration
-	tool7ResultMessage := getConfigValue(configKeys["tool7"]["resultMessage"], "failed to load tool 7 result message from the configuration")
-	tool9ResultMessage := getConfigValue(configKeys["tool9"]["resultMessage"], "failed to load tool 9 result message from the configuration")
-	tool10ResultMessage := getConfigValue(configKeys["tool10"]["resultMessage"], "failed to load tool 10 result message from the configuration")
-	tool13ResultMessage := getConfigValue(configKeys["tool13"]["resultMessage"], "failed to load tool 13 result message from the configuration")
-	tool16ResultMessage := getConfigValue(configKeys["tool16"]["resultMessage"], "failed to load tool 16 result message from the configuration")
-	tool18ResultMessage := getConfigValue(configKeys["tool18"]["resultMessage"], "failed to load tool 18 result message from the configuration")
-
-	// Get tool action success message from configuration
-	toolActionSuccessMessage := getConfigValue("APP_TOOL_ACTION_SUCCESS_MESSAGE", "failed to load tool action success message from the configuration")
-	actionKey1 := getConfigValue("APP_TOOL_ACTIONS_KEY_1", "failed to load tool action key 1 from the configuration")
-	actionKey2 := getConfigValue("APP_TOOL_ACTIONS_KEY_2", "failed to load tool action key 2 from the configuration")
-
-	// Initialize action values and message
-	var actionValue1, actionValue2, selectedMessage string
-
-	// Based on the tool name, set the action values and message
-	if toolName == tool7ResultName {
-		actionValue1 = getConfigValue(configKeys["tool7"]["actionValue1"], "failed to load tool 7 action value 1 from the configuration")
-		actionValue2 = getConfigValue(configKeys["tool7"]["actionValue2"], "failed to load tool 7 action value 2 from the configuration")
-		selectedMessage = tool7ResultMessage
-	} else if toolName == tool9ResultName {
-		actionValue1 = getConfigValue(configKeys["tool9"]["actionValue1"], "failed to load tool 9 action value 1 from the configuration")
-		actionValue2 = getConfigValue(configKeys["tool9"]["actionValue2"], "failed to load tool 9 action value 2 from the configuration")
-		selectedMessage = tool9ResultMessage
-	} else if toolName == tool10ResultName {
-		actionValue1 = getConfigValue(configKeys["tool10"]["actionValue1"], "failed to load tool 10 action value 1 from the configuration")
-		actionValue2 = getConfigValue(configKeys["tool10"]["actionValue2"], "failed to load tool 10 action value 2 from the configuration")
-		selectedMessage = tool10ResultMessage
-	} else if toolName == tool13ResultName {
-		actionValue1 = getConfigValue(configKeys["tool13"]["actionValue1"], "failed to load tool 13 action value 1 from the configuration")
-		actionValue2 = getConfigValue(configKeys["tool13"]["actionValue2"], "failed to load tool 13 action value 2 from the configuration")
-		selectedMessage = tool13ResultMessage
-	} else if toolName == tool16ResultName {
-		actionValue1 = getConfigValue(configKeys["tool16"]["actionValue1"], "failed to load tool 16 action value 1 from the configuration")
-		actionValue2 = getConfigValue(configKeys["tool16"]["actionValue2"], "failed to load tool 16 action value 2 from the configuration")
-		selectedMessage = tool16ResultMessage
-	} else if toolName == tool18ResultName {
-		actionValue1 = getConfigValue(configKeys["tool18"]["actionValue1"], "failed to load tool 18 action value 1 from the configuration")
-		actionValue2 = getConfigValue(configKeys["tool18"]["actionValue2"], "failed to load tool 18 action value 2 from the configuration")
-		selectedMessage = tool18ResultMessage
-	} else {
-		errorMessage := fmt.Sprintf("Invalid toolName %s", toolName)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
+	action := make(map[string]string)
+	for i, key := range keys {
+		action[key] = values[i]
 	}
 
-	message := toolActionSuccessMessage
-	if toolName == tool7ResultName || toolName == tool9ResultName || toolName == tool10ResultName || toolName == tool13ResultName || toolName == tool16ResultName || toolName == tool18ResultName {
-		message = selectedMessage
-		actions := []map[string]string{
-			{
-				actionKey1: actionValue1,
-				actionKey2: actionValue2,
-			},
-		}
-		finalMessage := map[string]interface{}{
-			"Message": message,
-			"Actions": actions,
-		}
-		bytesStream, err := json.Marshal(finalMessage)
-		if err != nil {
-			errorMessage := fmt.Sprintf("failed to convert actions to json: %v", err)
-			logging.Log.Error(ctx, errorMessage)
-			panic(errorMessage)
-		}
-		result = string(bytesStream)
-		logging.Log.Infof(ctx, "successfully converted actions to json: %q", result)
-	} else {
-		errorMessage := fmt.Sprintf("Invalid toolName %s", toolName)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	return result
+	actions = []map[string]string{action}
+	return
 }
+
+/*************************************************************************/
+/* 				 	Vector Database Related Functions 					 */
+/*************************************************************************/
 
 // SimilartitySearchOnPathDescriptions (Qdrant) do similarity search on path description
 //
@@ -1804,534 +417,6 @@ func SimilartitySearchOnPathDescriptionsQdrant(vector []float32, collection stri
 
 	logging.Log.Debugf(&logging.ContextMap{}, "Descriptions: %q", descriptions)
 	return
-}
-
-// ParseHistoryToHistoricMessages this function to convert chat history to historic messages
-//
-// Tags:
-//   - @displayName: ParseHistoryToHistoricMessages
-//
-// Parameters:
-//   - historyJson: chat history in json format
-//
-// Returns:
-//   - history: the history in sharedtypes.HistoricMessage format
-func ParseHistoryToHistoricMessages(historyJson string) (history []sharedtypes.HistoricMessage) {
-	ctx := &logging.ContextMap{}
-
-	var historyMaps []map[string]string
-	err := json.Unmarshal([]byte(historyJson), &historyMaps)
-	if err != nil {
-		errorMessage := fmt.Sprintf("failed to unmarshal history json: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	for _, msg := range historyMaps {
-		role, _ := msg["role"]
-		content, _ := msg["content"]
-		history = append(history, sharedtypes.HistoricMessage{
-			Role:    role,
-			Content: content,
-		})
-	}
-	return history
-}
-
-// ParseSlashCommand retrieves the Slash Input from the input string.
-//
-// Tags:
-//   - @displayName: ParseSlashCommand
-//
-// Parameters:
-//   - userInput: the input string containing the Slash Input message in JSON format
-//
-// Returns:
-//   - slashCmd: the slash command if found, otherwise an empty string
-//   - targetCmd: the target command if found, otherwise an empty string
-//   - hasCmd: boolean indicating if a slash command or target command was found
-func ParseSlashCommand(userInput string) (slashCmd, targetCmd string, hasCmd bool, hasContext bool) {
-
-	targetRe := regexp.MustCompile(`@[A-Za-z][\w]*`)
-	slashRe := regexp.MustCompile(`/[A-Za-z][\w]*`)
-
-	target := targetRe.FindString(userInput)
-	slash := slashRe.FindString(userInput)
-
-	if target != "" {
-		target = target[1:]
-	}
-	if slash != "" {
-		slash = slash[1:]
-	}
-
-	switch {
-	case slash != "" && target != "":
-		hasCmd = true
-	case slash != "" && target == "":
-		hasCmd = true
-	default:
-		hasCmd = false
-	}
-
-	remaining := strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(userInput, "/"+slash, ""), "@"+target, ""))
-	hasContext = remaining != ""
-
-	logging.Log.Debugf(&logging.ContextMap{}, "User Command: Slash: %s, Target: %s, Has Command: %t, Has Context: %t, Remaining: %s", slash, target, hasCmd, hasContext, remaining)
-
-	return slash, target, hasCmd, hasContext
-}
-
-// SynthesizeSlashCommand synthesize actions based on user instruction
-//
-// Tags:
-//   - @displayName: SynthesizeSlashCommand
-//
-// Parameters:
-//   - slashCmd: the slash command
-//   - targetCmd: the target command
-//   - finalizeResult: the finalize result from previous step
-//
-// Returns:
-//   - result: the synthesized string
-func SynthesizeSlashCommand(slashCmd, targetCmd, finalizeResult string) (result string) {
-	ctx := &logging.ContextMap{}
-
-	logging.Log.Debugf(ctx, "finalizeResult: %q, targetCmd: %q, slashCmd: %q", finalizeResult, targetCmd, slashCmd)
-
-	message, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_ACTION_TOOL_17_SUCCESS_MESSAGE"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_ACTION_TOOL_17_SUCCESS_MESSAGE from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actionKey1, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_KEY_1"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_KEY_1 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actionKey2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_KEY_2"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_KEY_2 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	actionValue2, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_TOOL_ACTIONS_TARGET_1"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load APP_TOOL_ACTIONS_TARGET_1 from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	var actions []map[string]string
-
-	if finalizeResult != "" {
-		var parsedResult map[string]interface{}
-		err := json.Unmarshal([]byte(finalizeResult), &parsedResult)
-		if err != nil {
-			errorMessage := fmt.Sprintf("failed to unmarshal finalizeResult: %v", err)
-			logging.Log.Error(ctx, errorMessage)
-			panic(errorMessage)
-		}
-
-		if parsedActions, ok := parsedResult["Actions"].([]interface{}); ok {
-			for _, action := range parsedActions {
-				if actionMap, ok := action.(map[string]interface{}); ok {
-					updatedAction := map[string]string{}
-					for k, v := range actionMap {
-						if strVal, ok := v.(string); ok {
-							updatedAction[k] = strVal
-						}
-					}
-					updatedAction[actionKey1] = targetCmd
-					updatedAction[actionKey2] = actionValue2
-					updatedAction["Argument"] = slashCmd
-					actions = append(actions, updatedAction)
-				}
-			}
-		}
-	} else {
-		actions = []map[string]string{
-			{
-				actionKey1: targetCmd,
-				actionKey2: actionValue2,
-				"Argument": slashCmd,
-			},
-		}
-	}
-
-	finalMessage := map[string]interface{}{
-		"Message": message,
-		"Actions": actions,
-	}
-
-	resultStream, err := json.Marshal(finalMessage)
-	if err != nil {
-		errorMessage := fmt.Sprintf("failed to marshal final message: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	result = string(resultStream)
-	logging.Log.Infof(ctx, "SynthesizeSlashCommand result: %s", result)
-	logging.Log.Infof(ctx, "successfully synthesized slash command")
-
-	return result
-}
-
-// ProcessMWWorkflowInfo parses the mwWorkflowInfo string and logs its content.
-//
-// Parameters:
-//   - mwWorkflowInfo: the workflow information in string format
-//
-// Returns:
-//   - None
-func ProcessMWWorkflowInfo(mwWorkflowInfo string) {
-	ctx := &logging.ContextMap{}
-
-	// Replace single quotes with double quotes to make it valid JSON
-	normalizedInfo := strings.ReplaceAll(mwWorkflowInfo, "'", "\"")
-
-	// Parse the JSON string into a generic map
-	var parsedData map[string]interface{}
-	err := json.Unmarshal([]byte(normalizedInfo), &parsedData)
-	if err != nil {
-		logging.Log.Errorf(ctx, "Failed to parse mwWorkflowInfo: %v", err)
-		return
-	}
-
-	// Convert the parsed data back to a single string
-	// parsedString, err := json.MarshalIndent(parsedData, "", "  ")
-	parsedString, err := json.Marshal(parsedData)
-	if err != nil {
-		logging.Log.Errorf(ctx, "Failed to convert parsed data to string: %v", err)
-		return
-	}
-
-	// Log the entire content as a single string
-	logging.Log.Infof(ctx, "MWWorkflowInfo Content: %s", string(parsedString))
-}
-
-// GenerateActionsSubWorkflowPrompt generates system and user prompts for subworkflow identification.
-//
-// Tags:
-//   - @displayName: GenerateActionsSubWorkflowPrompt
-//
-// Parameters:
-//   - userInstruction: user instruction
-//
-// Returns:
-//   - systemPrompt: the system prompt
-//   - userPrompt: the user prompt
-func GenerateActionsSubWorkflowPrompt(userInstruction string) (systemPrompt string, userPrompt string) {
-	ctx := &logging.ContextMap{}
-
-	// Retrieve subworkflows (name and description)
-	subworkflows := azure.GetActionsSubworkflows()
-	var subworkflowListStr strings.Builder
-	for i, sw := range subworkflows {
-		subworkflowListStr.WriteString(fmt.Sprintf("%d. %s - %s\n", i+1, sw.Name, sw.Description))
-	}
-
-	// Retrieve prompt templates from configuration
-	systemPromptTemplate, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_SUBWORKFLOW_IDENTIFICATION_SYSTEM_PROMPT"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load system prompt template from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-	userPromptTemplate, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_SUBWORKFLOW_IDENTIFICATION_USER_PROMPT"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load user prompt template from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Format the prompts
-	systemPrompt = fmt.Sprintf(systemPromptTemplate, subworkflowListStr.String())
-	userPrompt = fmt.Sprintf(userPromptTemplate, userInstruction)
-
-	logging.Log.Debugf(ctx, "Generated System Prompt: %s", systemPrompt)
-
-	logging.Log.Debugf(ctx, "Generated User Prompt: %s", userPrompt)
-	return systemPrompt, userPrompt
-}
-
-// GenerateHelperSubWorkflowPrompt generates system and user prompts for helper subworkflow identification.
-//
-// Tags:
-//   - @displayName: GenerateHelperSubWorkflowPrompt
-//
-// Parameters:
-//   - userInstruction: user instruction
-//
-// Returns:
-//   - systemPrompt: the system prompt
-//   - userPrompt: the user prompt
-func GenerateHelperSubWorkflowPrompt(userInstruction string) (systemPrompt string, userPrompt string) {
-	ctx := &logging.ContextMap{}
-
-	// Retrieve subworkflows (name and description)
-	subworkflows := azure.GetHelperSubworkflows()
-	var subworkflowListStr strings.Builder
-	for i, sw := range subworkflows {
-		subworkflowListStr.WriteString(fmt.Sprintf("%d. %s - %s\n", i+1, sw.Name, sw.Description))
-	}
-
-	// Retrieve prompt templates from configuration
-	systemPromptTemplate, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_SUBWORKFLOW_IDENTIFICATION_SYSTEM_PROMPT"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load system prompt template from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-	userPromptTemplate, exists := config.GlobalConfig.WORKFLOW_CONFIG_VARIABLES["APP_SUBWORKFLOW_IDENTIFICATION_USER_PROMPT"]
-	if !exists {
-		errorMessage := fmt.Sprintf("failed to load user prompt template from the configuration")
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	// Format the prompts
-	systemPrompt = fmt.Sprintf(systemPromptTemplate, subworkflowListStr.String())
-	userPrompt = fmt.Sprintf(userPromptTemplate, userInstruction)
-
-	logging.Log.Debugf(ctx, "Generated System Prompt: %s", systemPrompt)
-
-	logging.Log.Debugf(ctx, "Generated User Prompt: %s", userPrompt)
-	return systemPrompt, userPrompt
-}
-
-// GenerateUserPrompt generates user instruction prompt based on the provided template.
-//
-// Tags:
-//   - @displayName: GenerateUserPrompt
-//
-// Parameters:
-//   - userInstruction: user instruction
-//   - userPromptTemplate: user prompt template
-//
-// Returns:
-//   - userPrompt: the user prompt
-func GenerateUserPrompt(userInstruction string, userPromptTemplate string) (userPrompt string) {
-	ctx := &logging.ContextMap{}
-
-	userPrompt = fmt.Sprintf(userPromptTemplate, userInstruction)
-
-	logging.Log.Debugf(ctx, "Generated User Prompt: %s", userPrompt)
-
-	return
-}
-
-// GenerateUserPromptWithContext generates user instruction prompt based on the provided template with instruction and context.
-//
-// Tags:
-//   - @displayName: GenerateUserPromptWithContext
-//
-// Parameters:
-//   - userInstruction: user instruction
-//   - context: user context
-//   - userPromptTemplate: user prompt template
-//
-// Returns:
-//   - userPrompt: the user prompt
-func GenerateUserPromptWithContext(userInstruction string, context string, userPromptTemplate string) (userPrompt string) {
-	ctx := &logging.ContextMap{}
-
-	userPrompt = fmt.Sprintf(userPromptTemplate, userInstruction, context)
-
-	logging.Log.Debugf(ctx, "Generated User Prompt With Context: %s", userPrompt)
-
-	return
-}
-
-// GenerateUserPromptWithList generates user instruction prompt based on the provided template, instruction, list.
-//
-// Tags:
-//   - @displayName: GenerateUserPromptWithList
-//
-// Parameters:
-//   - userInstruction: user instruction
-//   - userList: list of items to include in the prompt
-//   - userPromptTemplate: user prompt template
-//
-// Returns:
-//   - userPrompt: the user prompt
-func GenerateUserPromptWithList(userInstruction string, userList []string, userPromptTemplate string) (userPrompt string) {
-	ctx := &logging.ContextMap{}
-
-	userPrompt = fmt.Sprintf(userPromptTemplate, userList, userInstruction)
-
-	logging.Log.Debugf(ctx, "Generated User Prompt: %s", userPrompt)
-
-	return
-}
-
-// ProcessSubworkflowIdentificationOutput this function process output of llm
-//
-// Tags:
-//   - @displayName: ProcessSubworkflowIdentificationOutput
-//
-// Parameters:
-//   - llmOutput: the llm output for subworkflow identification
-//
-// Returns:
-//   - status: status of processing
-//   - workflowName: the identified subworkflow name
-func ProcessSubworkflowIdentificationOutput(llmOutput string) (status string, workflowName string) {
-	ctx := &logging.ContextMap{}
-
-	// Clean up the output in case it is wrapped in code block
-	cleaned := strings.TrimSpace(llmOutput)
-	if strings.HasPrefix(cleaned, "```json") && strings.HasSuffix(cleaned, "```") {
-		cleaned = strings.TrimPrefix(cleaned, "```json")
-		cleaned = strings.TrimSuffix(cleaned, "```")
-		cleaned = strings.TrimSpace(cleaned)
-	}
-
-	// Parse JSON
-	var result struct {
-		Subworkflow string `json:"subworkflow"`
-	}
-	err := json.Unmarshal([]byte(cleaned), &result)
-	if err != nil {
-		logging.Log.Errorf(ctx, "Failed to parse LLM output as JSON: %v, content: %s", err, cleaned)
-		return "failure", ""
-	}
-
-	// Check if subworkflow is valid
-	if result.Subworkflow == "" || strings.ToLower(result.Subworkflow) == "none" {
-		logging.Log.Warnf(ctx, "No valid subworkflow found in LLM output: %s", cleaned)
-		return "failure", ""
-	}
-
-	logging.Log.Debugf(ctx, "Identified Subworkflow: %s", result.Subworkflow)
-
-	return "success", result.Subworkflow
-}
-
-// ProcessMainAgentOutput this function process output of llm
-//
-// Tags:
-//   - @displayName: ProcessMainAgentOutput
-//
-// Parameters:
-//   - llmOutput: the llm output for main agent
-//
-// Returns:
-//   - messageTo: send the message to this recipient
-//   - message: message to send to the recipient
-func ProcessMainAgentOutput(llmOutput string) (messageTo string, message string) {
-	ctx := &logging.ContextMap{}
-
-	// Clean up the output in case it is wrapped in code block
-	cleaned := strings.TrimSpace(llmOutput)
-	if strings.HasPrefix(cleaned, "```json") && strings.HasSuffix(cleaned, "```") {
-		cleaned = strings.TrimPrefix(cleaned, "```json")
-		cleaned = strings.TrimSuffix(cleaned, "```")
-		cleaned = strings.TrimSpace(cleaned)
-	}
-
-	// Parse JSON
-	var result struct {
-		MessageTo string `json:"messageTo"`
-		Message   string `json:"message"`
-	}
-
-	err := json.Unmarshal([]byte(cleaned), &result)
-	if err != nil {
-		errorMessage := fmt.Sprintf("Failed to parse LLM output as JSON: %v, content: %s", err, cleaned)
-		logging.Log.Error(ctx, errorMessage)
-		return "user", "Main Agent failed to parse the request. Please try again."
-	}
-
-	// Check if subworkflow is valid
-	if result.MessageTo == "" || result.Message == "" {
-		errorMessage := fmt.Sprintf("No valid messageTo or Message property found in LLM output: %s", cleaned)
-		logging.Log.Error(ctx, errorMessage)
-		return "user", "Main Agent failed to understand the request. Can you please try to rephrase your question?"
-	}
-
-	logging.Log.Debugf(ctx, "Message To: %s", result.MessageTo)
-	logging.Log.Debugf(ctx, "Message: %s", result.Message)
-
-	return result.MessageTo, result.Message
-}
-
-// MarkdownToHTML this function converts markdown to html
-//
-// Tags:
-//   - @displayName: MarkdownToHTML
-//
-// Parameters:
-//   - markdown: content in markdown format
-//
-// Returns:
-//   - html: content in html format
-func MarkdownToHTML(markdown string) (html string) {
-	logging.Log.Info(&logging.ContextMap{}, "Converting Markdown to HTML...")
-	// Use blackfriday to convert markdown to HTML
-	logging.Log.Debugf(&logging.ContextMap{}, "Markdown content: %s", markdown)
-	html = string(blackfriday.Run([]byte(markdown)))
-	return html
-}
-
-// FinalizeMessage this function takes message and generate response schema
-//
-// Tags:
-//   - @displayName: FinalizeMessage
-//
-// Parameters:
-//   - message: final message
-//
-// Returns:
-//   - result: response schema sent to chat interface
-func FinalizeMessage(message string) (result string) {
-	ctx := &logging.ContextMap{}
-	logging.Log.Info(ctx, "Finalizing message...")
-
-	actions := make([]map[string]string, 0)
-
-	finalMessage := make(map[string]interface{})
-	finalMessage["Message"] = message
-	finalMessage["Actions"] = actions
-
-	// Marshal the actions
-	bytesStream, err := json.Marshal(finalMessage)
-
-	if err != nil {
-		errorMessage := fmt.Sprintf("failed to convert actions to json: %v", err)
-		logging.Log.Error(ctx, errorMessage)
-		panic(errorMessage)
-	}
-
-	result = string(bytesStream)
-	logging.Log.Debugf(ctx, "Final message: %s", result)
-	logging.Log.Info(ctx, "successfully converted actions to json")
-
-	return result
-}
-
-// SelectedSolution this function parse the selected solution
-//
-// Tags:
-//   - @displayName: SelectedSolution
-//
-// Parameters:
-//   - selectedSolution: selected solution found by the LLM
-//
-// Returns:
-//   - solution: parsed solution
-func SelectedSolution(selectedSolution string) (solution string) {
-	logging.Log.Info(&logging.ContextMap{}, "Parsing Selected solution...")
-	// Use blackfriday to convert markdown to HTML
-	logging.Log.Debugf(&logging.ContextMap{}, "Selected Solution: %s", selectedSolution)
-	solution = selectedSolution
-	return solution
 }
 
 // PerformSimilaritySearchForSubqueries performs similarity search for each sub-query and returns Q&A pairs
@@ -2411,30 +496,165 @@ func PerformSimilaritySearchForSubqueries(subQueries []string, collection string
 	return uniqueQAPairs
 }
 
-// ProcessJSONListOutput parses the response and returns the tags slice.
+/*************************************************************************/
+/* 				 	Graph Database Related Functions 					 */
+/*************************************************************************/
+
+// FetchPropertiesFromPathDescription get properties from path description
 //
 // Tags:
-//   - @displayName: ProcessJSONListOutput
+//   - @displayName: FetchPropertiesFromPathDescription
 //
 // Parameters:
-//   - response: the JSON response string
+//   - db_name: the graph database name
+//   - description: the desctiption of path
+//   - query: the cypher query to get properties from description
 //
 // Returns:
-//   - tags: the list of items extracted from the response
-func ProcessJSONListOutput(response string) (generatedList []string) {
+//   - properties: the list of descriptions
+func FetchPropertiesFromPathDescription(db_name, description, query string) (properties []string) {
+
 	ctx := &logging.ContextMap{}
 
-	err := json.Unmarshal([]byte(response), &generatedList)
+	logging.Log.Infof(ctx, "Fetching Properties From Path Descriptions...")
+
+	err := ampgraphdb.EstablishConnection(config.GlobalConfig.GRAPHDB_ADDRESS, db_name)
+
 	if err != nil {
-		logging.Log.Errorf(ctx, "Error decoding JSON response: %v", err)
-		return []string{}
+		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
 	}
-	logging.Log.Debugf(ctx, "Generated List: %s", strings.Join(generatedList, ", "))
-	if len(generatedList) == 0 {
-		logging.Log.Error(ctx, "No items generated.")
-		return nil
+
+	properties, err = ampgraphdb.GraphDbDriver.GetProperties(description, query)
+
+	if err != nil {
+		errorMessage := fmt.Sprintf("Error fetching properties from path description: %v", err)
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
 	}
-	return generatedList
+
+	logging.Log.Debugf(ctx, "Propetries: %q\n", properties)
+	return
+}
+
+// FetchNodeDescriptionsFromPathDescription get node descriptions from path description
+//
+// Tags:
+//   - @displayName: FetchNodeDescriptionsFromPathDescription
+//
+// Parameters:
+//   - db_name: the graph database name
+//   - description: the desctiption of path
+//   - query: the cypher query to get node descriptions from description
+//
+// Returns:
+//   - actionDescriptions: action descriptions
+func FetchNodeDescriptionsFromPathDescription(db_name, description, query string) (actionDescriptions string) {
+
+	ctx := &logging.ContextMap{}
+
+	logging.Log.Infof(ctx, "Fetching Node Descriptions From Path Descriptions...")
+
+	err := ampgraphdb.EstablishConnection(config.GlobalConfig.GRAPHDB_ADDRESS, db_name)
+
+	if err != nil {
+		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
+	}
+
+	summaries, err := ampgraphdb.GraphDbDriver.GetSummaries(description, query)
+
+	if err != nil {
+		errorMessage := fmt.Sprintf("Error fetching summaries from path description: %v", err)
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	actionDescriptions = summaries
+	logging.Log.Debugf(ctx, "Summaries: %q\n", actionDescriptions)
+
+	return
+}
+
+// FetchActionsPathFromPathDescription fetch actions from path description
+//
+// Tags:
+//   - @displayName: FetchActionsPathFromPathDescription
+//
+// Parameters:
+//   - db_name: the graph database name
+//   - description: the desctiption of path
+//   - query: the cypher query to get actions from description
+//
+// Returns:
+//   - actions: the list of actions to execute
+func FetchActionsPathFromPathDescription(db_name, description, query string) (actions []map[string]string) {
+	ctx := &logging.ContextMap{}
+
+	logging.Log.Infof(ctx, "Fetching Actions From Path Descriptions...")
+
+	err := ampgraphdb.EstablishConnection(config.GlobalConfig.GRAPHDB_ADDRESS, db_name)
+
+	if err != nil {
+		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
+	}
+
+	actions, err = ampgraphdb.GraphDbDriver.GetActions(description, query)
+	if err != nil {
+		errorMessage := fmt.Sprintf("Error fetching actions from path description: %v", err)
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	return
+}
+
+// GetSolutionsToFixProblem do similarity search on path description
+//
+// Tags:
+//   - @displayName: GetSolutionsToFixProblem
+//
+// Parameters:
+//   - fmFailureCode: FM failure Code
+//   - primeMeshFailureCode: Prime Mesh Failure Code
+//
+// Returns:
+//   - solutions: the list of solutions in json
+func GetSolutionsToFixProblem(db_name, fmFailureCode, primeMeshFailureCode, query string) (solutions string) {
+
+	ctx := &logging.ContextMap{}
+
+	logging.Log.Infof(ctx, "Get Solutions To Fix Problem...")
+
+	err := ampgraphdb.EstablishConnection(config.GlobalConfig.GRAPHDB_ADDRESS, db_name)
+
+	if err != nil {
+		errMsg := fmt.Sprintf("error initializing graphdb: %v", err)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
+	}
+
+	solutionsVec, err := ampgraphdb.GraphDbDriver.GetSolutions(fmFailureCode, primeMeshFailureCode, query)
+	if err != nil {
+		errorMessage := fmt.Sprintf("Error fetching solutions from path description: %v", err)
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	byteStream, err := json.Marshal(solutionsVec)
+	if err != nil {
+		errorMessage := fmt.Sprintf("Error marshalling solutions: %v\n", err)
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	solutions = string(byteStream)
+	logging.Log.Info(ctx, "found solutions to fix problem...")
+	return
 }
 
 // GenerateMKSummariesforTags retrieves unique MK summaries for the provided tags from the graph database.
@@ -2449,7 +669,6 @@ func ProcessJSONListOutput(response string) (generatedList []string) {
 //
 // Returns:
 //   - allTagsSummaries: the list of unique MK summaries
-
 func GenerateMKSummariesforTags(dbName string, tags []string, GetTagIdByNameQuery string, GetMKSummaryFromDBQuery string) (allTagsSummaries []string) {
 	ctx := &logging.ContextMap{}
 
@@ -2493,6 +712,319 @@ func GenerateMKSummariesforTags(dbName string, tags []string, GetTagIdByNameQuer
 	return allTagsSummaries
 }
 
+/*************************************************************************/
+/* 				 	Parse JSON to Object 					 	 		 */
+/*************************************************************************/
+
+// ParseHistoryToHistoricMessages this function to convert chat history to historic messages
+//
+// Tags:
+//   - @displayName: ParseHistoryToHistoricMessages
+//
+// Parameters:
+//   - historyJson: chat history in json format
+//
+// Returns:
+//   - history: the history in sharedtypes.HistoricMessage format
+func ParseHistoryToHistoricMessages(historyJson string) (history []sharedtypes.HistoricMessage) {
+	ctx := &logging.ContextMap{}
+
+	var historyMaps []map[string]string
+	err := json.Unmarshal([]byte(historyJson), &historyMaps)
+	if err != nil {
+		errorMessage := fmt.Sprintf("failed to unmarshal history json: %v", err)
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	for _, msg := range historyMaps {
+		role, _ := msg["role"]
+		content, _ := msg["content"]
+		history = append(history, sharedtypes.HistoricMessage{
+			Role:    role,
+			Content: content,
+		})
+	}
+	return history
+}
+
+// ParseMapFromJSON update action as per user instruction
+//
+// Tags:
+//   - @displayName: ParseMapFromJSON
+//
+// Parameters:
+//   - message: the message from the llm
+//
+// Returns:
+//   - structuredOutput: the list of synthesized actions
+func ParseMapFromJSON(message string) (structuredOutput map[string]interface{}) {
+	ctx := &logging.ContextMap{}
+
+	if strings.TrimSpace(message) == "" {
+		errMsg := "ParseMapFromJSON: empty message"
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
+	}
+
+	cleaned := cleanJSONBlock(message)
+
+	if err := json.Unmarshal([]byte(cleaned), &structuredOutput); err != nil {
+		errMsg := fmt.Sprintf("ParseMapFromJSON: unmarshal failed: %v", err)
+		logging.Log.Error(ctx, errMsg)
+		panic(errMsg)
+	}
+
+	return
+}
+
+// ProcessJSONListOutput parses the response and returns the tags slice.
+//
+// Tags:
+//   - @displayName: ProcessJSONListOutput
+//
+// Parameters:
+//   - response: the JSON response string
+//
+// Returns:
+//   - tags: the list of items extracted from the response
+func ProcessJSONListOutput(response string) (generatedList []string) {
+	ctx := &logging.ContextMap{}
+
+	err := json.Unmarshal([]byte(response), &generatedList)
+	if err != nil {
+		logging.Log.Errorf(ctx, "Error decoding JSON response: %v", err)
+		return []string{}
+	}
+	logging.Log.Debugf(ctx, "Generated List: %s", strings.Join(generatedList, ", "))
+	if len(generatedList) == 0 {
+		logging.Log.Error(ctx, "No items generated.")
+		return nil
+	}
+	return generatedList
+}
+
+/*************************************************************************/
+/* 				 	Slash Command Functions 					 		 */
+/*************************************************************************/
+
+// ParseSlashCommand retrieves the Slash Input from the input string.
+//
+// Tags:
+//   - @displayName: ParseSlashCommand
+//
+// Parameters:
+//   - userInput: the input string containing the Slash Input message in JSON format
+//
+// Returns:
+//   - slashCmd: the slash command if found, otherwise an empty string
+//   - targetCmd: the target command if found, otherwise an empty string
+//   - hasCmd: boolean indicating if a slash command or target command was found
+func ParseSlashCommand(userInput string) (slashCmd, targetCmd string, hasCmd bool, hasContext bool) {
+
+	targetRe := regexp.MustCompile(`@[A-Za-z][\w]*`)
+	slashRe := regexp.MustCompile(`/[A-Za-z][\w]*`)
+
+	target := targetRe.FindString(userInput)
+	slash := slashRe.FindString(userInput)
+
+	if target != "" {
+		target = target[1:]
+	}
+	if slash != "" {
+		slash = slash[1:]
+	}
+
+	switch {
+	case slash != "" && target != "":
+		hasCmd = true
+	case slash != "" && target == "":
+		hasCmd = true
+	default:
+		hasCmd = false
+	}
+
+	remaining := strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(userInput, "/"+slash, ""), "@"+target, ""))
+	hasContext = remaining != ""
+
+	logging.Log.Debugf(&logging.ContextMap{}, "User Command: Slash: %s, Target: %s, Has Command: %t, Has Context: %t, Remaining: %s", slash, target, hasCmd, hasContext, remaining)
+
+	return slash, target, hasCmd, hasContext
+}
+
+// SynthesizeSlashCommand synthesize actions based on user instruction
+//
+// Tags:
+//   - @displayName: SynthesizeSlashCommand
+//
+// Parameters:
+//   - slashCmd: the slash command
+//   - targetCmd: the target command
+//
+// Returns:
+//   - result: the synthesized string
+func SynthesizeSlashCommand(slashCmd, targetCmd, finalizeResult, message, key1, key2, value string) (result string) {
+	ctx := &logging.ContextMap{}
+
+	var actions []map[string]string
+
+	if finalizeResult != "" {
+		var parsedResult map[string]interface{}
+		err := json.Unmarshal([]byte(finalizeResult), &parsedResult)
+		if err != nil {
+			errorMessage := fmt.Sprintf("failed to unmarshal finalizeResult: %v", err)
+			logging.Log.Error(ctx, errorMessage)
+			panic(errorMessage)
+		}
+
+		if parsedActions, ok := parsedResult["Actions"].([]interface{}); ok {
+			for _, action := range parsedActions {
+				if actionMap, ok := action.(map[string]interface{}); ok {
+					updatedAction := map[string]string{}
+					for k, v := range actionMap {
+						if strVal, ok := v.(string); ok {
+							updatedAction[k] = strVal
+						}
+					}
+					updatedAction[key1] = targetCmd
+					updatedAction[key2] = value
+					updatedAction["Argument"] = slashCmd
+					actions = append(actions, updatedAction)
+				}
+			}
+		}
+	} else {
+		actions = []map[string]string{
+			{
+				key1:       targetCmd,
+				key2:       value,
+				"Argument": slashCmd,
+			},
+		}
+	}
+
+	finalMessage := map[string]interface{}{
+		"Message": message,
+		"Actions": actions,
+	}
+
+	resultStream, err := json.Marshal(finalMessage)
+	if err != nil {
+		errorMessage := fmt.Sprintf("failed to marshal final message: %v", err)
+		logging.Log.Error(ctx, errorMessage)
+		panic(errorMessage)
+	}
+
+	result = string(resultStream)
+	logging.Log.Infof(ctx, "SynthesizeSlashCommand result: %s", result)
+	logging.Log.Infof(ctx, "successfully synthesized slash command")
+
+	return result
+}
+
+/****************************************************************************/
+/*		 				Constructing Prompts 								*/
+/****************************************************************************/
+
+// GenerateActionsSubWorkflowPrompt generates system and user prompts for subworkflow identification.
+//
+// Tags:
+//   - @displayName: GenerateActionsSubWorkflowPrompt
+//
+// Parameters:
+//   - userInstruction: user instruction
+//
+// Returns:
+//   - systemPrompt: the system prompt
+//   - userPrompt: the user prompt
+func GenerateSubWorkflowPrompt(userInstruction, systemPromptTemplate, userPromptTemplate string, subworkflows []map[string]string) (systemPrompt string, userPrompt string) {
+	ctx := &logging.ContextMap{}
+
+	// Retrieve subworkflows (name and description)
+	var subworkflowListStr strings.Builder
+	for i, sw := range subworkflows {
+		swName, nameOk := sw["Name"]
+		swDesc, descOk := sw["Description"]
+		if nameOk && descOk {
+			subworkflowListStr.WriteString(fmt.Sprintf("%d. %s - %s\n", i+1, swName, swDesc))
+		}
+	}
+
+	// Format the prompts
+	systemPrompt = fmt.Sprintf(systemPromptTemplate, subworkflowListStr.String())
+	userPrompt = fmt.Sprintf(userPromptTemplate, userInstruction)
+
+	logging.Log.Debugf(ctx, "Generated System Prompt: %s", systemPrompt)
+
+	logging.Log.Debugf(ctx, "Generated User Prompt: %s", userPrompt)
+	return systemPrompt, userPrompt
+}
+
+// GenerateUserPrompt generates user instruction prompt based on the provided template.
+//
+// Tags:
+//   - @displayName: GenerateUserPrompt
+//
+// Parameters:
+//   - userInstruction: user instruction
+//   - userPromptTemplate: user prompt template
+//
+// Returns:
+//   - userPrompt: the user prompt
+func GenerateUserPrompt(userInstruction string, userPromptTemplate string) (userPrompt string) {
+	ctx := &logging.ContextMap{}
+
+	userPrompt = fmt.Sprintf(userPromptTemplate, userInstruction)
+
+	logging.Log.Debugf(ctx, "Generated User Prompt: %s", userPrompt)
+
+	return
+}
+
+// GenerateUserPromptWithContext generates user instruction prompt based on the provided template with instruction and context.
+//
+// Tags:
+//   - @displayName: GenerateUserPromptWithContext
+//
+// Parameters:
+//   - userInstruction: user instruction
+//   - context: user context
+//   - userPromptTemplate: user prompt template
+//
+// Returns:
+//   - userPrompt: the user prompt
+func GenerateUserPromptWithContext(userInstruction string, context string, userPromptTemplate string) (userPrompt string) {
+	ctx := &logging.ContextMap{}
+
+	userPrompt = fmt.Sprintf(userPromptTemplate, userInstruction, context)
+
+	logging.Log.Debugf(ctx, "Generated User Prompt With Context: %s", userPrompt)
+
+	return
+}
+
+// GenerateUserPromptWithList generates user instruction prompt based on the provided template, instruction, list.
+//
+// Tags:
+//   - @displayName: GenerateUserPromptWithList
+//
+// Parameters:
+//   - userInstruction: user instruction
+//   - userList: list of items to include in the prompt
+//   - userPromptTemplate: user prompt template
+//
+// Returns:
+//   - userPrompt: the user prompt
+func GenerateUserPromptWithList(userInstruction string, userList []string, userPromptTemplate string) (userPrompt string) {
+	ctx := &logging.ContextMap{}
+
+	userPrompt = fmt.Sprintf(userPromptTemplate, userList, userInstruction)
+
+	logging.Log.Debugf(ctx, "Generated User Prompt: %s", userPrompt)
+
+	return
+}
+
 // GenerateSynthesizeAnswerfromMetaKnowlwdgeUserPrompt generates a user prompt for synthesizing an answer from meta knowledge.
 //
 // Tags:
@@ -2506,12 +1038,7 @@ func GenerateMKSummariesforTags(dbName string, tags []string, GetTagIdByNameQuer
 //
 // Returns:
 //   - userPrompt: the formatted user prompt
-func GenerateSynthesizeAnswerfromMetaKnowlwdgeUserPrompt(
-	SynthesizeAnswerUserPromptTemplate string,
-	originalQuery string,
-	expandedQueries []string,
-	retrievedQAPairs []map[string]interface{},
-) (userPrompt string) {
+func GenerateSynthesizeAnswerfromMetaKnowlwdgeUserPrompt(SynthesizeAnswerUserPromptTemplate string, originalQuery string, expandedQueries []string, retrievedQAPairs []map[string]interface{}) (userPrompt string) {
 	ctx := &logging.ContextMap{}
 
 	expandedQueriesStr := fmt.Sprintf("[%s]", strings.Join(expandedQueries, ", "))
@@ -2520,5 +1047,122 @@ func GenerateSynthesizeAnswerfromMetaKnowlwdgeUserPrompt(
 
 	userPrompt = fmt.Sprintf(SynthesizeAnswerUserPromptTemplate, originalQuery, expandedQueriesStr, qaPairsStr)
 	logging.Log.Debugf(ctx, "Generated Synthesize Answer User Prompt: %s", userPrompt)
+	return
+}
+
+/*************************************************************************/
+/* 						Miscellaneous 									 */
+/*************************************************************************/
+
+// MarkdownToHTML this function converts markdown to html
+//
+// Tags:
+//   - @displayName: MarkdownToHTML
+//
+// Parameters:
+//   - markdown: content in markdown format
+//
+// Returns:
+//   - html: content in html format
+func MarkdownToHTML(markdown string) (html string) {
+	logging.Log.Info(&logging.ContextMap{}, "Converting Markdown to HTML...")
+	// Use blackfriday to convert markdown to HTML
+	logging.Log.Debugf(&logging.ContextMap{}, "Markdown content: %s", markdown)
+	html = string(blackfriday.Run([]byte(markdown)))
+	return html
+}
+
+// FinalizeResult converts actions to json string to send back data
+//
+// Tags:
+//   - @displayName: FinalizeResult
+//
+// Parameters:
+//   - actions: the executable actions
+//   - message: message to send to the client
+//
+// Returns:
+//   - result: the actions in json format
+func FinalizeResult(actions []map[string]string, message string) (result string) {
+	ctx := &logging.ContextMap{}
+
+	if actions == nil {
+		actions = []map[string]string{}
+	}
+
+	finalMessage := map[string]interface{}{
+		"Message": message,
+		"Actions": actions,
+	}
+
+	bytesStream, err := json.Marshal(finalMessage)
+	if err != nil {
+		panic(fmt.Sprintf("failed to convert actions to json: %v", err))
+	}
+
+	result = string(bytesStream)
+	logging.Log.Info(ctx, "successfully converted actions to json")
+	return
+}
+
+// SynthesizeActionsTool3 update action as per user instruction
+// // Tags:
+//   - @displayName: SynthesizeActionsTool3
+//
+// Parameters:
+//   - message_1: the first message from the llm
+//   - message_2: the second message from the llm
+//   - actions: the list of actions
+//
+// Returns:
+//   - updatedActions: the list of synthesized actions
+func SynthesizeActionsTool3(message_1, message_2, target_object, key1, key2, target1, target2 string, actions []map[string]string) (updatedActions []map[string]string) {
+	ctx := &logging.ContextMap{}
+
+	// Clean up the input messages
+	message_1 = strings.TrimSpace(strings.Trim(message_1, "\""))
+	message_2 = strings.TrimSpace(strings.Trim(message_2, "\""))
+	target_object = strings.TrimSpace(strings.Trim(target_object, "\""))
+
+	logging.Log.Debugf(ctx, "Tool 3 Synthesize Message 1: %s\n", message_1)
+	logging.Log.Debugf(ctx, "Tool 3 Synthesize Message 2: %s\n", message_2)
+	logging.Log.Debugf(ctx, "Tool 3 Target Object: %s\n", target_object)
+
+	// Initialize updatedActions with the input actions
+	updatedActions = actions
+
+	if target_object == target1 {
+		// Check the first dictionary in actions
+		if len(updatedActions) > 0 {
+			firstAction := updatedActions[0]
+			if _, ok := firstAction[key1]; ok {
+				// Replace the value with the input message
+				firstAction[key1] = message_1
+			}
+
+			if _, ok := firstAction[key2]; ok && len(message_2) != 0 {
+				firstAction[key2] = message_2
+			}
+		}
+	} else if target_object == target2 {
+		// Check if there is a third dictionary in actions
+		if len(updatedActions) > 2 {
+			thirdAction := updatedActions[2]
+			if _, ok := thirdAction[key1]; ok {
+				// Replace the value with the input message
+				thirdAction[key1] = message_1
+			}
+
+			updatedActions = []map[string]string{thirdAction}
+		} else {
+			logging.Log.Warnf(ctx, "No third action found in updatedActions for target_object: %s", target_object)
+		}
+	} else {
+		// Skip if target_object is neither APP_TOOL_ACTIONS_TARGET_5 nor APP_TOOL_ACTIONS_TARGET_6
+		logging.Log.Infof(ctx, "Skipping action synthesis for target_object: %s", target_object)
+	}
+
+	logging.Log.Debugf(ctx, "The Updated Actions: %q\n", updatedActions)
+
 	return
 }

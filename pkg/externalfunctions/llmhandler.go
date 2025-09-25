@@ -1741,7 +1741,12 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		finalQuery += "  - Selections: " + strings.Join(selections, ", ") + "\n"
 	}
 
-	finalQuery += "- DO NOT explicitly declare the version of AEDT unless specifically listed in the above known information.\n"
+	if aedtVersion != aedtVersionDefault {
+		finalQuery += "- DO explicitly declare the version of AEDT.\n"
+	} else {
+		finalQuery += "- DO NOT explicitly declare the version of AEDT.\n"
+	}
+
 	finalQuery += "- DO release the AEDT desktop using `release_desktop()` function.\n"
 
 	finalQuery += "- DO NOT close on exit the AEDT desktop (close_on_exit=False) if the request does not explicitly ask for it.\n"

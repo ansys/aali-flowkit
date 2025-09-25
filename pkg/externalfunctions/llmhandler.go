@@ -1281,7 +1281,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// information about the current design, project, application, and PyAEDT version.
 	// It is in the following format:
 	// "{'designContext': {'design': 'MyDesign', 'project': 'MyProject',
-	// 'selections': [], 'application': 'MyApplication',
+	// 'selections': [], 'application': 'MyApplication', 'aedtVersion': 'xxxx.x',
 	// 'pyaedtVersion': '0.xx.x', 'type': 'Generic', 'units': 'xx'}}"
 	//
 	// The code will parse this string and extract the information to the final prompt.
@@ -1289,6 +1289,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// 		{
 	// 			'design': 'MyDesign',
 	// 			'project': 'MyProject',
+	//			'aedtVersion': 'xxxx.x',
 	// 			'selections': [],
 	// 			'application': 'MyApplication',
 	// 			'pyaedtVersion': '0.xx.x',
@@ -1322,14 +1323,13 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// ...
 	// --- END EXAMPLE {response_n}---
 	//
-
 	// Generate the Python code for the following request: {original request}
 	//
 	// Hard requirements (do not violate):
 	// - Include **all imports** actually used. Follow the template for {Pyaedt version}}: {import template}
 	// - Provide an **Initialization** section that **explicitly** declares the known information as follows:
 	//   - Use PyAEDT version: {Pyaedt version}
-	//   - AEDT version: {AEDT version}
+	//   - AEDT version: {AEDT version if known}
 	//   - Design name: {Design name}
 	//   - Application: {Application name}
 	//   - Project name: {Project name}
@@ -1338,6 +1338,10 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// The following statements are examples of how to initialize different applications, refer to these examples and initialization accordingly:
 	//  - {application name}: {initialization template}
 	//	- ... (other applications as applicable)
+	//
+	// Also, refer to the following example of how to release the AEDT desktop, choose the appropriate one:
+	// - {application name}: {release template}
+	// - ... (other applications as applicable)
 	// ******************************************************************************
 
 	// Construct final query prompt.
@@ -1423,13 +1427,21 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 
 	var generationType, design, project, application, pyaedtVersion, aedtVersion string
 	var selections []string
+
+	var designDefult = "MyDesign"
+	var projectDefault = "MyProject"
+	var applicationDefault = "MyApplication"
+	var pyaedtVersionDefault = "0.19.0" // Default version: the latest one by Sep 2025.
+	var aedtVersionDefault = ""         // Default AEDT version: empty string.
+	logging.Log.Debugf(&logging.ContextMap{}, "~~~~ Raw Design context provided: %s", designContext)
+
 	if designContext == "" {
 		logging.Log.Info(&logging.ContextMap{}, "No design context provided. Using default strings for design, project, application, and pyaedtVersion.")
-		design = "MyDesign"
-		project = "MyProject"
-		application = "MyApplication"
-		pyaedtVersion = "0.19.0" // Default version: the latest one by Sep 2025.
-		aedtVersion = ""         // With default AEDT version if not provided.
+		design = designDefult
+		project = projectDefault
+		application = applicationDefault
+		pyaedtVersion = pyaedtVersionDefault
+		aedtVersion = aedtVersionDefault
 		selections = []string{}
 	} else {
 		// Cutoff designContext and only process generic context.
@@ -1485,17 +1497,33 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 			// Extract design name
 			if val, ok := nestedContext["design"]; ok {
 				if strVal, ok := val.(string); ok {
-					design = strVal
+					if strVal == "None" || strVal == "" {
+						// For empty design name, use default.
+						design = designDefult
+					} else {
+						design = strVal
+					}
+				} else {
+					logging.Log.Warnf(&logging.ContextMap{}, "Design field is not a string, found type: %T, value: %v. Using default.", val, val)
+					design = designDefult
 				}
 			} else {
 				logging.Log.Debugf(&logging.ContextMap{}, "No design name found in design context. Using default.")
-				design = "MyDesign"
+				design = designDefult
 			}
 
 			// Extract project name.
 			if val, ok := nestedContext["project"]; ok {
 				if strVal, ok := val.(string); ok {
-					project = strVal
+					if strVal == "None" || strVal == "" {
+						// For empty project name, use default.
+						project = projectDefault
+					} else {
+						project = strVal
+					}
+				} else {
+					logging.Log.Warnf(&logging.ContextMap{}, "Project field is not a string, found type: %T, value: %v. Using default.", val, val)
+					project = "MyProject"
 				}
 			} else {
 				logging.Log.Debugf(&logging.ContextMap{}, "No project name found in design context. Using default.")
@@ -1525,11 +1553,18 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 			// Extract AEDT version.
 			if val, ok := nestedContext["aedtVersion"]; ok {
 				if strVal, ok := val.(string); ok {
-					aedtVersion = strVal
+					if strVal == "Unknown" || strVal == "None" || strVal == "" {
+						aedtVersion = aedtVersionDefault
+					} else {
+						aedtVersion = strVal
+					}
+				} else {
+					logging.Log.Warnf(&logging.ContextMap{}, "AEDT version field is not a string, found type: %T, value: %v. Using default.", val, val)
+					aedtVersion = aedtVersionDefault
 				}
 			} else {
 				logging.Log.Debugf(&logging.ContextMap{}, "No AEDT version found in design context. Using default.")
-				aedtVersion = ""
+				aedtVersion = aedtVersionDefault
 			}
 
 			// Extract selections.
@@ -1554,7 +1589,14 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 				selections = []string{}
 			}
 		} else {
-			logging.Log.Error(&logging.ContextMap{}, "Missing generation type in design context.")
+			logging.Log.Warn(&logging.ContextMap{}, "designContext field not found or invalid in designContext map. Using defaults.")
+
+			design = designDefult
+			project = projectDefault
+			application = applicationDefault
+			pyaedtVersion = pyaedtVersionDefault
+			aedtVersion = aedtVersionDefault
+			selections = []string{}
 		}
 
 		// Store designContext to a JSON file.
@@ -1611,7 +1653,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	}
 
 	// ==============================
-	// Imports and initilization templates for different PyAEDT versions
+	// Imports, initilization and release templates for different PyAEDT versions
 	import_templates := map[string]string{
 		// Imports templates for different PyAEDT versions:
 		// PyAEDT version bigger than 0.9: use import ansys.aedt.core as pyaedt
@@ -1635,6 +1677,24 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 			"MaxwellCircuit": "```\nMaxwellCircuit(project:str|None, design:str|None, solution_type:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
 			"Emit":           "```\nEmit(project:str|None, design:str|None, solution_type:str|None, version:str|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
 			"TwinBuilder":    "```\nTwinBuilder(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
+		},
+	}
+	release_templates := map[string]map[string]string{
+		"18": {
+			"Desktop":        "```\ndesktop.release_desktop(close_projects=True, close_on_exit:False)\n```",
+			"Hfss":           "```\nHfss.release_desktop(close_projects=True, close_desktop=False)\n```",
+			"Q3d":            "```\nQ3d.release_desktop(close_projects=True, close_desktop=False)\n```",
+			"Q2d":            "```\nQ2d.release_desktop(close_projects=True, close_desktop=False)\n```",
+			"Maxwell2d":      "```\nMaxwell2d.release_desktop(close_projects=True, close_desktop=False)\n```",
+			"Maxwell3d":      "```\nMaxwell3d.release_desktop(close_projects=True, close_desktop=False)\n```",
+			"Icepak":         "```\nIcepak.release_desktop(close_projects=True, close_desktop=False)\n```",
+			"Hfss3dLayout":   "```\nHfss3dLayout.release_desktop(close_projects=True, close_desktop=False)\n```",
+			"Mechanical":     "```\nMechanical.release_desktop(close_projects=True, close_desktop=False)\n```",
+			"Rmxprt":         "```\nRmxprt.release_desktop(close_projects=True, close_desktop=False)\n```",
+			"Circuit":        "```\nCircuit.release_desktop(close_projects=True, close_desktop=False)\n```",
+			"MaxwellCircuit": "```\nMaxwellCircuit.release_desktop(close_projects=True, close_desktop=False)\n```",
+			"Emit":           "```\nEmit.release_desktop(close_projects=True, close_desktop=False)\n```",
+			"TwinBuilder":    "```\nTwinBuilder.release_desktop(close_projects=True, close_desktop=False)\n```",
 		},
 	}
 	// ==============================
@@ -1669,7 +1729,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	}
 
 	finalQuery += "- Provide an **Initialization** section that **explicitly** declares the known information as follows:\n"
-	if aedtVersion != "" {
+	if aedtVersion != aedtVersionDefault {
 		finalQuery += "  - AEDT version: " + aedtVersion + "\n"
 	}
 	finalQuery += "  - Project name: " + project + "\n"
@@ -1682,7 +1742,8 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	}
 
 	finalQuery += "- DO NOT explicitly declare the version of AEDT unless specifically listed in the above known information.\n"
-	finalQuery += "- DO NOT release the AEDT desktop if the request does not explicitly ask for it.\n"
+	finalQuery += "- DO release the AEDT desktop using `release_desktop()` function.\n"
+
 	finalQuery += "- DO NOT close on exit the AEDT desktop (close_on_exit=False) if the request does not explicitly ask for it.\n"
 
 	if design != "MyDesign" {
@@ -1691,7 +1752,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		finalQuery += "- DO setup a new AEDT desktop session (new_desktop=True) if the request does not explicitly ask for it.\n"
 	}
 
-	finalQuery += "- DO show graphical user interface (non-graphical=False) if the request does not explicitly ask for it.\n\n"
+	finalQuery += "- DO NOT show graphical user interface (non-graphical=True) if the request does not explicitly ask for it.\n\n"
 
 	// Include initialization template to prompt.
 	finalQuery += "The following statements are examples of how to initialize different applications, refer to these examples and initialization accordingly: \n"
@@ -1699,6 +1760,14 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	if minorVersion >= 18 {
 		for appName, init_template := range init_templates["18"] {
 			finalQuery += "\n- " + appName + ":\n" + init_template + "\n"
+		}
+	}
+
+	// Include release template to prompt.
+	finalQuery += "\nAlso, refer to the following example of how to release the AEDT desktop, choose the appropriate one: \n"
+	if minorVersion >= 18 {
+		for appName, release_templates := range release_templates["18"] {
+			finalQuery += "\n- " + appName + ":\n" + release_templates + "\n"
 		}
 	}
 

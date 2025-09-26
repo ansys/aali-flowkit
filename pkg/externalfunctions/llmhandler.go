@@ -1392,6 +1392,9 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 
 	// Convert designContext to a JSON format: map[string]any
 	convertDesignContext := func(designContext string, format string) (any, error) {
+		// Replace Python None with JSON null
+		designContext = strings.ReplaceAll(designContext, ": None", ": null")
+
 		// Replace single quotes with double quotes for valid JSON
 		designContext = strings.ReplaceAll(designContext, "'", "\"")
 
@@ -1444,29 +1447,38 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		aedtVersion = aedtVersionDefault
 		selections = []string{}
 	} else {
-		// Cutoff designContext and only process generic context.
-		pattern := `'type'\s*:\s*'[^']*'`
+		// First check if design is None
+		designNonePattern := `'design'\s*:\s*(?:None|"None"|'None')`
+		designNoneRe := regexp.MustCompile(designNonePattern)
+		isDesignNone := designNoneRe.MatchString(designContext)
+
+		var pattern string
+		if isDesignNone {
+			// Scenario 1: If design is None, cutoff after design
+			pattern = `'design'\s*:\s*(?:None|"None"|'None')`
+		} else {
+			// Scenario 2: If design has value, cutoff after application
+			pattern = `'application'\s*:\s*'[^']*'`
+
+			// Also handle double quotes
+			if !strings.Contains(designContext, "'application'") {
+				pattern = `"application"\s*:\s*"[^"]*"`
+			}
+		}
 
 		// Use regex to find the pattern
 		re := regexp.MustCompile(pattern)
 		match := re.FindStringIndex(designContext)
 
 		if match == nil {
-			// If pattern not found, try with double quotes format
-			pattern = `"type"\s*:\s*"[^"]*"`
-			re = regexp.MustCompile(pattern)
-			match = re.FindStringIndex(designContext)
-
-			if match == nil {
-				logging.Log.Warnf(&logging.ContextMap{}, "Cutoff pattern 'type' field not found in designContext")
-				return designContext
-			}
+			logging.Log.Warnf(&logging.ContextMap{}, "Cutoff pattern not found in designContext")
+			return designContext
 		}
 
-		// Get the end position of the match (after the 'type' field and its value)
+		// Get the end position of the match
 		endPos := match[1]
 
-		// Extract substring up to the end of the 'type' field
+		// Extract substring up to the end of the matched field
 		designContextGeneric := designContext[:endPos]
 
 		// Add proper closing braces
@@ -1499,17 +1511,17 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 				if strVal, ok := val.(string); ok {
 					if strVal == "None" || strVal == "" {
 						// For empty design name, use default.
-						design = designDefult
+						design = ""
 					} else {
 						design = strVal
 					}
 				} else {
 					logging.Log.Warnf(&logging.ContextMap{}, "Design field is not a string, found type: %T, value: %v. Using default.", val, val)
-					design = designDefult
+					design = ""
 				}
 			} else {
 				logging.Log.Debugf(&logging.ContextMap{}, "No design name found in design context. Using default.")
-				design = designDefult
+				design = ""
 			}
 
 			// Extract project name.
@@ -1517,17 +1529,17 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 				if strVal, ok := val.(string); ok {
 					if strVal == "None" || strVal == "" {
 						// For empty project name, use default.
-						project = projectDefault
+						project = ""
 					} else {
 						project = strVal
 					}
 				} else {
 					logging.Log.Warnf(&logging.ContextMap{}, "Project field is not a string, found type: %T, value: %v. Using default.", val, val)
-					project = "MyProject"
+					project = ""
 				}
 			} else {
 				logging.Log.Debugf(&logging.ContextMap{}, "No project name found in design context. Using default.")
-				project = "MyProject"
+				project = ""
 			}
 
 			// Extract application name.
@@ -1537,7 +1549,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 				}
 			} else {
 				logging.Log.Debugf(&logging.ContextMap{}, "No application name found in design context. Using default.")
-				application = "MyApplication"
+				application = ""
 			}
 
 			// Extract PyAEDT version.
@@ -1562,6 +1574,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 					logging.Log.Warnf(&logging.ContextMap{}, "AEDT version field is not a string, found type: %T, value: %v. Using default.", val, val)
 					aedtVersion = aedtVersionDefault
 				}
+				logging.Log.Debugf(&logging.ContextMap{}, "AEDT version found in design context: %s", aedtVersion)
 			} else {
 				logging.Log.Debugf(&logging.ContextMap{}, "No AEDT version found in design context. Using default.")
 				aedtVersion = aedtVersionDefault
@@ -1658,8 +1671,8 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		// Imports templates for different PyAEDT versions:
 		// PyAEDT version bigger than 0.9: use import ansys.aedt.core as pyaedt
 		// PyAEDT version smaller or equal to 0.9: use import pyaedt
-		"older":   "```python\nimport pyaedt\n```",
-		"current": "```python\nimport ansys.aedt.core as pyaedt\n```",
+		"older":   "```\nimport pyaedt\n```",
+		"current": "```\nimport ansys.aedt.core as pyaedt\n```",
 	}
 	init_templates := map[string]map[string]string{
 		"18": {
@@ -1681,27 +1694,26 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	}
 	release_templates := map[string]map[string]string{
 		"18": {
-			"Desktop":        "```\ndesktop.release_desktop(close_projects=True, close_on_exit:False)\n```",
-			"Hfss":           "```\nHfss.release_desktop(close_projects=True, close_desktop=False)\n```",
-			"Q3d":            "```\nQ3d.release_desktop(close_projects=True, close_desktop=False)\n```",
-			"Q2d":            "```\nQ2d.release_desktop(close_projects=True, close_desktop=False)\n```",
-			"Maxwell2d":      "```\nMaxwell2d.release_desktop(close_projects=True, close_desktop=False)\n```",
-			"Maxwell3d":      "```\nMaxwell3d.release_desktop(close_projects=True, close_desktop=False)\n```",
-			"Icepak":         "```\nIcepak.release_desktop(close_projects=True, close_desktop=False)\n```",
-			"Hfss3dLayout":   "```\nHfss3dLayout.release_desktop(close_projects=True, close_desktop=False)\n```",
-			"Mechanical":     "```\nMechanical.release_desktop(close_projects=True, close_desktop=False)\n```",
-			"Rmxprt":         "```\nRmxprt.release_desktop(close_projects=True, close_desktop=False)\n```",
-			"Circuit":        "```\nCircuit.release_desktop(close_projects=True, close_desktop=False)\n```",
-			"MaxwellCircuit": "```\nMaxwellCircuit.release_desktop(close_projects=True, close_desktop=False)\n```",
-			"Emit":           "```\nEmit.release_desktop(close_projects=True, close_desktop=False)\n```",
-			"TwinBuilder":    "```\nTwinBuilder.release_desktop(close_projects=True, close_desktop=False)\n```",
+			"Desktop":        "```\ndesktop.release_desktop(close_on_exit:False)\n```",
+			"Hfss":           "```\nHfss.release_desktop(close_desktop=False)\n```",
+			"Q3d":            "```\nQ3d.release_desktop(close_desktop=False)\n```",
+			"Q2d":            "```\nQ2d.release_desktop(close_desktop=False)\n```",
+			"Maxwell2d":      "```\nMaxwell2d.release_desktop(close_desktop=False)\n```",
+			"Maxwell3d":      "```\nMaxwell3d.release_desktop(close_desktop=False)\n```",
+			"Icepak":         "```\nIcepak.release_desktop(close_desktop=False)\n```",
+			"Hfss3dLayout":   "```\nHfss3dLayout.release_desktop(close_desktop=False)\n```",
+			"Mechanical":     "```\nMechanical.release_desktop(close_desktop=False)\n```",
+			"Rmxprt":         "```\nRmxprt.release_desktop(close_desktop=False)\n```",
+			"Circuit":        "```\nCircuit.release_desktop(close_desktop=False)\n```",
+			"MaxwellCircuit": "```\nMaxwellCircuit.release_desktop(close_desktop=False)\n```",
+			"Emit":           "```\nEmit.release_desktop(close_desktop=False)\n```",
+			"TwinBuilder":    "```\nTwinBuilder.release_desktop(close_desktop=False)\n```",
 		},
 	}
 	// ==============================
 
 	finalQuery += "\nHard requirements (do not violate):\n"
-	finalQuery += "- Include **all imports** actually used. Follow the template for PyAEDT version " + pyaedtVersion + ": "
-	finalQuery += "- Provide the imports in a single code block as follows: \n"
+	finalQuery += "- Include **all imports** actually used. Follow the template for PyAEDT version " + pyaedtVersion + ": \n"
 	// Parse pyaedtVersion to decide which import template to use.
 	versionParts := strings.Split(pyaedtVersion, ".")
 
@@ -1728,40 +1740,38 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		}
 	}
 
-	finalQuery += "- Provide an **Initialization** section that **explicitly** declares the known information as follows:\n"
-	if aedtVersion != aedtVersionDefault {
-		finalQuery += "  - AEDT version: " + aedtVersion + "\n"
+	if !(aedtVersion == "" && project == "" && design == "" && application == "") {
+		finalQuery += "- Provide an **Initialization** section that **explicitly** declares the ONLY KNOWN information as follows:\n"
+
+		if aedtVersion != "" {
+			finalQuery += "  - AEDT version: " + aedtVersion + "\n"
+		}
+
+		if project != "" {
+			finalQuery += "  - Project name: " + project + "\n"
+		}
+
+		if design != "" {
+			finalQuery += "  - Design name: " + design + "\n"
+		}
+
+		if application != "" {
+			finalQuery += "  - Application: " + application + "\n"
+		}
 	}
-	finalQuery += "  - Project name: " + project + "\n"
-	finalQuery += "  - Design name: " + design + "\n"
-	finalQuery += "  - Application: " + application + "\n"
 
 	// if selections is empty, skip it.
 	if selections != nil && len(selections) > 0 {
 		finalQuery += "  - Selections: " + strings.Join(selections, ", ") + "\n"
 	}
 
-	if aedtVersion != aedtVersionDefault {
-		finalQuery += "- DO explicitly declare the version of AEDT.\n"
-	} else {
-		finalQuery += "- DO NOT explicitly declare the version of AEDT.\n"
-	}
+	finalQuery += "- DO NOT show graphical user interface (non-graphical=True) if the request does not explicitly ask for it.\n"
 
-	finalQuery += "- DO release the AEDT desktop using `release_desktop()` function.\n"
-
-	finalQuery += "- DO NOT close on exit the AEDT desktop (close_on_exit=False) if the request does not explicitly ask for it.\n"
-
-	if design != "MyDesign" {
-		finalQuery += "- DO NOT setup a new AEDT desktop session (new_desktop=False) if the request does not explicitly ask for it.\n"
-	} else {
-		finalQuery += "- DO setup a new AEDT desktop session (new_desktop=True) if the request does not explicitly ask for it.\n"
-	}
-
-	finalQuery += "- DO NOT show graphical user interface (non-graphical=True) if the request does not explicitly ask for it.\n\n"
+	finalQuery += "- DO release the AEDT desktop using `release_desktop()` function.\n\n"
 
 	// Include initialization template to prompt.
-	finalQuery += "The following statements are examples of how to initialize different applications, refer to these examples and initialization accordingly: \n"
-
+	finalQuery += "The following statements are examples of how to initialize different applications, refer to these examples and initialization accordingly: \n\n"
+	finalQuery += "> [!IMPORTANT] \n> **If the value of initialization parameters are defaults, you can skip them.**\n> "
 	if minorVersion >= 18 {
 		for appName, init_template := range init_templates["18"] {
 			finalQuery += "\n- " + appName + ":\n" + init_template + "\n"

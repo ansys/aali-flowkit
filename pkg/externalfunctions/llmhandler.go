@@ -25,6 +25,8 @@ package externalfunctions
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -321,7 +323,7 @@ func PerformKeywordExtractionRequest(input string, maxKeywordsSearch uint32) (ke
 	}
 
 	for words := range keywords {
-		logging.Log.Debugf(&logging.ContextMap{},"kapatil: Keyword %s ", words)
+		logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Keyword %v ", words)
 	}
 
 	// Return the response
@@ -388,7 +390,7 @@ func PerformGeneralRequest(input string, history []sharedtypes.HistoricMessage, 
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, nil, nil)
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
 		// Create a stream channel
@@ -445,7 +447,7 @@ func PerformGeneralRequestWithImages(input string, history []sharedtypes.Histori
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, images)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, nil, images)
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
 		// Create a stream channel
@@ -504,7 +506,7 @@ func PerformGeneralModelSpecificationRequest(input string, history []sharedtypes
 
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil, nil)
 
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
@@ -562,7 +564,7 @@ func PerformGeneralRequestSpecificModel(input string, history []sharedtypes.Hist
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil, nil)
 
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
@@ -621,7 +623,7 @@ func PerformGeneralRequestSpecificModelAndModelOptions(input string, history []s
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, &modelOptions, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, &modelOptions, nil)
 
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
@@ -676,12 +678,12 @@ func PerformGeneralRequestSpecificModelAndModelOptions(input string, history []s
 // Returns:
 //   - message: the response message
 //   - stream: the stream channel
-func PerformGeneralRequestSpecificModelModelOptionsAndImages(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt string, modelIds []string, modelOptions sharedtypes.ModelOptions, images []string) (message string, stream *chan string) {
+func PerformGeneralRequestSpecificModelModelOptionsAndImages(input string, history []sharedtypes.HistoricMessage, isStream bool, systemPrompt string, modelIds []string, modelOptions sharedtypes.ModelOptions, images []string, modelCategory []string) (message string, stream *chan string) {
 	// get the LLM handler endpoint
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, &modelOptions, images)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, modelCategory, &modelOptions, images)
 
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
@@ -740,7 +742,7 @@ func PerformGeneralRequestSpecificModelNoStreamWithOpenAiTokenOutput(input strin
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, nil, nil)
 	defer close(responseChannel)
 
 	// else Process all responses
@@ -817,7 +819,7 @@ func PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiTokenOut
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, &modelOptions, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, &modelOptions, nil)
 	defer close(responseChannel)
 
 	// else Process all responses
@@ -895,7 +897,7 @@ func PerformGeneralRequestSpecificModelAndModelOptionsNoStreamWithOpenAiInputOut
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, &modelOptions, nil)
+	responseChannel := sendChatRequest(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, modelIds, nil, &modelOptions, nil)
 	defer close(responseChannel)
 
 	// else Process all responses
@@ -952,13 +954,13 @@ func parseAPINames(input string) (listApis []string) {
 	// expected input
 	// `python \n api1,api2,api3\n`
 	libContext := "ansys.aedt.core"
-	aedtApps := []string{"desktop", "hfss", "maxwell", "circuit", "icepak", "hfss3dlayout", "mechanical", "rmxprt", "emit", "maxwellcircuit",}
+	aedtApps := []string{"desktop", "hfss", "maxwell", "circuit", "icepak", "hfss3dlayout", "mechanical", "rmxprt", "emit", "maxwellcircuit"}
 	clearList := strings.ReplaceAll(input, "\n", "")
 	clearList = strings.ReplaceAll(clearList, "```", "")
 	clearList = strings.ReplaceAll(clearList, "plaintext", "")
 	clearList = strings.ReplaceAll(clearList, "python", "")
 	clearList = strings.ReplaceAll(clearList, "```", "")
-	listRawApis := strings.Split(clearList, ",")// ignore python
+	listRawApis := strings.Split(clearList, ",") // ignore python
 	// add suffix ansys.aedt.core ?
 	// we get imports and function names here
 	// map it as class to function names
@@ -981,7 +983,7 @@ func parseAPINames(input string) (listApis []string) {
 				//check is aaedt app
 				for _, app := range aedtApps {
 					if strings.ToLower(funcName) == app {
-						funcName = libContext + "."+ strings.ToLower(funcName)+ "."+funcName + ".__init__" 
+						funcName = libContext + "." + strings.ToLower(funcName) + "." + funcName + ".__init__"
 					}
 				}
 				listApis = append(listApis, funcName)
@@ -1026,46 +1028,6 @@ func PyaedtPerformCodeLLMRequest(input string, /*history []sharedtypes.HistoricM
 	
 	// Return the response
 	return "", nil
-}
-
-
-// PyaedtCodeStreaming performs a code validation request to LLM with streaming
-//
-// Tags:
-//   - @displayName: Pyaedt Code Streaming
-//
-// Parameters:
-//   - input: the input code string
-//   - history: the conversation history
-//   - isStream: the stream flag
-//
-// Returns:
-//   - message: the generated code
-//   - stream: the stream channel
-func PyaedtCodeStreaming(input string, isStream bool) (message string, stream *chan string) {
-	responseAsStr := input
-	// Set up WebSocket connection with LLM and send chat request
-	//responseChannel := sendChatRequest(input, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
-	if isStream {
-		logging.Log.Debugf(&logging.ContextMap{}, "Streaming ..%v", input)	
-	//	validateCode = false
-		// Create a stream channel
-		streamChannel := make(chan string, 400)
-		// Start a goroutine to transfer the data from the response channel to the stream channel
-		//go transferDatafromResponseToStreamChannel(&responseChannel, &streamChannel, validateCode, false, "", 0, 0, "", "", "", false, "")
-		// Return the stream channel
-		//go func() {
-		streamChannel <- input
-		//}()
-		return responseAsStr, &streamChannel
-	}
-
-	// Close the response channel
-	//defer close(responseChannel)
-	
-
-	// Return the response
-	return responseAsStr, nil
 }
 
 // PyaedtCodeValidationLoopWithStreaming performs a code validation request to LLM and returns revised code
@@ -1138,7 +1100,7 @@ func PyaedtCodeValidationLoopWithStreaming(input string, history []sharedtypes.H
 				// kapatil: redo code generation 
 				// Prompt: Following errors are found in code, fix code w.r.t pyaedt code library
 				errPrompt := GetValidationPrompt(err.Error(), latestAPISignatures)
-				time.Sleep(2 * time.Second)
+				time.Sleep(1 * time.Second)
 				if errPrompt != "" {
 					errPrompt += "Pyaedt script:\n " + pythonCode
 					// Set up WebSocket connection with LLM and send chat request
@@ -1272,10 +1234,11 @@ func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, 
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseChannel := sendChatRequest(input, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil)
+	responseChannel := sendChatRequest(input, "code", history, 0, "", llmHandlerEndpoint, nil, nil, nil, nil)
+
 	// If isStream is true, create a stream channel and return asap
 	if isStream {
-		
+
 		// Create a stream channel
 		streamChannel := make(chan string, 400)
 		// Start a goroutine to transfer the data from the response channel to the stream channel
@@ -1326,7 +1289,6 @@ func PerformCodeLLMRequest(input string, history []sharedtypes.HistoricMessage, 
 						responseAsStr += "\nCode is valid."
 					}
 				} else {
-					
 					responseAsStr += "\nCode is invalid."
 				}
 			}
@@ -1353,7 +1315,7 @@ func PerformGeneralRequestNoStreaming(input string, history []sharedtypes.Histor
 	llmHandlerEndpoint := config.GlobalConfig.LLM_HANDLER_ENDPOINT
 
 	// Set up WebSocket connection with LLM and send chat request
-	responseString := sendChatRequestNoStreaming(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, nil)
+	responseString := sendChatRequestNoStreaming(input, "general", history, 0, systemPrompt, llmHandlerEndpoint, nil, nil, nil, nil)
 
 	// Return the response
 	return responseString
@@ -1372,11 +1334,10 @@ func PerformGeneralRequestNoStreaming(input string, history []sharedtypes.Histor
 //   - messageWithContext: the message with context
 func BuildLibraryContext(message string, libraryContext string) (messageWithContext string) {
 	// Check if "pyansys" is in the library context
-	message = libraryContext + " "+ message
+	message = libraryContext + " " + message
 
 	return message
 }
-
 
 // BuildFinalQueryForGeneralLLMRequest builds the final query for a general
 // request to LLM. The final query is a markdown string that contains the
@@ -1422,29 +1383,30 @@ func BuildFinalQueryForGeneralLLMRequest(request string, knowledgedbResponse []s
 //   - userGuideSearch: include user guide citations
 //   - citations: citations string
 //   - elementContext: String context prompt
+//   - design context: context from the active design
 //
 // Returns:
 //   - finalQuery: the final query
 func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []sharedtypes.ExampleDbResponse, userGuideSearch bool, citations []string, elementContexts []string, designContext string) (finalQuery string) {
-	finalQuery = "You are a Python expert with experience in writing complete, functional PyAEDT scripts. These scripts typically include python code for tasks such as geometry creation, boundary setup, and analysis setups - especially for HFSS (or other AnsysEM tools as applicable). Your task is to write valid Python code using PyAEDT APIs." 
-	if len(elementContexts) > 0 {
-		// assuming we get the first element context only
-		finalQuery += elementContexts[0]
-
-	}
 	// Build the final query using the KnowledgeDB response and the original request
 	// We have to use the text from the DB response and the original request.
 	//
 	// Design context is a string that we get from the AEDT session. It contains
 	// information about the current design, project, application, and PyAEDT version.
 	// It is in the following format:
+	// "{'designContext': {'design': 'MyDesign', 'project': 'MyProject',
+	// 'selections': [], 'application': 'MyApplication', 'aedtVersion': 'xxxx.x',
+	// 'pyaedtVersion': '0.xx.x', 'type': 'Generic', 'units': 'xx'}}"
+	//
+	// The code will parse this string and extract the information to the final prompt.
 	// {'designContext':
 	// 		{
-	// 			'design': 'DESIGN',
-	// 			'project': 'PROJECT',
+	// 			'design': 'MyDesign',
+	// 			'project': 'MyProject',
+	//			'aedtVersion': 'xxxx.x',
 	// 			'selections': [],
-	// 			'application': 'APP',
-	// 			'pyaedtVersion': 'x.x.x',
+	// 			'application': 'MyApplication',
+	// 			'pyaedtVersion': '0.xx.x',
 	// 			'type': 'Generic',
 	// 			'units': 'xxx'
 	// 		}
@@ -1475,13 +1437,39 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// ...
 	// --- END EXAMPLE {response_n}---
 	//
-	// Generate the PyAEDT code for the following request:
+	// Generate the Python code for the following request: {original request}
 	//
-	// >>> Request:
-	// {original_request}
+	// Hard requirements (do not violate):
+	// - Include **all imports** actually used. Follow the template for {Pyaedt version}}: {import template}
+	// - Provide an **Initialization** section that **explicitly** declares the known information as follows:
+	//   - Use PyAEDT version: {Pyaedt version}
+	//   - AEDT version: {AEDT version if known}
+	//   - Design name: {Design name}
+	//   - Application: {Application name}
+	//   - Project name: {Project name}
+	//   - Selections: {selections, if any}
+	//
+	// The following statements are examples of how to initialize different applications, refer to these examples and initialization accordingly:
+	//  - {application name}: {initialization template}
+	//	- ... (other applications as applicable)
+	//
+	// Also, refer to the following example of how to release the AEDT desktop, choose the appropriate one:
+	// - {application name}: {release template}
+	// - ... (other applications as applicable)
 	// ******************************************************************************
+
+	// Construct final query prompt.
+	finalQuery = "You are a Python expert with experience in writing complete, functional PyAEDT scripts. These scripts typically include python code for tasks such as geometry creation, boundary setup, and analysis setups - especially for HFSS (or other AnsysEM tools as applicable). Your task is to write valid Python code using PyAEDT APIs.\n"
+	if len(elementContexts) > 0 {
+		// assuming we get the first element context only
+		finalQuery += elementContexts[0]
+
+	}
+
+	// Get the citations from the user guide search
 	if userGuideSearch {
-		finalQuery += "\nBased on the following pyaedt documentation links:\n"
+		finalQuery += "\nBased on the following PyAEDT documentation links: \n\n"
+
 		for i, citation := range citations {
 			finalQuery += "--- REFERENCE LINKS START " + fmt.Sprint(i+1) + " ---\n"
 			finalQuery += citation + "\n"
@@ -1489,30 +1477,38 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 		}
 		finalQuery += "And following examples:\n\n"
 	} else {
-		finalQuery += "Based on the following examples:\n\n"
+		finalQuery += "\nBased on the following examples:\n\n"
+
 	}
 
+	// Get the examples from the knowledge DB
 	if len(knowledgedbResponse) > 0 {
 		for i, element := range knowledgedbResponse {
 			// Add the example number
-			logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Reading knowledge DB response")
+			// logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Reading knowledge DB response")
 			finalQuery += "--- START EXAMPLE " + fmt.Sprint(i+1) + "---\n"
 			finalQuery += "* Summary:\n" + element.Summary + "\n\n"
 			finalQuery += "* Code snippet:\n```python\n" + element.Text + "\n```\n"
 			finalQuery += "--- END EXAMPLE " + fmt.Sprint(i+1) + "---\n\n"
-			//logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Initial Query %s", finalQuery)
-		}
+			// logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Initial Query %s", finalQuery)
 
+		}
 	} else {
 		logging.Log.Debugf(&logging.ContextMap{}, "No relevant examples found in DB.")
 	}
-	
+
+	// Kaumudi: Rephrase
+	//newRequest := RephraseRequest_kapatil(request)
 	newRequest := request
+
 	// Pass in the original request without blank in the front and end
 	finalQuery += "Generate the Python code for the following request: **" + strings.TrimSpace(newRequest) + "** \n"
 
 	// Convert designContext to a JSON format: map[string]any
 	convertDesignContext := func(designContext string, format string) (any, error) {
+		// Replace Python None with JSON null
+		designContext = strings.ReplaceAll(designContext, ": None", ": null")
+
 		// Replace single quotes with double quotes for valid JSON
 		designContext = strings.ReplaceAll(designContext, "'", "\"")
 
@@ -1546,39 +1542,57 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 
 	}
 
-	var generationType, design, project, application, pyaedtVersion string
+	var generationType, design, project, application, pyaedtVersion, aedtVersion string
 	var selections []string
+
+	var designDefult = "MyDesign"
+	var projectDefault = "MyProject"
+	var applicationDefault = "MyApplication"
+	var pyaedtVersionDefault = "0.19.0" // Default version: the latest one by Sep 2025.
+	var aedtVersionDefault = ""         // Default AEDT version: empty string.
+	logging.Log.Debugf(&logging.ContextMap{}, "~~~~ Raw Design context provided: %s", designContext)
+
 	if designContext == "" {
 		logging.Log.Info(&logging.ContextMap{}, "No design context provided. Using default strings for design, project, application, and pyaedtVersion.")
-		design = "MyDesign"
-		project = "MyProject"
-		application = "MyApplication"
-		pyaedtVersion = "0.19.0" // Default version: the latest one by Sep 2025.
+		design = designDefult
+		project = projectDefault
+		application = applicationDefault
+		pyaedtVersion = pyaedtVersionDefault
+		aedtVersion = aedtVersionDefault
 		selections = []string{}
 	} else {
-		// Cutoff designContext and only process generic context.
-		pattern := `'type'\s*:\s*'[^']*'`
+		// First check if design is None
+		designNonePattern := `'design'\s*:\s*(?:None|"None"|'None')`
+		designNoneRe := regexp.MustCompile(designNonePattern)
+		isDesignNone := designNoneRe.MatchString(designContext)
+
+		var pattern string
+		if isDesignNone {
+			// Scenario 1: If design is None, cutoff after design
+			pattern = `'design'\s*:\s*(?:None|"None"|'None')`
+		} else {
+			// Scenario 2: If design has value, cutoff after application
+			pattern = `'application'\s*:\s*'[^']*'`
+
+			// Also handle double quotes
+			if !strings.Contains(designContext, "'application'") {
+				pattern = `"application"\s*:\s*"[^"]*"`
+			}
+		}
 
 		// Use regex to find the pattern
 		re := regexp.MustCompile(pattern)
 		match := re.FindStringIndex(designContext)
 
 		if match == nil {
-			// If pattern not found, try with double quotes format
-			pattern = `"type"\s*:\s*"[^"]*"`
-			re = regexp.MustCompile(pattern)
-			match = re.FindStringIndex(designContext)
-
-			if match == nil {
-				logging.Log.Warnf(&logging.ContextMap{}, "Cutoff pattern 'type' field not found in designContext")
-				return designContext
-			}
+			logging.Log.Warnf(&logging.ContextMap{}, "Cutoff pattern not found in designContext")
+			return designContext
 		}
 
-		// Get the end position of the match (after the 'type' field and its value)
+		// Get the end position of the match
 		endPos := match[1]
 
-		// Extract substring up to the end of the 'type' field
+		// Extract substring up to the end of the matched field
 		designContextGeneric := designContext[:endPos]
 
 		// Add proper closing braces
@@ -1609,21 +1623,37 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 			// Extract design name
 			if val, ok := nestedContext["design"]; ok {
 				if strVal, ok := val.(string); ok {
-					design = strVal
+					if strVal == "None" || strVal == "" {
+						// For empty design name, use default.
+						design = ""
+					} else {
+						design = strVal
+					}
+				} else {
+					logging.Log.Warnf(&logging.ContextMap{}, "Design field is not a string, found type: %T, value: %v. Using default.", val, val)
+					design = ""
 				}
 			} else {
 				logging.Log.Debugf(&logging.ContextMap{}, "No design name found in design context. Using default.")
-				design = "MyDesign"
+				design = ""
 			}
 
 			// Extract project name.
 			if val, ok := nestedContext["project"]; ok {
 				if strVal, ok := val.(string); ok {
-					project = strVal
+					if strVal == "None" || strVal == "" {
+						// For empty project name, use default.
+						project = ""
+					} else {
+						project = strVal
+					}
+				} else {
+					logging.Log.Warnf(&logging.ContextMap{}, "Project field is not a string, found type: %T, value: %v. Using default.", val, val)
+					project = ""
 				}
 			} else {
 				logging.Log.Debugf(&logging.ContextMap{}, "No project name found in design context. Using default.")
-				project = "MyProject"
+				project = ""
 			}
 
 			// Extract application name.
@@ -1633,7 +1663,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 				}
 			} else {
 				logging.Log.Debugf(&logging.ContextMap{}, "No application name found in design context. Using default.")
-				application = "MyApplication"
+				application = ""
 			}
 
 			// Extract PyAEDT version.
@@ -1644,6 +1674,24 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 			} else {
 				logging.Log.Debugf(&logging.ContextMap{}, "No PyAEDT version found in design context. Using default.")
 				pyaedtVersion = "0.19.0"
+			}
+
+			// Extract AEDT version.
+			if val, ok := nestedContext["aedtVersion"]; ok {
+				if strVal, ok := val.(string); ok {
+					if strVal == "Unknown" || strVal == "None" || strVal == "" {
+						aedtVersion = aedtVersionDefault
+					} else {
+						aedtVersion = strVal
+					}
+				} else {
+					logging.Log.Warnf(&logging.ContextMap{}, "AEDT version field is not a string, found type: %T, value: %v. Using default.", val, val)
+					aedtVersion = aedtVersionDefault
+				}
+				logging.Log.Debugf(&logging.ContextMap{}, "AEDT version found in design context: %s", aedtVersion)
+			} else {
+				logging.Log.Debugf(&logging.ContextMap{}, "No AEDT version found in design context. Using default.")
+				aedtVersion = aedtVersionDefault
 			}
 
 			// Extract selections.
@@ -1668,7 +1716,14 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 				selections = []string{}
 			}
 		} else {
-			logging.Log.Error(&logging.ContextMap{}, "Missing generation type in design context.")
+			logging.Log.Warn(&logging.ContextMap{}, "designContext field not found or invalid in designContext map. Using defaults.")
+
+			design = designDefult
+			project = projectDefault
+			application = applicationDefault
+			pyaedtVersion = pyaedtVersionDefault
+			aedtVersion = aedtVersionDefault
+			selections = []string{}
 		}
 
 		// Store designContext to a JSON file.
@@ -1725,15 +1780,16 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	}
 
 	// ==============================
-	// Imports and initilization templates for different PyAEDT versions
-	version_mapper := map[string]string{
-		"0.19.0": "2025.1",
-	}
+	// Imports, initilization and release templates for different PyAEDT versions
 	import_templates := map[string]string{
-		"0.19.0": "```python\nimport ansys.aedt.core as pyaedt```",
+		// Imports templates for different PyAEDT versions:
+		// PyAEDT version bigger than 0.9: use import ansys.aedt.core as pyaedt
+		// PyAEDT version smaller or equal to 0.9: use import pyaedt
+		"older":   "```\nimport pyaedt\n```",
+		"current": "```\nimport ansys.aedt.core as pyaedt\n```",
 	}
 	init_templates := map[string]map[string]string{
-		"0.19.0": {
+		"18": {
 			"Desktop":        "```\nDesktop(version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None)\n```",
 			"Hfss":           "```\nHfss(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
 			"Q3d":            "```\nQ3d(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
@@ -1750,31 +1806,98 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 			"TwinBuilder":    "```\nTwinBuilder(project:str|None, design:str|None, solution_type:str|None, setup:str|None, version:str|int|float|None, non_graphical:bool|None, new_desktop:bool|None, close_on_exit:bool|None, student_version:bool|None, machine:str|None, port:int|None, aedt_process_id:int|None, remove_lock:bool|None)\n```",
 		},
 	}
+	release_templates := map[string]map[string]string{
+		"18": {
+			"Desktop":        "```\ndesktop.release_desktop(close_on_exit:False)\n```",
+			"Hfss":           "```\nHfss.release_desktop(close_desktop=False)\n```",
+			"Q3d":            "```\nQ3d.release_desktop(close_desktop=False)\n```",
+			"Q2d":            "```\nQ2d.release_desktop(close_desktop=False)\n```",
+			"Maxwell2d":      "```\nMaxwell2d.release_desktop(close_desktop=False)\n```",
+			"Maxwell3d":      "```\nMaxwell3d.release_desktop(close_desktop=False)\n```",
+			"Icepak":         "```\nIcepak.release_desktop(close_desktop=False)\n```",
+			"Hfss3dLayout":   "```\nHfss3dLayout.release_desktop(close_desktop=False)\n```",
+			"Mechanical":     "```\nMechanical.release_desktop(close_desktop=False)\n```",
+			"Rmxprt":         "```\nRmxprt.release_desktop(close_desktop=False)\n```",
+			"Circuit":        "```\nCircuit.release_desktop(close_desktop=False)\n```",
+			"MaxwellCircuit": "```\nMaxwellCircuit.release_desktop(close_desktop=False)\n```",
+			"Emit":           "```\nEmit.release_desktop(close_desktop=False)\n```",
+			"TwinBuilder":    "```\nTwinBuilder.release_desktop(close_desktop=False)\n```",
+		},
+	}
 	// ==============================
 
-	// Include initialization template to prompt.
-	finalQuery += "\nHard requirements (do not violate):\n- Include **all imports** actually used. Follow the template for PyAEDT version " + pyaedtVersion + ": " + import_templates[pyaedtVersion] + "\n"
-	finalQuery += "- Provide an **Initialization** section that **explicitly** declares the known information as follows:\n"
+	finalQuery += "\nHard requirements (do not violate):\n"
+	finalQuery += "- Include **all imports** actually used. Follow the template for PyAEDT version " + pyaedtVersion + ": \n"
+	// Parse pyaedtVersion to decide which import template to use.
+	versionParts := strings.Split(pyaedtVersion, ".")
 
-	if _, ok := version_mapper[pyaedtVersion]; !ok {
-		logging.Log.Warnf(&logging.ContextMap{}, "Unknown PyAEDT version: %s. Defaulting to 0.19.0", pyaedtVersion)
-		pyaedtVersion = "0.19.0"
+	// Combine first two parts to get major.minor version, eg 0.19 from 0.19.0
+	// If major version is not 0, use default version 0.19
+	if len(versionParts) < 2 || versionParts[0] != "0" {
+		logging.Log.Warnf(&logging.ContextMap{}, "Unexpected PyAEDT major version: %s. Defaulting to 0.19.0", pyaedtVersion)
+		versionParts = []string{"0", "19"}
 	}
-	finalQuery += "  - Use PyAEDT version: " + pyaedtVersion + "\n"
-	finalQuery += "  - AEDT version: " + version_mapper[pyaedtVersion] + "\n"
-	finalQuery += "  - Design name: " + design + "\n"
-	finalQuery += "  - Application: " + application + "\n"
 
-	logging.Log.Debugf(&logging.ContextMap{}, "!!!!Selections: %v", selections)
+	// If minor version is less than or equal to 9, use older import template.
+	// If minor version is greater than 9, use current import template.
+	minorVersion, err := strconv.Atoi(versionParts[1])
+	if err != nil {
+		logging.Log.Warnf(&logging.ContextMap{}, "Failed to parse minor version: %v. Defaulting to current template", err)
+		finalQuery += import_templates["current"] + "\n"
+	} else {
+		if minorVersion <= 9 {
+			// older version
+			finalQuery += import_templates["older"] + "\n"
+		} else {
+			// current version
+			finalQuery += import_templates["current"] + "\n"
+		}
+	}
+
+	if !(aedtVersion == "" && project == "" && design == "" && application == "") {
+		finalQuery += "- Provide an **Initialization** section that **explicitly** declares the ONLY KNOWN information as follows:\n"
+
+		if aedtVersion != "" {
+			finalQuery += "  - AEDT version: " + aedtVersion + "\n"
+		}
+
+		if project != "" {
+			finalQuery += "  - Project name: " + project + "\n"
+		}
+
+		if design != "" {
+			finalQuery += "  - Design name: " + design + "\n"
+		}
+
+		if application != "" {
+			finalQuery += "  - Application: " + application + "\n"
+		}
+	}
+
 	// if selections is empty, skip it.
 	if selections != nil && len(selections) > 0 {
 		finalQuery += "  - Selections: " + strings.Join(selections, ", ") + "\n"
 	}
-	finalQuery += "  - Project name: " + project + "\n\n"
-	finalQuery += "The following statements are examples of how to initialize different applications, refer to these examples and initialization accordingly: \n"
 
-	for appName, init_template := range init_templates[pyaedtVersion] {
-		finalQuery += "\n- " + appName + ":\n" + init_template + "\n"
+	finalQuery += "- DO NOT show graphical user interface (non-graphical=True) if the request does not explicitly ask for it.\n"
+
+	finalQuery += "- DO release the AEDT desktop using `release_desktop()` function.\n\n"
+
+	// Include initialization template to prompt.
+	finalQuery += "The following statements are examples of how to initialize different applications, refer to these examples and initialization accordingly: \n\n"
+	finalQuery += "> [!IMPORTANT] \n> **If the value of initialization parameters are defaults, you can skip them.**\n> "
+	if minorVersion >= 18 {
+		for appName, init_template := range init_templates["18"] {
+			finalQuery += "\n- " + appName + ":\n" + init_template + "\n"
+		}
+	}
+
+	// Include release template to prompt.
+	finalQuery += "\nAlso, refer to the following example of how to release the AEDT desktop, choose the appropriate one: \n"
+	if minorVersion >= 18 {
+		for appName, release_templates := range release_templates["18"] {
+			finalQuery += "\n- " + appName + ":\n" + release_templates + "\n"
+		}
 	}
 
 	finalQuery += "\n\n"
@@ -1784,8 +1907,7 @@ func PyaedtBuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse 
 	// Return the final query
 	return finalQuery
 }
-
-
+	
 // BuildFinalQueryForCodeLLMRequest builds the final query for a code generation
 // request to LLM. The final query is a markdown string that contains the
 // original request and the code examples from the KnowledgeDB.
@@ -1841,7 +1963,7 @@ func BuildFinalQueryForCodeLLMRequest(request string, knowledgedbResponse []shar
 			finalQuery += ">>> Summary:\n" + element.Summary + "\n\n"
 			finalQuery += ">>> Code snippet:\n```python\n" + element.Text + "\n```\n"
 			finalQuery += "--- END EXAMPLE " + fmt.Sprint(i+1) + "---\n\n"
-			logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Initial Query %s", finalQuery)
+			// logging.Log.Debugf(&logging.ContextMap{}, "kapatil: Initial Query %s", finalQuery)
 		}
 
 	} else {

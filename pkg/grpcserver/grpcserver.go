@@ -26,9 +26,7 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"reflect"
-	"strings"
 
 	"github.com/ansys/aali-flowkit/pkg/externalfunctions"
 	"github.com/ansys/aali-sharedtypes/pkg/aaliflowkitgrpc"
@@ -154,7 +152,7 @@ func (s *server) HealthCheck(ctx context.Context, req *aaliflowkitgrpc.HealthReq
 // - error: an error if the version retrieval fails
 func (s *server) GetVersion(ctx context.Context, req *aaliflowkitgrpc.VersionRequest) (*aaliflowkitgrpc.VersionResponse, error) {
 	// Get the version from the file
-	version := getAaliFlowktiVersion(&logging.ContextMap{})
+	version := internalstates.FlowkitVersion
 
 	// If the version is empty, return an error
 	if version == "" {
@@ -453,21 +451,4 @@ func convertOptionSetValues(functionName string, inputName string, inputValue in
 	}
 
 	return nil, fmt.Errorf("unsupported function: '%s'", functionName)
-}
-
-// getAaliFlowktiVersion reads the agent's version from a file and returns the value.
-//
-// Returns:
-//   - string: Version
-func getAaliFlowktiVersion(ctx *logging.ContextMap) string {
-	// Read the version from a file; the file is expected to be at ROOT level and called VERSION
-	file := "VERSION"
-	versionFile, err := os.ReadFile(file)
-	if err != nil {
-		logging.Log.Errorf(ctx, "Error reading version file: %s\n", err)
-		return ""
-	}
-
-	version := strings.TrimSpace(string(versionFile))
-	return version
 }

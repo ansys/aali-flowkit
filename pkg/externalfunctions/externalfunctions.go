@@ -47,10 +47,10 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"ShortenMessageHistory":                                                                     ShortenMessageHistory,
 	"CheckTokenLimitReached":                                                                    CheckTokenLimitReached,
 	"PyaedtBuildFinalQueryForCodeLLMRequest":                                                    PyaedtBuildFinalQueryForCodeLLMRequest,
-	"PyaedtCodeValidationLoop": 								     PyaedtCodeValidationLoop,
-	"PyaedtPerformCodeLLMRequest":								     PyaedtPerformCodeLLMRequest,
-	"PyaedtCodeValidationLoopWithStreaming":						     PyaedtCodeValidationLoopWithStreaming,
-	"PyaedtCodeStreaming":						    			     PyaedtCodeStreaming,	
+	"PyaedtCodeValidationLoop": 								                                                 PyaedtCodeValidationLoop,
+	"PyaedtPerformCodeLLMRequest":								                                               PyaedtPerformCodeLLMRequest,
+	"PyaedtCodeValidationLoopWithStreaming":						                                         PyaedtCodeValidationLoopWithStreaming,
+	"PyaedtCodeStreaming":						    			                                                 PyaedtCodeStreaming,	
 
 	// knowledge db
 	"SendVectorsToKnowledgeDB": SendVectorsToKnowledgeDB,
@@ -86,6 +86,7 @@ var ExternalFunctionsMap = map[string]interface{}{
 	"AisChangeAcsResponsesByFactor":                  AisChangeAcsResponsesByFactor,
 	"AecGetContextFromRetrieverModule":               AecGetContextFromRetrieverModule,
 	"AecPerformLLMFinalRequest":                      AecPerformLLMFinalRequest,
+	"GetContextFromDataPlugin":                       GetContextFromDataPlugin,
 
 	// data extraction
 	"GetGithubFilesToExtract":                    GetGithubFilesToExtract,

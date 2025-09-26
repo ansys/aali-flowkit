@@ -22,7 +22,6 @@
 
 package externalfunctions
 
-
 import (
 	//"encoding/json"
 	//"encoding/xml"
@@ -54,14 +53,13 @@ import (
 // Parameters:
 //   - elementName - string
 //   - elementType - string
-// 
 func GetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse) {
 	ctx := &logging.ContextMap{}
 	var exampleName []string
 	var err error
 	//graphdb.Initialize()
 	// kapatil : instead of element names, can we use GUID ?
-        // Assuming this is a single entry point 
+	// Assuming this is a single entry point
 	if len(dbResponses) > 0 {
 		elementType := dbResponses[0].Type
 		elementName := dbResponses[0].Name
@@ -70,49 +68,47 @@ func GetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse) {
 			logPanic(ctx, "error Getting examples from code generation element: %v", err)
 		}
 		for ex, _ := range exampleName {
-			logging.Log.Debugf(ctx, "Reading examples %s", ex)
-	        }   
+			logging.Log.Debugf(ctx, "Reading examples %v", ex)
+		}
 	} else {
 		logging.Log.Debugf(ctx, "Graph DB no entry point found!!!")
 	}
-		// For method name -> 
-		// 1. check caller - is application, module or methods, config
-		// Method- > belongs to ->class-> is a pyaedtGroup -> <>
-		// string 
-		//callerObjType = graphdb.GraphDbDriver.GetMethodCaller(elementName, guid)
-		//if callObjType == nil {
-		//	errMsg := fmt.Sprintf("error adding code gen relationships to graphdb: %v", err)
-//			logging.Log.Error(ctx, errMsg)
-//			panic(errMsg)
-//		}
-//
-//	//string[]
-//	err, params = graphdb.GraphDbDriver.GetParameters(elementName, guid)
-  //      if err != nil {
-//		errMsg := fmt.Sprintf("error reading parameters  graphdb: %v", err)
-//		logging.Log.Error(ctx, errMsg)
-//		panic(errMsg)
-//	}
+	// For method name ->
+	// 1. check caller - is application, module or methods, config
+	// Method- > belongs to ->class-> is a pyaedtGroup -> <>
+	// string
+	//callerObjType = graphdb.GraphDbDriver.GetMethodCaller(elementName, guid)
+	//if callObjType == nil {
+	//	errMsg := fmt.Sprintf("error adding code gen relationships to graphdb: %v", err)
+	//			logging.Log.Error(ctx, errMsg)
+	//			panic(errMsg)
+	//		}
+	//
+	//	//string[]
+	//	err, params = graphdb.GraphDbDriver.GetParameters(elementName, guid)
+	//      if err != nil {
+	//		errMsg := fmt.Sprintf("error reading parameters  graphdb: %v", err)
+	//		logging.Log.Error(ctx, errMsg)
+	//		panic(errMsg)
+	//	}
 
 	// rets []string
-//	err, rets = graphdb.GraphDbDriver.GetReturns(elementName, guid)
-  //      if err != nil {
-//		errMsg := fmt.Sprintf("error reading return type from  graphdb: %v", err)
-//		logging.Log.Error(ctx, errMsg)
-//		panic(errMsg)
-//	}
+	//	err, rets = graphdb.GraphDbDriver.GetReturns(elementName, guid)
+	//      if err != nil {
+	//		errMsg := fmt.Sprintf("error reading return type from  graphdb: %v", err)
+	//		logging.Log.Error(ctx, errMsg)
+	//		panic(errMsg)
+	//	}
 
 	// kapatil: Create context prompt
 	// <Method> takes _,_,_, as arguments and returns _
 	// For example:
-	// application object like hfss calls create_circle takes _,_,_ arguments 
+	// application object like hfss calls create_circle takes _,_,_ arguments
 	// and returns ...
 	// For example:
 	// example-1, 2, 3
 
-
 }
-
 
 // GetElementMethodExamplesFromGraphDb  graph database.
 //
@@ -121,17 +117,17 @@ func GetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse) {
 //
 // Parameters:
 //   - elementName - string
-// 
+//
 //func GetElementMethodContextFromGraphDb(element sharedtypes.CodeGenerationElement) {
 //	ctx := &logging.ContextMap{}
 
-	// kapatil : instead of element names, can we use GUID ?
+// kapatil : instead of element names, can we use GUID ?
 //	err = graphdb.GraphDbDriver.GetExamplesFromCodeGenerationElement(elementType, elementName)
 //	if err != nil {
 //		logPanic(ctx, "error Getting examples from code generation element: %v", err)
 //	}
 
-	// For method name -> 
+// For method name ->
 //	err = graphdb.GraphDbDriver.GetExamplesFromGraphDb(elementName)
 //	if err != nil {
 //		errMsg := fmt.Sprintf("error getting examples: %v", err)
@@ -139,6 +135,3 @@ func GetElementContextFromGraphDb(dbResponses []sharedtypes.ApiDbResponse) {
 //		panic(errMsg)
 //	}
 //}
-
-
-

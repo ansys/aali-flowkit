@@ -80,6 +80,7 @@ func parseMessageForType(msgType string, msg string) (finalMsg []string, lineNos
     var es []string
     es = strings.Split(msg, msgType)
     if len(es) > 1 {
+	    es = es[:len(es)-1]
 	    for _, e:= range es {
 	        if strings.Contains(e, "py:") {
 	            lineNos = append(lineNos, strings.Split(e, "py:")[1])
@@ -806,6 +807,9 @@ func extractPythonCode(markdown string) (pythonCode string, error error) {
 
 
 func GetLatestApiSignaturesForApis(inputs []string) (ApiSignatures []string) {
+	if len(inputs) == 0 {
+		return
+	}
 	ctx := &logging.ContextMap{}
 	err := graphdb.Initialize(config.GlobalConfig.GRAPHDB_ADDRESS)
 	if err != nil {
